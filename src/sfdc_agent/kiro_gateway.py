@@ -14,25 +14,46 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
+from .kiro_screen_projection import project_screen_fields
 from .providers import _kiro_environment
 
 router = APIRouter(prefix="/internal/kiro/sessions")
 logger = logging.getLogger("uvicorn.error")
 REQUEST_LIMIT = 18 * 1024 * 1024
 RESPONSE_LIMIT = 48 * 1024 * 1024
-IDLE_SECONDS = 16 * 60
 MAX_SESSIONS = 12
 OPERATIONS = {
     "screen.analyze", "screen.analyze.local", "screen.capture", "screen.discovery", "screen.metadata",
-    "screen.generate", "screen.repair", "screen.plan", "screen.plan.repair",
+    "screen.generate", "screen.repair", "screen.plan", "screen.plan.repair", "screen.review-plan",
     "story.classification", "story.analysis", "story.generate",
+}
+_MODES = {"screen": "SFDC_AGENT_SCREEN_KIRO_MODE", "story": "SFDC_AGENT_STORY_KIRO_MODE"}
+_HEADLESS_OPERATIONS = {
+    "screen": {"screen.analyze.local", "screen.review-plan", "screen.generate", "screen.repair",
+               "screen.plan", "screen.plan.repair"},
+    "story": {"story.classification", "story.analysis", "story.generate"},
 }
 
 
-class SessionError(Exception):
-    def __init__(self, code, message):
-        super().__init__(message)
-        self.code = code
+def kiro_mode(purpose: str) -> str:
+    return os.environ.get(_MODES[purpose], "acp")
+
+
+def _validate_headless_prompt(prompt):
+    if prompt.fields is None or prompt.png is not None:
+        raise ValueError("Headless tasks require structured text evidence.")
+    fields = prompt.fields
+    if prompt.operation in {"screen.repair", "screen.plan.repair"}:
+        fields = fields.get("evidence")
+        if not isinstance(fields, dict) or not isinstance(prompt.fields.get("previousDraft"), str):
+            raise ValueError("Headless repairs require the original evidence and draft.")
+    if prompt.operation in {"screen.generate", "screen.repair"}:
+        if not isinstance(fields.get("reviewedAnalysis"), dict):
+            raise ValueError("Headless generation requires a reviewed analysis.")
+    if prompt.operation in {"screen.analyze.local", "screen.review-plan", "screen.generate", "screen.repair"}:
+        if not (fields.get("sourceContext") or fields.get("capturedContext") or fields.get("sourceSections")):
+            raise ValueError("Headless Screen tasks require captured Figma evidence.")
 
 
 class OpenSession(BaseModel):
@@ -78,6 +99,8 @@ class Prompt(BaseModel):
 
 
 class KiroSession:
+    execution_mode = "acp"
+
     def __init__(self, process):
         self.process = process
         self.pending = {}
@@ -227,10 +250,16 @@ def error_response(_, error):
 async def start_session(request: Request):
     sessions = authorize(request)
     options = await read_request(request, OpenSession)
+    purpose = request.headers.get("x-sfdc-kiro-purpose")
+    if purpose is not None and (purpose not in _MODES or options.readFigma):
+        raise HTTPException(422, "Invalid Kiro session purpose.")
+    mode = kiro_mode(purpose) if purpose else "acp"
+    if mode not in {"acp", "headless"}:
+        raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
     if len(sessions) >= MAX_SESSIONS:
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     session_id = uuid4().hex
-    session = await KiroSession.start()
+    session = HeadlessKiroSession(read_key(), purpose=purpose) if mode == "headless" else await KiroSession.start()
     if len(sessions) >= MAX_SESSIONS:
         await session.close()
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
@@ -258,7 +287,7 @@ async def start_session(request: Request):
             if not task.done():
                 task.cancel()
         await asyncio.gather(opening, disconnect, return_exceptions=True)
-    return {"id": session_id}
+    return {"id": session_id, "executionMode": session.execution_mode}
 
 
 @router.get("/{session_id}/events")
@@ -290,16 +319,25 @@ async def authorize_figma(request: Request, session_id: str):
 async def prompt_session(request: Request, session_id: str):
     session = get_session(request, session_id)
     prompt = await read_request(request, Prompt)
+    execution_mode = session.execution_mode
     try:
+        if execution_mode == "headless":
+            if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
+                raise ValueError("Unsupported operation for the headless session.")
+            _validate_headless_prompt(prompt)
+        fields = await project_screen_fields(prompt.operation, prompt.fields)
+        if fields is not prompt.fields:
+            prompt = prompt.model_copy(update={"fields": fields})
         text = prompt.build()
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
     payload = text.encode()
     operation = prompt.operation or "prompt"
-    logger.info("Kiro %s started (%s)", operation, session_id[:8])
+    logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     result = await session.call("prompt", {"text": text, "png": prompt.png})
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
-    return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload)}
+    return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
+            "executionMode": execution_mode}
 
 
 @router.delete("/{session_id}", status_code=204)

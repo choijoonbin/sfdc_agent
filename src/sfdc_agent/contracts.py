@@ -5,10 +5,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+ProviderName = Literal["kiro", "openai", "azure"]
+
+
 class PilotRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider: Literal["kiro", "openai"] = "kiro"
+    provider: ProviderName = "kiro"
     model: str | None = None
     target: Literal["all", "screen", "story"] = "all"
     reference_manifest: str | None = None

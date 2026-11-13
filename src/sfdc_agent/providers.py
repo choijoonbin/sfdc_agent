@@ -226,4 +226,8 @@ def create_provider(
         if not model:
             raise ProviderError("OPENAI_MODEL_MISSING", "Specify a model or set OPENAI_MODEL.")
         return OpenAIProvider(model, timeout)
-    raise ProviderError("MODEL_PROVIDER_UNKNOWN", "Choose the kiro or openai provider.")
+    if name == "azure":
+        from .azure_provider import AzureOpenAIProvider, AzureSettings
+
+        return AzureOpenAIProvider(AzureSettings.from_environment(), timeout, model)
+    raise ProviderError("MODEL_PROVIDER_UNKNOWN", "Choose the kiro, openai or azure provider.")

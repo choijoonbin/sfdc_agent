@@ -12,6 +12,8 @@ BASE_PATH = '/internal/kiro/sessions'
 
 
 class StubSession:
+    execution_mode = 'acp'
+
     def __init__(self):
         self.closed = False
         self.events = [{'type': 'figma-auth-required'}]

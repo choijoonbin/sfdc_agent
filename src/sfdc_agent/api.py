@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import store_for_project
 from .contracts import PilotRequest
-from .kiro_gateway import SessionError, error_response, kiro_lifespan, router
+from .kiro_gateway import SessionError, error_response, kiro_lifespan, kiro_mode, router
 from .storage import read_json
 
 app = FastAPI(title="SFDC Agent", lifespan=kiro_lifespan)
@@ -18,7 +18,8 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ready", "kiroSessionProtocol": 1}
+    return {"status": "ready", "kiroSessionProtocol": 1, "screenKiroMode": kiro_mode("screen"),
+            "storyKiroMode": kiro_mode("story")}
 
 
 @app.post("/runs", status_code=202)

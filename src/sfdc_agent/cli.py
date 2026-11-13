@@ -2,16 +2,19 @@
 
 import argparse
 import fcntl
+import logging
 import re
 import sys
 import time
 from pathlib import Path
+from typing import get_args
+
 from .config import project_root, store_for_project, ui_root
 
-from .contracts import PilotRequest
+from .contracts import PilotRequest, ProviderName
 from .engine import NodeEngine
 from .pilot import run_pilot
-from .providers import create_provider
+from .providers import ProviderError, create_provider
 from .storage import RunStore
 
 
@@ -25,6 +28,9 @@ def execute(store: RunStore, row: dict) -> int:
     run_id = row["id"]
     try:
         request = PilotRequest.model_validate_json(row["request"])
+        if request.provider == "azure":
+            logging.basicConfig()
+            logging.getLogger("sfdc_agent.azure_provider").setLevel(logging.INFO)
         provider = create_provider(request.provider,
                                    timeout=request.model_timeout, model=request.model)
         result = run_pilot(store, run_id, request, NodeEngine(project_root(), ui_root()), provider)
@@ -68,7 +74,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="sfdc-agent")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("pilot")
-    run.add_argument("--provider", choices=("kiro", "openai"), default="kiro")
+    run.add_argument("--provider", choices=get_args(ProviderName), default="kiro")
     run.add_argument("--model")
     run.add_argument("--model-timeout", type=int, default=PilotRequest.model_fields["model_timeout"].default)
     run.add_argument("--target", choices=("all", "screen", "story"), default="all")
@@ -78,7 +84,16 @@ def main() -> int:
     resume = sub.add_parser("resume")
     resume.add_argument("id", type=valid_id)
     sub.add_parser("serve")
+    sub.add_parser("check-azure", help="Validate local Azure configuration without contacting the gateway.")
     args = parser.parse_args()
+    if args.command == "check-azure":
+        try:
+            create_provider("azure")
+        except ProviderError as error:
+            print(f"{error.code}: {error}", file=sys.stderr)
+            return 1
+        print("Azure configuration is ready. No network request was made.")
+        return 0
     if args.command == "serve":
         import uvicorn
         uvicorn.run("sfdc_agent.api:app", host="127.0.0.1", port=8765, timeout_graceful_shutdown=8)
