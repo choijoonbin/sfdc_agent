@@ -202,13 +202,19 @@ class AzureOpenAIProvider:
         self._token = _EntraToken(settings)
 
     def complete(self, task: str, evidence: dict | str, schema: dict) -> dict:
+        return self._complete([
+            {"role": "system", "content": _prompt(task, schema)},
+            {"role": "user", "content": _evidence_text(evidence)},
+        ])
+
+    def complete_rendered(self, text: str) -> dict:
+        return self._complete([{"role": "user", "content": text}])
+
+    def _complete(self, messages: list[dict[str, str]]) -> dict:
         settings = self.settings
         body = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": _prompt(task, schema)},
-                {"role": "user", "content": _evidence_text(evidence)},
-            ],
+            "messages": messages,
             "max_completion_tokens": settings.max_completion_tokens,
         }
         if settings.reasoning_effort:

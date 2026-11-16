@@ -16,4 +16,4 @@ sfdc-agent = "sfdc_agent.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-sfdc_agent = ["*.mjs"]
+sfdc_agent = ["*.mjs", "prompt_templates_v1/*.txt"]

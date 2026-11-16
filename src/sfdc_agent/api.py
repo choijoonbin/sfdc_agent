@@ -1,6 +1,7 @@
 """Loopback API for interactive model sessions and background pilot runs."""
 
 import re
+import sqlite3
 
 from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -8,18 +9,25 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .config import store_for_project
 from .contracts import PilotRequest
 from .kiro_gateway import SessionError, error_response, kiro_lifespan, kiro_mode, router
+from .prompt_api import router as prompt_router
+from .prompt_registry import RegistryError, runtime_release
 from .storage import read_json
 
 app = FastAPI(title="SFDC Agent", lifespan=kiro_lifespan)
 app.include_router(router)
+app.include_router(prompt_router)
 app.add_exception_handler(SessionError, error_response)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 
 
 @app.get("/health")
 def health() -> dict:
+    try:
+        release_id = runtime_release().id
+    except (RegistryError, sqlite3.Error):
+        raise HTTPException(503, "The active prompt release is unavailable.") from None
     return {"status": "ready", "kiroSessionProtocol": 1, "screenKiroMode": kiro_mode("screen"),
-            "storyKiroMode": kiro_mode("story")}
+            "storyKiroMode": kiro_mode("story"), "promptReleaseId": release_id}
 
 
 @app.post("/runs", status_code=202)

@@ -88,3 +88,17 @@ SFDC_AGENT_SCREEN_KIRO_MODE=headless SFDC_AGENT_STORY_KIRO_MODE=headless .venv/b
 ```
 
 Screen은 Figma REST에서 선택한 노드의 원본을 읽는다. REST를 사용할 수 없고 버전을 별도로 지정하지 않은 경우에는 일치하는 등록 `.fig` 사본을 사용한다. 저장된 원본 근거를 헤드리스 분석과 LWC 생성에 전달한다. 검토가 필요한 분석은 기존 화면에서 검토한 뒤 같은 분석으로 생성한다. 원본을 확보할 수 없으면 변환 화면에 원인을 표시한다. `/health`의 `screenKiroMode`와 `storyKiroMode`에서 각 기능의 설정을 확인한다.
+
+## 프롬프트 관리
+
+4175 개발 작업공간의 상단 사용자 메뉴에서 **프롬프트 관리**를 열면 Screen 9종, Story 3종의 활성 본문과 사용 가능한 변수를 볼 수 있다. **초안 저장 → 검증 → 활성화**로 적용하고, 이력에서 이전에 활성화한 버전을 복원한다. 검증은 템플릿 변수와 코드에 포함된 합성 입력의 렌더링을 검사한다. 실제 Figma 변환 품질은 모델 시험과 Screen·Story 회귀 검사에서 확인한다.
+
+최초 릴리스 `prompts-v1`은 `src/sfdc_agent/prompt_templates_v1/`에 보존한다. 초안과 확정 버전, 활성 릴리스, 변경 이력은 Agent가 `.prompt-management/prompts.sqlite3`에 저장한다. `SFDC_AGENT_PROMPT_DB`로 별도 경로를 지정할 수 있다. 진행 중인 작업과 저장된 분석은 생성·보정에서 시작할 때의 릴리스를 사용한다. 릴리스 정보가 없는 이전 분석은 최초 버전을 사용한다. 변경 이력을 다른 환경으로 옮길 때는 SQLite 백업을 사용한다.
+
+4175 서버와 Agent에 같은 서버 전용 `SFDC_AGENT_PROMPT_ADMIN_TOKEN`을 설정하고, 4175에 편집과 활성화를 담당할 Salesforce 사용자 ID를 `SFDC_UI_PROMPT_EDITOR_IDS`, `SFDC_UI_PROMPT_PUBLISHER_IDS`로 지정한다. 로컬 파일로 관리할 경우 Agent는 `.prompt-management/admin-token`을 읽고, 4175는 `SFDC_Ui/.prompt-management/access.json`의 `token`, `editorIds`, `publisherIds`를 읽는다. 두 파일은 실행 사용자 소유와 `0600` 권한을 사용한다. 설정한 계정이 Salesforce에 연결된 세션에서 편집하거나 활성화할 수 있다.
+
+같은 릴리스의 텍스트 프롬프트를 다른 모델에서 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma MCP 도구를 직접 호출하는 작업은 기존 Kiro 경로에서 실행한다.
+
+```sh
+.venv/bin/sfdc-agent evaluate-prompt story.classification fixture.json --provider azure --release prompts-v1
+```

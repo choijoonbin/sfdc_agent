@@ -2,8 +2,10 @@
 
 import argparse
 import fcntl
+import json
 import logging
 import re
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -15,6 +17,7 @@ from .contracts import PilotRequest, ProviderName
 from .engine import NodeEngine
 from .pilot import run_pilot
 from .providers import ProviderError, create_provider
+from .prompt_registry import RegistryError
 from .storage import RunStore
 
 
@@ -85,7 +88,35 @@ def main() -> int:
     resume.add_argument("id", type=valid_id)
     sub.add_parser("serve")
     sub.add_parser("check-azure", help="Validate local Azure configuration without contacting the gateway.")
+    prompt = sub.add_parser("evaluate-prompt", help="Run a versioned text prompt with a selected model provider.")
+    prompt.add_argument("operation")
+    prompt.add_argument("fields", type=Path, help="Path to JSON operation fields from a test fixture.")
+    prompt.add_argument("--provider", choices=get_args(ProviderName), required=True)
+    prompt.add_argument("--model")
+    prompt.add_argument("--model-timeout", type=int, default=120)
+    prompt.add_argument("--release")
     args = parser.parse_args()
+    if args.command == "evaluate-prompt":
+        from .prompt_provider_eval import evaluate_prompt_provider
+
+        try:
+            with args.fields.open("rb") as stream:
+                source = stream.read(8 * 1024 * 1024 + 1)
+            if len(source) > 8 * 1024 * 1024:
+                raise ValueError
+            result = evaluate_prompt_provider(args.operation, json.loads(source), args.provider, model=args.model,
+                                              timeout=args.model_timeout, release_id=args.release)
+        except (ProviderError, RegistryError) as error:
+            print(f"{error.code}: {error}", file=sys.stderr)
+            return 1
+        except sqlite3.Error:
+            print("PROMPT_STORE_UNAVAILABLE: The prompt store could not be opened.", file=sys.stderr)
+            return 1
+        except (OSError, ValueError):
+            print("The evaluation fields could not be read as a JSON object within 8 MiB.", file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     if args.command == "check-azure":
         try:
             create_provider("azure")

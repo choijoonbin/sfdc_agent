@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -16,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .kiro_screen_projection import project_screen_fields
+from .prompt_registry import RegistryError, runtime_release
 from .providers import _kiro_environment
 
 router = APIRouter(prefix="/internal/kiro/sessions")
@@ -60,6 +62,7 @@ class OpenSession(BaseModel):
     model_config = ConfigDict(extra="forbid")
     fileKey: str | None = Field(default=None, pattern=r"^[A-Za-z0-9]{1,128}$")
     readFigma: bool = False
+    promptReleaseId: str | None = Field(default=None, pattern=r"^prompts-(?:v1|[a-f0-9]{32})$")
 
     @model_validator(mode="after")
     def restrict_figma(self):
@@ -75,7 +78,7 @@ class Prompt(BaseModel):
     fields: dict | None = None
     png: str | None = None
 
-    def build(self) -> str:
+    def build(self, *, templates=None) -> str:
         if self.operation is not None and self.operation not in OPERATIONS:
             raise ValueError("Unsupported Kiro operation.")
         if self.fields is None and self.text:
@@ -83,10 +86,10 @@ class Prompt(BaseModel):
         elif self.text is None and self.fields is not None and self.operation:
             if self.operation.startswith("screen."):
                 from .screen_tasks import build_screen_task
-                text = build_screen_task(self.operation, self.fields)
+                text = build_screen_task(self.operation, self.fields, templates=templates)
             else:
                 from .story_tasks import build_story_task
-                text = build_story_task(self.operation, self.fields)
+                text = build_story_task(self.operation, self.fields, templates=templates)
         else:
             raise ValueError("Send a prompt or structured task fields.")
         if self.png is not None:
@@ -258,11 +261,18 @@ async def start_session(request: Request):
         raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
     if len(sessions) >= MAX_SESSIONS:
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
+    try:
+        release = await asyncio.to_thread(runtime_release, options.promptReleaseId)
+    except RegistryError as error:
+        raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", str(error)) from None
+    except sqlite3.Error:
+        raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", "프롬프트 릴리스를 불러올 수 없습니다.") from None
     session_id = uuid4().hex
     session = HeadlessKiroSession(read_key(), purpose=purpose) if mode == "headless" else await KiroSession.start()
     if len(sessions) >= MAX_SESSIONS:
         await session.close()
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
+    session.prompt_release = release
     sessions[session_id] = session
 
     async def disconnected():
@@ -287,7 +297,7 @@ async def start_session(request: Request):
             if not task.done():
                 task.cancel()
         await asyncio.gather(opening, disconnect, return_exceptions=True)
-    return {"id": session_id, "executionMode": session.execution_mode}
+    return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id}
 
 
 @router.get("/{session_id}/events")
@@ -320,6 +330,7 @@ async def prompt_session(request: Request, session_id: str):
     session = get_session(request, session_id)
     prompt = await read_request(request, Prompt)
     execution_mode = session.execution_mode
+    release = session.prompt_release
     try:
         if execution_mode == "headless":
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
@@ -328,7 +339,7 @@ async def prompt_session(request: Request, session_id: str):
         fields = await project_screen_fields(prompt.operation, prompt.fields)
         if fields is not prompt.fields:
             prompt = prompt.model_copy(update={"fields": fields})
-        text = prompt.build()
+        text = prompt.build(templates=release.templates)
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
     payload = text.encode()
@@ -337,7 +348,8 @@ async def prompt_session(request: Request, session_id: str):
     result = await session.call("prompt", {"text": text, "png": prompt.png})
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
     return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
-            "executionMode": execution_mode}
+            "executionMode": execution_mode, "promptReleaseId": release.id,
+            **({"promptVersion": release.versions[operation]} if prompt.fields is not None else {})}
 
 
 @router.delete("/{session_id}", status_code=204)
