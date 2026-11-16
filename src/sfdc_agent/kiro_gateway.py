@@ -7,8 +7,9 @@ import json
 import logging
 import os
 import sqlite3
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
+from time import monotonic
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request
@@ -17,7 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .kiro_screen_projection import project_screen_fields
-from .prompt_registry import RegistryError, runtime_release
+from .prompt_registry import PROMPTS, RegistryError, runtime_release
+from .prompt_run_values import PromptRunValues, capture_prompt_run, trace_owner
 from .providers import _kiro_environment
 
 router = APIRouter(prefix="/internal/kiro/sessions")
@@ -202,10 +204,12 @@ class KiroSession:
 @asynccontextmanager
 async def kiro_lifespan(app):
     sessions = app.state.kiro_sessions = {}
+    prompt_run_values = app.state.prompt_run_values = PromptRunValues()
 
     async def reap():
         while True:
             await asyncio.sleep(30)
+            prompt_run_values.purge()
             now = asyncio.get_running_loop().time()
             expired = [key for key, value in sessions.items() if value.expiry < now or value.closed or value.reader.done()]
             await asyncio.gather(*(sessions.pop(key).close() for key in expired))
@@ -331,6 +335,7 @@ async def prompt_session(request: Request, session_id: str):
     prompt = await read_request(request, Prompt)
     execution_mode = session.execution_mode
     release = session.prompt_release
+    owner = trace_owner(request.headers) if prompt.fields is not None and prompt.operation in PROMPTS else None
     try:
         if execution_mode == "headless":
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
@@ -339,13 +344,17 @@ async def prompt_session(request: Request, session_id: str):
         fields = await project_screen_fields(prompt.operation, prompt.fields)
         if fields is not prompt.fields:
             prompt = prompt.model_copy(update={"fields": fields})
-        text = prompt.build(templates=release.templates)
+        with capture_prompt_run(prompt.operation) if owner else nullcontext() as prompt_run:
+            text = prompt.build(templates=release.templates)
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
     payload = text.encode()
     operation = prompt.operation or "prompt"
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
+    started = monotonic()
     result = await session.call("prompt", {"text": text, "png": prompt.png})
+    if prompt_run is not None:
+        request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
     return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
             "executionMode": execution_mode, "promptReleaseId": release.id,

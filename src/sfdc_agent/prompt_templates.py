@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from functools import lru_cache
 from importlib.resources import files
 
+from .prompt_run_values import record_prompt_arguments
+
 
 _SECTION = re.compile(r"(?:\A|\n)@@section ([a-z][a-z0-9_]*)\n")
 _VARIABLE = re.compile(r"\{\{([a-z][a-z0-9_]*)\}\}")
@@ -94,6 +96,7 @@ class PromptTemplate:
         if operation not in source:
             raise ValueError("Missing prompt template.")
         self._templates = source
+        self.operation = operation
         self.sections = _validated_sections(operation, source[operation])
         self.signatures = _baseline_signatures(operation)
 
@@ -103,4 +106,6 @@ class PromptTemplate:
     def render(self, section: str = "main", **values: str) -> str:
         if self.signatures[section].keys() != values.keys():
             raise ValueError(f"Missing or unexpected values for prompt section {section}.")
-        return _VARIABLE.sub(lambda match: values[match[1]], self.sections[section])
+        rendered = _VARIABLE.sub(lambda match: values[match[1]], self.sections[section])
+        record_prompt_arguments(self.operation, section, values)
+        return rendered

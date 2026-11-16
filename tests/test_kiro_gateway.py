@@ -46,7 +46,7 @@ class StubSession:
 
 
 class GatewayTests(unittest.IsolatedAsyncioTestCase):
-    async def request(self, method, path, payload=None, *, trusted=True, extra_headers=(), disconnect=False):
+    async def request(self, method, path, payload=None, *, trusted=True, extra_headers=(), disconnect=False, query=b''):
         headers = [(b'host', b'127.0.0.1:8765')]
         if trusted:
             headers.append((b'x-sfdc-agent', b'1'))
@@ -71,7 +71,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         await app({
             'type': 'http', 'asgi': {'version': '3.0'}, 'http_version': '1.1',
             'scheme': 'http', 'method': method, 'path': path, 'root_path': '',
-            'query_string': b'', 'headers': headers, 'server': ('127.0.0.1', 8765),
+            'query_string': query, 'headers': headers, 'server': ('127.0.0.1', 8765),
             'client': ('127.0.0.1', 41000),
         }, receive, send)
         body = b''.join(message.get('body', b'') for message in messages)
@@ -201,6 +201,61 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(error['error']['code'], 'KIRO_TASK_INVALID')
             self.assertEqual([method for method, _ in session.calls], ['open'])
         self.assertTrue(session.closed)
+
+    async def test_run_values_match_sent_prompt_and_are_scoped_to_the_prompt_request_owner(self):
+        story_run = '/internal/prompts/story.analysis/runs'
+        screen_run = '/internal/prompts/screen.capture/runs'
+        alice = ((b'x-sfdc-prompt-trace-owner', b'a' * 64),)
+        bob = ((b'x-sfdc-prompt-trace-owner', b'b' * 64),)
+        session = StubSession()
+        async with kiro_lifespan(app):
+            with patch.object(KiroSession, 'start', return_value=session):
+                _, opened = await self.request('POST', BASE_PATH, {})
+            path = f'{BASE_PATH}/{opened["id"]}/prompt'
+            original = '{\n  "scope": "번호이동"\n}'
+            story = {'operation': 'story.analysis',
+                     'fields': {'evidence': original, 'categories': '{}', 'maxFacts': 1}}
+
+            self.assertEqual(await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence'),
+                             (200, {'run': None}))
+            _, reply = await self.request('POST', path, story, extra_headers=alice)
+            self.assertTrue(session.calls[-1][1]['text'].endswith(original))
+            self.assertNotIn('values', reply)
+            status, response = await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence')
+            self.assertEqual(status, 200)
+            run = response['run']
+            self.assertEqual(run['values'], [{'section': 'main', 'value': original}])
+            self.assertEqual(run['promptReleaseId'], reply['promptReleaseId'])
+            self.assertEqual(run['promptVersion'], reply['promptVersion'])
+            self.assertEqual(run['executionMode'], 'acp')
+            self.assertEqual(await self.request('GET', story_run, extra_headers=bob, query=b'variable=evidence'),
+                             (200, {'run': None}))
+            for headers, trusted in (((), True), (alice, False), ((*alice, (b'origin', b'https://localhost:4175')), True)):
+                status, _ = await self.request('GET', story_run, trusted=trusted, extra_headers=headers, query=b'variable=evidence')
+                self.assertEqual(status, 403)
+            self.assertEqual((await self.request('GET', story_run, extra_headers=alice, query=b'variable=unknown'))[0], 404)
+
+            second = {**story, 'fields': {**story['fields'], 'evidence': '{"password":"fixture-secret"}'}}
+            self.assertEqual((await self.request('POST', path, second, extra_headers=bob))[0], 200)
+            _, isolated = await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence')
+            _, protected = await self.request('GET', story_run, extra_headers=bob, query=b'variable=evidence')
+            self.assertEqual(isolated['run'], run)
+            self.assertEqual(protected['run']['values'], [{'section': 'main', 'redacted': True}])
+
+            invalid = {**story, 'fields': {**story['fields'], 'maxFacts': 0}}
+            self.assertEqual((await self.request('POST', path, invalid, extra_headers=alice))[0], 502)
+            with patch.object(session, 'call', side_effect=SessionError('KIRO_UNAVAILABLE', 'Unavailable')):
+                self.assertEqual((await self.request('POST', path, second, extra_headers=alice))[0], 502)
+            _, unchanged = await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence')
+            self.assertEqual(unchanged['run'], run)
+
+            capture = {'operation': 'screen.capture', 'fields': {'fileKey': 'FileA', 'nodeId': '1:2', 'maxDimension': 640}}
+            self.assertEqual((await self.request('POST', path, capture, extra_headers=alice))[0], 200)
+            _, reference = await self.request('GET', screen_run, extra_headers=alice, query=b'variable=reference')
+            _, screenshot = await self.request('GET', screen_run, extra_headers=alice, query=b'variable=screenshot')
+            self.assertEqual(reference['run']['id'], screenshot['run']['id'])
+            self.assertEqual(reference['run']['values'], [])
+            self.assertEqual(json.loads(screenshot['run']['values'][0]['value'])['nodeId'], '1:2')
 
     async def test_failed_open_releases_the_session(self):
         session = StubSession()

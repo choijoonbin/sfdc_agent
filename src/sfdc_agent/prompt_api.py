@@ -12,7 +12,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .config import project_root
-from .prompt_registry import PromptRegistry, RegistryError, runtime_release
+from .prompt_registry import PROMPTS, PromptRegistry, RegistryError, runtime_release
+from .prompt_run_values import trace_owner
+from .prompt_templates import template_placeholders
 
 
 router = APIRouter(prefix="/internal/prompts")
@@ -112,6 +114,21 @@ async def active(request: Request):
 @router.get("/{operation}")
 async def detail(request: Request, operation: str):
     return await _response(request, lambda _: PromptRegistry().detail(operation))
+
+
+@router.get("/{operation}/runs")
+async def get_prompt_run(request: Request, operation: str, variable: str):
+    try:
+        _authorized(request)
+        owner = trace_owner(request.headers)
+        if owner is None:
+            raise RegistryError("PROMPT_TRACE_PERMISSION_REQUIRED", "실행 입력값 조회 권한을 확인할 수 없습니다.", 403)
+        if operation not in PROMPTS or variable not in template_placeholders(operation):
+            raise RegistryError("PROMPT_NOT_FOUND", "조회할 프롬프트 변수를 찾을 수 없습니다.", 404)
+        run = request.app.state.prompt_run_values.get(owner, operation, variable)
+        return JSONResponse({"run": run}, headers={"Cache-Control": "no-store"})
+    except RegistryError as error:
+        return _error(error.code, str(error), error.status)
 
 
 @router.post("/drafts")

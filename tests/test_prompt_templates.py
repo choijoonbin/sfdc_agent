@@ -1,8 +1,11 @@
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
-from sfdc_agent.prompt_templates import load_baseline_templates, preview_template, validate_template
+from sfdc_agent.prompt_registry import BASELINE_RELEASE, runtime_release
+from sfdc_agent.prompt_run_values import PromptRunValues, capture_prompt_run
+from sfdc_agent.prompt_templates import load_baseline_templates, preview_template, template_placeholders, validate_template
 from sfdc_agent.screen_tasks import build_screen_task
 from sfdc_agent.story_tasks import build_story_task
 
@@ -122,8 +125,42 @@ class PromptTemplateTests(unittest.TestCase):
         for case, (operation, fields) in cases.items():
             with self.subTest(case=case):
                 builder = build_story_task if operation.startswith("story.") else build_screen_task
-                actual = hashlib.sha256(builder(operation, fields).encode("utf-8")).hexdigest()
-                self.assertEqual(actual, EXPECTED_BASELINE[case])
+                with capture_prompt_run(operation) as capture:
+                    actual = builder(operation, fields)
+                self.assertEqual(hashlib.sha256(actual.encode("utf-8")).hexdigest(), EXPECTED_BASELINE[case])
+                self.assertLessEqual(capture.values.keys(), set(template_placeholders(operation)))
+                for items in capture.values.values():
+                    for entry in items:
+                        if "value" in entry:
+                            self.assertIn(entry["value"], actual)
+                if case == "plan_repair_with_evidence":
+                    self.assertEqual(capture.values["diagnostic"], [
+                        {"section": "with_evidence", "value": json.dumps(fields["diagnostic"], ensure_ascii=False)},
+                    ])
+                if case == "repair_with_evidence":
+                    self.assertEqual(capture.values["prompt"], [{"section": "with_evidence", "redacted": True}])
+
+    def test_runtime_values_expire_and_older_completions_do_not_overwrite_latest(self):
+        release = runtime_release(BASELINE_RELEASE)
+        owner = 'a' * 64
+        operation = "story.classification"
+        store = PromptRunValues()
+        now = [2.0]
+        with patch("sfdc_agent.prompt_run_values.monotonic", side_effect=lambda: now[0]), patch(
+            "sfdc_agent.prompt_run_values._MAX_VALUE_BYTES", 50,
+        ):
+            new_evidence = json.dumps({"title": "a" * 70})
+            with capture_prompt_run(operation) as latest:
+                build_story_task(operation, {"evidence": new_evidence})
+            store.save(owner, latest, started=2, release=release, mode="headless")
+            run = store.get(owner, operation, "evidence")
+            self.assertEqual(run["values"], [{"section": "main", "omitted": True}])
+            with capture_prompt_run(operation) as older:
+                build_story_task(operation, {"evidence": "{}"})
+            store.save(owner, older, started=1, release=release, mode="headless")
+            self.assertEqual(store.get(owner, operation, "evidence"), run)
+            now[0] += 60 * 60
+            self.assertIsNone(store.get(owner, operation, "evidence"))
 
     def test_preview_and_edits_keep_evidence_and_validate_template_contract(self):
         operation, fields = template_cases()["story_analysis"]
