@@ -9,6 +9,16 @@ from sfdc_agent.kiro_gateway import KiroSession, SessionError, kiro_lifespan
 
 
 BASE_PATH = '/internal/kiro/sessions'
+CANDIDATE_PATH = '/internal/kiro/design-standards/candidate'
+
+
+def candidate_payload():
+    return {
+        'designVersion': '2.0', 'baseReleaseId': 'nextbss-1.9-' + 'a' * 64,
+        'sources': {'guide': {'fileKey': 'FileA', 'revision': '1234567890123'},
+                    'library': {'fileKey': 'FileB', 'sha256': 'b' * 64}},
+        'evidence': [{'source': 'guide', 'nodeId': '1:2', 'title': 'Typography', 'text': 'Pretendard'}],
+    }
 
 
 class StubSession:
@@ -66,6 +76,58 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         }, receive, send)
         body = b''.join(message.get('body', b'') for message in messages)
         return messages[0]['status'], json.loads(body) if body else None
+
+    async def test_design_candidate_returns_only_reviewable_cited_proposals(self):
+        data = candidate_payload()
+        proposal = {'summary': '서체 기준의 변경을 확인합니다.', 'suggestions': [{
+            'source': 'guide', 'nodeId': '1:2', 'title': '서체', 'note': '기존 토큰과 확인하세요.',
+        }]}
+        session = StubSession()
+        async with kiro_lifespan(app):
+            with patch('sfdc_agent.design_candidate.read_key', return_value='test-key'), patch(
+                'sfdc_agent.design_candidate.HeadlessKiroSession', return_value=session
+            ) as launch, patch.object(session, 'call', return_value={'text': json.dumps(proposal)}) as call:
+                status, reply = await self.request('POST', CANDIDATE_PATH, data)
+        self.assertEqual(status, 200)
+        launch.assert_called_once_with('test-key', purpose='design-standards')
+        self.assertEqual(call.call_args.args[0], 'prompt')
+        prompt = call.call_args.args[1]['text']
+        self.assertIn('"text": "Pretendard"', prompt)
+        self.assertEqual(reply, {**proposal, 'promptVersion': 'design-candidate-v1',
+                                'promptDigest': hashlib.sha256(prompt.encode()).hexdigest()})
+        self.assertTrue(session.closed)
+
+    async def test_design_candidate_rejects_untrusted_or_unpinned_input_before_launch(self):
+        data = candidate_payload()
+        unpinned = {**data, 'sources': {**data['sources'], 'guide': {'fileKey': 'FileA'}}}
+        async with kiro_lifespan(app):
+            with patch('sfdc_agent.design_candidate.read_key') as key:
+                self.assertEqual((await self.request('POST', CANDIDATE_PATH, data, trusted=False))[0], 403)
+                self.assertEqual((await self.request(
+                    'POST', CANDIDATE_PATH, data, extra_headers=((b'origin', b'https://localhost:4175'),)
+                ))[0], 403)
+                self.assertEqual((await self.request('POST', CANDIDATE_PATH, unpinned))[0], 422)
+                self.assertEqual((await self.request(
+                    'POST', CANDIDATE_PATH, {**data, 'evidence': [{**data['evidence'][0], 'text': 'a' * 500000}]}
+                ))[0], 413)
+                key.assert_not_called()
+
+    async def test_design_candidate_drops_outputs_with_unknown_citations_or_extra_mutations(self):
+        candidate = candidate_payload()
+        proposal = {'summary': '서체', 'suggestions': [{
+            'source': 'library', 'nodeId': '1:2', 'title': '서체', 'note': '검토',
+        }]}
+        async with kiro_lifespan(app):
+            for answer in (proposal, {**proposal, 'suggestions': [], 'activate': True}):
+                with self.subTest(answer=answer):
+                    session = StubSession()
+                    with patch('sfdc_agent.design_candidate.read_key', return_value='test-key'), patch(
+                        'sfdc_agent.design_candidate.HeadlessKiroSession', return_value=session
+                    ), patch.object(session, 'call', return_value={'text': json.dumps(answer)}):
+                        status, reply = await self.request('POST', CANDIDATE_PATH, candidate)
+                    self.assertEqual(status, 502)
+                    self.assertEqual(reply['error']['code'], 'KIRO_INVALID_PROPOSAL')
+                    self.assertTrue(session.closed)
 
     async def test_session_preserves_oauth_and_builds_structured_screen_and_story_prompts(self):
         session = StubSession()

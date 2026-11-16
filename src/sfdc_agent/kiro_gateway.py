@@ -226,10 +226,10 @@ def authorize(request):
     return request.app.state.kiro_sessions
 
 
-async def read_request(request, contract):
+async def read_request(request, contract, limit=REQUEST_LIMIT):
     data = bytearray()
     async for chunk in request.stream():
-        if len(data) + len(chunk) > REQUEST_LIMIT:
+        if len(data) + len(chunk) > limit:
             raise HTTPException(413, "Kiro request exceeds the supported size.")
         data.extend(chunk)
     try:

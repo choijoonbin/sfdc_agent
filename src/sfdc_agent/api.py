@@ -8,6 +8,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import store_for_project
 from .contracts import PilotRequest
+from .design_candidate import router as design_candidate_router
 from .kiro_gateway import SessionError, error_response, kiro_lifespan, kiro_mode, router
 from .prompt_api import router as prompt_router
 from .prompt_registry import RegistryError, runtime_release
@@ -16,6 +17,7 @@ from .storage import read_json
 app = FastAPI(title="SFDC Agent", lifespan=kiro_lifespan)
 app.include_router(router)
 app.include_router(prompt_router)
+app.include_router(design_candidate_router)
 app.add_exception_handler(SessionError, error_response)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 
