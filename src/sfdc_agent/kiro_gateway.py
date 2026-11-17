@@ -27,6 +27,8 @@ logger = logging.getLogger("uvicorn.error")
 REQUEST_LIMIT = 18 * 1024 * 1024
 RESPONSE_LIMIT = 48 * 1024 * 1024
 MAX_SESSIONS = 12
+MAX_IDLE_PNG_SESSIONS = 4
+FIGMA_PNG_PURPOSE = "figma-png"
 OPERATIONS = {
     "screen.analyze", "screen.analyze.local", "screen.capture", "screen.discovery", "screen.metadata",
     "screen.generate", "screen.repair", "screen.plan", "screen.plan.repair", "screen.review-plan",
@@ -113,6 +115,9 @@ class KiroSession:
         self.updated = asyncio.Event()
         self.counter = 0
         self.expiry = 0.0
+        self.figma_png_file_key = None
+        self.figma_connected = False
+        self.png_prompt_active = False
         self.touch()
         self.closed = False
         self.reader = asyncio.create_task(self.read())
@@ -139,7 +144,13 @@ class KiroSession:
             while line := await self.process.stdout.readline():
                 message = json.loads(line)
                 if "event" in message:
-                    self.events.append(message["event"])
+                    event = message["event"]
+                    if event.get("stage") == "figma-connected":
+                        self.figma_connected = True
+                    elif (event.get("type") in {"figma-auth", "figma-auth-required"} or
+                            event.get("stage") in {"figma-connecting", "figma-auth-required", "figma-unavailable"}):
+                        self.figma_connected = False
+                    self.events.append(event)
                     self.events = self.events[-128:]
                     self.updated.set()
                     continue
@@ -204,15 +215,15 @@ class KiroSession:
 @asynccontextmanager
 async def kiro_lifespan(app):
     sessions = app.state.kiro_sessions = {}
+    png_idle = app.state.kiro_png_idle = {}
+    app.state.kiro_png_in_use = set()
     prompt_run_values = app.state.prompt_run_values = PromptRunValues()
 
     async def reap():
         while True:
             await asyncio.sleep(30)
             prompt_run_values.purge()
-            now = asyncio.get_running_loop().time()
-            expired = [key for key, value in sessions.items() if value.expiry < now or value.closed or value.reader.done()]
-            await asyncio.gather(*(sessions.pop(key).close() for key in expired))
+            await reap_kiro_sessions(app)
 
     reaper = asyncio.create_task(reap())
     try:
@@ -220,7 +231,61 @@ async def kiro_lifespan(app):
     finally:
         reaper.cancel()
         await asyncio.gather(reaper, return_exceptions=True)
-        await asyncio.gather(*(session.close() for session in sessions.values()))
+        await asyncio.gather(*(session.close() for session in [*sessions.values(), *png_idle.values()]))
+
+
+def session_expired(session, now):
+    return session.expiry <= now or session.closed or session.reader.done()
+
+
+def figma_png_file_key(session):
+    key = getattr(session, "figma_png_file_key", None)
+    return key if isinstance(key, str) else None
+
+
+def png_session_reusable(session, now):
+    return (not session_expired(session, now) and session.figma_connected
+            and not session.pending and not session.png_prompt_active)
+
+
+async def reap_kiro_sessions(app):
+    now = asyncio.get_running_loop().time()
+    sessions = app.state.kiro_sessions
+    png_idle = app.state.kiro_png_idle
+    expired = [session_id for session_id, session in sessions.items() if session_expired(session, now)]
+    unusable = [key for key, session in png_idle.items() if not png_session_reusable(session, now)]
+    # Reserve retiring file keys until the old process has stopped.
+    for key in unusable:
+        app.state.kiro_png_in_use.add(key)
+    await asyncio.gather(*(finish_png_process(app, key, png_idle.pop(key)) for key in unusable),
+                         *(close_kiro_lease(app, session_id) for session_id in expired))
+
+
+async def finish_png_process(app, key, session):
+    try:
+        await session.close()
+    finally:
+        app.state.kiro_png_in_use.discard(key)
+
+
+async def close_kiro_lease(app, session_id, *, reuse=False):
+    session = app.state.kiro_sessions.pop(session_id, None)
+    if session is None:
+        return
+    key = figma_png_file_key(session)
+    if key is None:
+        await session.close()
+        return
+    session.events.clear()
+    session.updated.set()  # Wake pending event polls so they can reject the ended lease.
+    now = asyncio.get_running_loop().time()
+    png_idle = app.state.kiro_png_idle
+    if reuse and len(png_idle) < MAX_IDLE_PNG_SESSIONS and png_session_reusable(session, now):
+        session.touch()
+        png_idle[key] = session
+        app.state.kiro_png_in_use.discard(key)
+    else:
+        await finish_png_process(app, key, session)
 
 
 def authorize(request):
@@ -244,7 +309,8 @@ async def read_request(request, contract, limit=REQUEST_LIMIT):
 
 def get_session(request, session_id):
     session = authorize(request).get(session_id)
-    if session is None or session.closed:
+    if session is None or session.closed or (figma_png_file_key(session) is not None and
+                                             session_expired(session, asyncio.get_running_loop().time())):
         raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
     return session
 
@@ -255,14 +321,32 @@ def error_response(_, error):
 
 @router.post("")
 async def start_session(request: Request):
-    sessions = authorize(request)
+    authorize(request)
     options = await read_request(request, OpenSession)
     purpose = request.headers.get("x-sfdc-kiro-purpose")
-    if purpose is not None and (purpose not in _MODES or options.readFigma):
+    figma_png = purpose == FIGMA_PNG_PURPOSE
+    if ((figma_png and not options.readFigma) or
+            (purpose is not None and not figma_png and (purpose not in _MODES or options.readFigma))):
         raise HTTPException(422, "Invalid Kiro session purpose.")
-    mode = kiro_mode(purpose) if purpose else "acp"
+    mode = kiro_mode(purpose) if purpose in _MODES else "acp"
     if mode not in {"acp", "headless"}:
         raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
+    if not figma_png:
+        return await open_kiro_lease(request, options, purpose, mode)
+    key = options.fileKey
+    in_use = request.app.state.kiro_png_in_use
+    if key in in_use:
+        raise SessionError("KIRO_BUSY", "같은 Figma 파일의 PNG 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
+    in_use.add(key)
+    try:
+        return await open_kiro_lease(request, options, purpose, mode, png_key=key)
+    except BaseException:
+        in_use.discard(key)
+        raise
+
+
+async def open_kiro_lease(request, options, purpose, mode, *, png_key=None):
+    sessions = request.app.state.kiro_sessions
     if len(sessions) >= MAX_SESSIONS:
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     try:
@@ -272,20 +356,36 @@ async def start_session(request: Request):
     except sqlite3.Error:
         raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", "프롬프트 릴리스를 불러올 수 없습니다.") from None
     session_id = uuid4().hex
+    if png_key is not None:
+        idle = request.app.state.kiro_png_idle.pop(png_key, None)
+        if idle is not None:
+            if len(sessions) < MAX_SESSIONS and png_session_reusable(idle, asyncio.get_running_loop().time()):
+                idle.touch()
+                idle.events[:] = [{"type": "status", "stage": "figma-connected"}]
+                idle.updated.set()
+                idle.prompt_release = release
+                sessions[session_id] = idle
+                return {"id": session_id, "executionMode": idle.execution_mode, "promptReleaseId": release.id}
+            await idle.close()
     session = HeadlessKiroSession(read_key(), purpose=purpose) if mode == "headless" else await KiroSession.start()
     if len(sessions) >= MAX_SESSIONS:
         await session.close()
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     session.prompt_release = release
+    if png_key is not None:
+        session.figma_png_file_key = png_key
     sessions[session_id] = session
 
     async def disconnected():
         while (await request.receive())["type"] != "http.disconnect":
             pass
 
-    opening = asyncio.create_task(session.call("open", {
+    open_options = {
         "reference": {"fileKey": options.fileKey}, "readFigma": options.readFigma,
-    }, timeout=65))
+    }
+    if png_key is not None:
+        open_options["figmaPng"] = True
+    opening = asyncio.create_task(session.call("open", open_options, timeout=65))
     disconnect = asyncio.create_task(disconnected())
     try:
         done, _ = await asyncio.wait((opening, disconnect), return_when=asyncio.FIRST_COMPLETED)
@@ -312,6 +412,7 @@ async def session_events(request: Request, session_id: str):
             await asyncio.wait_for(session.updated.wait(), 10)
         except TimeoutError:
             pass
+    get_session(request, session_id)  # A poll from a released lease must not consume the next lease's events.
     session.updated.clear()
     events, session.events = session.events, []
     if not events and session.reader.done():
@@ -321,12 +422,31 @@ async def session_events(request: Request, session_id: str):
 
 @router.post("/{session_id}/wait")
 async def wait_for_figma(request: Request, session_id: str):
-    return {"result": await get_session(request, session_id).call("wait", timeout=IDLE_SECONDS)}
+    return {"result": await call_kiro_lease(request, session_id, "wait", timeout=IDLE_SECONDS)}
 
 
 @router.post("/{session_id}/authorize")
 async def authorize_figma(request: Request, session_id: str):
-    return {"result": await get_session(request, session_id).call("authorize", timeout=35)}
+    return {"result": await call_kiro_lease(request, session_id, "authorize", timeout=35)}
+
+
+async def call_kiro_lease(request, session_id, method, params=None, *, timeout=610):
+    session = get_session(request, session_id)
+    png = figma_png_file_key(session) is not None
+    png_prompt = png and method == "prompt"
+    if png_prompt:
+        if session.png_prompt_active:
+            raise SessionError("KIRO_BUSY", "같은 Figma 파일의 PNG 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
+        session.png_prompt_active = True
+    try:
+        return await session.call(method, params, timeout=timeout)
+    except (SessionError, asyncio.CancelledError):
+        if png:
+            await close_kiro_lease(request.app, session_id)
+        raise
+    finally:
+        if png_prompt:
+            session.png_prompt_active = False
 
 
 @router.post("/{session_id}/prompt")
@@ -337,6 +457,10 @@ async def prompt_session(request: Request, session_id: str):
     release = session.prompt_release
     owner = trace_owner(request.headers) if prompt.fields is not None and prompt.operation in PROMPTS else None
     try:
+        if figma_png_file_key(session) is not None and (
+            prompt.operation not in {None, "screen.capture"} or prompt.png is not None
+        ):
+            raise ValueError("Figma PNG sessions only support export and screenshot prompts.")
         if execution_mode == "headless":
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
                 raise ValueError("Unsupported operation for the headless session.")
@@ -352,7 +476,7 @@ async def prompt_session(request: Request, session_id: str):
     operation = prompt.operation or "prompt"
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     started = monotonic()
-    result = await session.call("prompt", {"text": text, "png": prompt.png})
+    result = await call_kiro_lease(request, session_id, "prompt", {"text": text, "png": prompt.png})
     if prompt_run is not None:
         request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
@@ -363,6 +487,5 @@ async def prompt_session(request: Request, session_id: str):
 
 @router.delete("/{session_id}", status_code=204)
 async def end_session(request: Request, session_id: str):
-    sessions = authorize(request)
-    if session := sessions.pop(session_id, None):
-        await session.close()
+    authorize(request)
+    await close_kiro_lease(request.app, session_id, reuse=True)

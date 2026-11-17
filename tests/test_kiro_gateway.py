@@ -5,11 +5,12 @@ import unittest
 from unittest.mock import patch
 
 from sfdc_agent.api import app
-from sfdc_agent.kiro_gateway import KiroSession, SessionError, kiro_lifespan
+from sfdc_agent.kiro_gateway import KiroSession, SessionError, kiro_lifespan, reap_kiro_sessions
 
 
 BASE_PATH = '/internal/kiro/sessions'
 CANDIDATE_PATH = '/internal/kiro/design-standards/candidate'
+PNG_HEADERS = ((b'x-sfdc-kiro-purpose', b'figma-png'),)
 
 
 def candidate_payload():
@@ -31,6 +32,12 @@ class StubSession:
         self.reader = asyncio.get_running_loop().create_future()
         self.expiry = float('inf')
         self.calls = []
+        self.pending = {}
+        self.figma_connected = False
+        self.png_prompt_active = False
+
+    def touch(self):
+        self.expiry = float('inf')
 
     async def call(self, method, params=None, timeout=None):
         self.calls.append((method, params))
@@ -174,6 +181,118 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
             status, error = await self.request('POST', f'{path}/wait')
             self.assertEqual(status, 502)
             self.assertEqual(error['error']['code'], 'KIRO_CLOSED')
+
+    async def test_png_sessions_force_acp_and_reuse_only_connected_sessions_of_the_same_file(self):
+        session = StubSession()
+        different_file = StubSession()
+        normal_session = StubSession()
+        file_a = {'fileKey': 'FileA', 'readFigma': True}
+        async with kiro_lifespan(app):
+            with patch.object(KiroSession, 'start', side_effect=[session, normal_session, different_file]) as launch, patch(
+                'sfdc_agent.kiro_gateway.kiro_mode', return_value='headless'
+            ) as configured_mode:
+                for payload in ({'fileKey': 'FileA'}, {'readFigma': True}):
+                    status, _ = await self.request('POST', BASE_PATH, payload, extra_headers=PNG_HEADERS)
+                    self.assertEqual(status, 422)
+                launch.assert_not_awaited()
+                status, first = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 200)
+                self.assertEqual(first['executionMode'], 'acp')
+                status, busy = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 502)
+                self.assertEqual(busy['error']['code'], 'KIRO_BUSY')
+                self.assertEqual(session.calls, [('open', {
+                    'reference': {'fileKey': 'FileA'}, 'readFigma': True, 'figmaPng': True,
+                })])
+                session.figma_connected = True
+                first_path = f'{BASE_PATH}/{first["id"]}'
+                await self.request('GET', f'{first_path}/events')
+                old_poll = asyncio.create_task(self.request('GET', f'{first_path}/events'))
+                await asyncio.sleep(0)
+                self.assertEqual(await self.request('DELETE', first_path), (204, None))
+                self.assertFalse(session.closed)
+                status, normal = await self.request('POST', BASE_PATH, file_a)
+                self.assertEqual(status, 200)
+                status, second = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 200)
+                self.assertNotEqual(second['id'], first['id'])
+                self.assertNotEqual(second['id'], normal['id'])
+                status, expired = await old_poll
+                self.assertEqual(status, 502)
+                self.assertEqual(expired['error']['code'], 'KIRO_CLOSED')
+                second_path = f'{BASE_PATH}/{second["id"]}'
+                self.assertEqual(await self.request('GET', f'{second_path}/events'),
+                                 (200, {'events': [{'type': 'status', 'stage': 'figma-connected'}]}))
+                status, different = await self.request('POST', BASE_PATH, {**file_a, 'fileKey': 'filea'},
+                                                       extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 200)
+                self.assertEqual(await self.request('DELETE', f'{BASE_PATH}/{different["id"]}'), (204, None))
+                self.assertTrue(different_file.closed)
+                self.assertEqual(await self.request('DELETE', second_path), (204, None))
+                session.expiry = 0
+                await reap_kiro_sessions(app)
+                self.assertTrue(session.closed)
+                configured_mode.assert_not_called()
+        self.assertEqual(launch.await_count, 3)
+
+    async def test_png_session_prevents_duplicate_open_and_prompt_while_requests_are_running(self):
+        session = StubSession()
+        launching, launch_allowed = asyncio.Event(), asyncio.Event()
+        prompting, prompt_allowed = asyncio.Event(), asyncio.Event()
+        file_a = {'fileKey': 'FileA', 'readFigma': True}
+
+        async def launch():
+            launching.set()
+            await launch_allowed.wait()
+            return session
+
+        call_stub = session.call
+
+        async def call(method, params=None, timeout=None):
+            if method == 'prompt':
+                prompting.set()
+                await prompt_allowed.wait()
+            return await call_stub(method, params, timeout)
+
+        async with kiro_lifespan(app):
+            with patch.object(KiroSession, 'start', side_effect=launch), patch.object(session, 'call', side_effect=call):
+                start = asyncio.create_task(self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS))
+                await launching.wait()
+                status, busy = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual((status, busy['error']['code']), (502, 'KIRO_BUSY'))
+                launch_allowed.set()
+                status, opened = await start
+                self.assertEqual(status, 200)
+                session.figma_connected = True
+                path = f'{BASE_PATH}/{opened["id"]}'
+                prompt = asyncio.create_task(self.request('POST', f'{path}/prompt', {'text': 'Export a PNG.'}))
+                await prompting.wait()
+                status, busy = await self.request('POST', f'{path}/prompt', {'text': 'Export a second PNG.'})
+                self.assertEqual((status, busy['error']['code']), (502, 'KIRO_BUSY'))
+                self.assertEqual(await self.request('DELETE', path), (204, None))
+                self.assertTrue(session.closed)
+                self.assertNotIn('FileA', app.state.kiro_png_idle)
+                prompt_allowed.set()
+                await prompt
+
+    async def test_png_session_closes_after_connection_failure_even_if_previously_connected(self):
+        session = StubSession()
+        replacement = StubSession()
+        file_a = {'fileKey': 'FileA', 'readFigma': True}
+        async with kiro_lifespan(app):
+            with patch.object(KiroSession, 'start', side_effect=[session, replacement]) as launch:
+                status, opened = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 200)
+                session.figma_connected = True
+                path = f'{BASE_PATH}/{opened["id"]}'
+                with patch.object(session, 'call', side_effect=SessionError('KIRO_FIGMA_UNAVAILABLE', 'Unavailable.')):
+                    status, failure = await self.request('POST', f'{path}/wait')
+                self.assertEqual((status, failure['error']['code']), (502, 'KIRO_FIGMA_UNAVAILABLE'))
+                self.assertTrue(session.closed)
+                self.assertNotIn('FileA', app.state.kiro_png_idle)
+                status, _ = await self.request('POST', BASE_PATH, file_a, extra_headers=PNG_HEADERS)
+                self.assertEqual(status, 200)
+                self.assertEqual(launch.await_count, 2)
 
     async def test_invalid_requests_do_not_reach_kiro(self):
         session = StubSession()
