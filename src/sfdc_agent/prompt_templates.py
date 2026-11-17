@@ -81,15 +81,6 @@ def validate_template(operation: str, text: str) -> None:
     _validated_sections(operation, text)
 
 
-def preview_template(operation: str, text: str) -> str:
-    """Show substitutions for all sections with synthetic values."""
-    sections = _validated_sections(operation, text)
-    rendered = {name: _VARIABLE.sub(lambda match: f"〈{match[1]}〉", section) for name, section in sections.items()}
-    if len(rendered) == 1:
-        return rendered["main"]
-    return "\n".join(f"@@section {name}\n{section}" for name, section in rendered.items())
-
-
 class PromptTemplate:
     def __init__(self, operation: str, templates: Mapping[str, str] | None = None):
         source = _baseline() if templates is None else templates

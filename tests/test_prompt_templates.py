@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from sfdc_agent.prompt_registry import BASELINE_RELEASE, runtime_release
 from sfdc_agent.prompt_run_values import PromptRunValues, capture_prompt_run
-from sfdc_agent.prompt_templates import load_baseline_templates, preview_template, template_placeholders, validate_template
+from sfdc_agent.prompt_templates import load_baseline_templates, template_placeholders, validate_template
 from sfdc_agent.screen_tasks import build_screen_task
 from sfdc_agent.story_tasks import build_story_task
 
@@ -162,16 +162,13 @@ class PromptTemplateTests(unittest.TestCase):
             now[0] += 60 * 60
             self.assertIsNone(store.get(owner, operation, "evidence"))
 
-    def test_preview_and_edits_keep_evidence_and_validate_template_contract(self):
+    def test_edits_keep_evidence_and_validate_template_contract(self):
         operation, fields = template_cases()["story_analysis"]
         baseline = load_baseline_templates()
         changed = baseline.copy()
         changed[operation] = "Edited guidance.\n" + changed[operation]
         prompt = build_story_task(operation, fields, templates=changed)
         self.assertEqual(prompt, "Edited guidance.\n" + build_story_task(operation, fields))
-        preview = preview_template(operation, changed[operation])
-        self.assertIn("〈evidence〉", preview)
-        self.assertNotIn(fields["evidence"], preview)
         for invalid in (
             changed[operation].replace("{{evidence}}", ""),
             changed[operation].replace("{{evidence}}", "{{dto.evidence}}"),
