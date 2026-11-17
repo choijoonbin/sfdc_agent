@@ -7,7 +7,6 @@ import math
 import os
 import re
 import subprocess
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError

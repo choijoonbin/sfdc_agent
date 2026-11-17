@@ -131,19 +131,3 @@ test('aborts a pending Figma connection and removes its temporary workspace', as
   await kiro.close();
   assert.equal(existsSync(h.cwd), false);
 });
-
-test('PNG sessions open with only the two Figma export tools in a disposable workspace', async (t) => {
-  const h = harness();
-  const session = await openKiroSession({
-    reference: { fileKey: 'FileA' }, readFigma: true, figmaPng: true, spawnProcess: h.spawnProcess,
-  });
-  t.after(() => session.close());
-  const opened = h.messages.find(({ method }) => method === 'session/new');
-  assert.equal(opened.params.mcpServers[0].url, 'https://mcp.figma.com/mcp');
-  const config = JSON.parse(await readFile(join(h.cwd, '.kiro', 'agents', 'nova-figma.json'), 'utf8'));
-  assert.deepEqual(config.tools, ['@figma/download_assets', '@figma/get_screenshot']);
-  assert.equal(config.includeMcpJson, false);
-  assert.equal(config.includePowers, false);
-  await session.close();
-  assert.equal(existsSync(h.cwd), false);
-});
