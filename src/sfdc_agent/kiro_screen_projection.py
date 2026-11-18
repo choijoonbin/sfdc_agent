@@ -3,9 +3,10 @@
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 
-from .config import ui_root
+from .config import engine_root
 
 
 logger = logging.getLogger("uvicorn.error")
@@ -23,8 +24,10 @@ async def project_screen_fields(operation: str | None, fields: dict | None) -> d
         return fields
 
     try:
+        release_root = os.environ.get("SFDC_MANAGED_RELEASE_ROOT", "") if os.environ.get("SFDC_MANAGED_ENGINE_ROOT") else ""
         process = await asyncio.create_subprocess_exec(
-            "node", str(_BRIDGE), str(ui_root()), stdin=asyncio.subprocess.PIPE,
+            os.environ.get("SFDC_MANAGED_EXECUTION_NODE", "node"), str(_BRIDGE), str(engine_root()), release_root,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         )
         try:

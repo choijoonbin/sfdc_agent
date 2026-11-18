@@ -12,7 +12,7 @@ from .prompt_templates import PromptTemplate
 class TaskFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    fileKey: str = Field(pattern=r"^[a-zA-Z0-9]+$", max_length=128)
+    fileKey: str = Field(pattern=r"^[a-zA-Z0-9]+$", max_length=160)
 
 
 class NodeFields(TaskFields):
@@ -25,6 +25,7 @@ class CaptureFields(NodeFields):
 
 
 class DiscoveryFields(TaskFields):
+    fileKey: str = Field(pattern=r"^[a-zA-Z0-9]+$", max_length=160)
     nodeId: str | None = Field(default=None, pattern=r"^\d+:\d+$", max_length=40)
 
 

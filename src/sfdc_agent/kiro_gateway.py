@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -19,8 +20,17 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .kiro_screen_projection import project_screen_fields
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
+from .managed_prompts import (
+    managed_context_alive,
+    managed_trace_enabled,
+    record_managed_trace,
+    require_managed_context,
+    session_prompt_release,
+)
 from .prompt_run_values import PromptRunValues, capture_prompt_run, trace_owner
 from .providers import _kiro_environment
+from .service_mode import managed_only
+from .managed_execution_progress import managed_execution_context
 
 router = APIRouter(prefix="/internal/kiro/sessions")
 logger = logging.getLogger("uvicorn.error")
@@ -71,6 +81,10 @@ class OpenSession(BaseModel):
         if self.readFigma and not self.fileKey:
             raise ValueError("Figma MCP requires a file key.")
         return self
+
+
+class ManagedOpenSession(OpenSession):
+    fileKey: str | None = Field(default=None, pattern=r"^[A-Za-z0-9]{1,160}$")
 
 
 class Prompt(BaseModel):
@@ -139,6 +153,8 @@ class KiroSession:
             while line := await self.process.stdout.readline():
                 message = json.loads(line)
                 if "event" in message:
+                    if callback := getattr(self, 'on_managed_event', None):
+                        callback(message['event'])
                     self.events.append(message["event"])
                     self.events = self.events[-128:]
                     self.updated.set()
@@ -212,7 +228,8 @@ async def kiro_lifespan(app):
             prompt_run_values.purge()
             now = asyncio.get_running_loop().time()
             expired = [key for key, session in sessions.items()
-                       if session.expiry <= now or session.closed or session.reader.done()]
+                       if session.expiry <= now or session.closed or session.reader.done()
+                       or managed_only() and not managed_context_alive(getattr(session, "managed_prompt_token", ""))]
             await asyncio.gather(*(sessions.pop(key).close() for key in expired))
 
     reaper = asyncio.create_task(reap())
@@ -228,6 +245,8 @@ def authorize(request):
     if (request.headers.get("x-sfdc-agent") != "1" or "origin" in request.headers
             or "sec-fetch-site" in request.headers):
         raise HTTPException(403, "Use the NOVA local server connection.")
+    if managed_only():
+        require_managed_context(request)
     return request.app.state.kiro_sessions
 
 
@@ -247,7 +266,16 @@ def get_session(request, session_id):
     session = authorize(request).get(session_id)
     if session is None or session.closed:
         raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
+    require_session_owner(request, session)
     return session
+
+
+def require_session_owner(request, session):
+    if managed_only() and not hmac.compare_digest(require_managed_context(request), getattr(session, "managed_prompt_token", "")):
+        raise HTTPException(403, "The session belongs to a different managed job.")
+    if context := getattr(session, 'managed_execution_context', None):
+        if not context.alive():
+            raise HTTPException(403, 'The execution attempt ended.')
 
 
 def error_response(_, error):
@@ -257,17 +285,24 @@ def error_response(_, error):
 @router.post("")
 async def start_session(request: Request):
     sessions = authorize(request)
-    options = await read_request(request, OpenSession)
+    options = await read_request(request, ManagedOpenSession if managed_only() else OpenSession)
     purpose = request.headers.get("x-sfdc-kiro-purpose")
-    if purpose is not None and (purpose not in _MODES or options.readFigma):
+    context = managed_execution_context(request) if managed_only() else None
+    if managed_only() and purpose not in _MODES:
+        raise HTTPException(422, "A managed Screen or Story session purpose is required.")
+    approved_remote = bool(context and context.purpose == 'screen' and context.remote and context.mode == 'acp'
+                           and context.file_key == options.fileKey and purpose == 'screen')
+    if purpose is not None and (purpose not in _MODES or options.readFigma and not approved_remote):
         raise HTTPException(422, "Invalid Kiro session purpose.")
-    mode = kiro_mode(purpose) if purpose in _MODES else "acp"
+    if context and context.purpose != purpose:
+        raise HTTPException(422, 'The execution purpose does not match.')
+    mode = context.mode if context else kiro_mode(purpose) if purpose in _MODES else "acp"
     if mode not in {"acp", "headless"}:
         raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
     if len(sessions) >= MAX_SESSIONS:
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     try:
-        release = await asyncio.to_thread(runtime_release, options.promptReleaseId)
+        release = session_prompt_release(request, options.promptReleaseId) or await asyncio.to_thread(runtime_release, options.promptReleaseId)
     except RegistryError as error:
         raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", str(error)) from None
     except sqlite3.Error:
@@ -278,6 +313,12 @@ async def start_session(request: Request):
         await session.close()
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     session.prompt_release = release
+    session.managed_execution_context = context
+    if managed_only():
+        session.managed_prompt_token = require_managed_context(request)
+        session.purpose = purpose
+        if context:
+            context.bind(session, options.readFigma)
     sessions[session_id] = session
 
     async def disconnected():
@@ -293,6 +334,7 @@ async def start_session(request: Request):
         if disconnect in done:
             raise SessionError("KIRO_ABORTED", "Kiro 변환 작업이 중단됐습니다.")
         await opening
+        require_session_owner(request, session)
     except BaseException:
         sessions.pop(session_id, None)
         await session.close()
@@ -323,21 +365,32 @@ async def session_events(request: Request, session_id: str):
 
 @router.post("/{session_id}/wait")
 async def wait_for_figma(request: Request, session_id: str):
-    return {"result": await get_session(request, session_id).call("wait", timeout=IDLE_SECONDS)}
+    result = await get_session(request, session_id).call("wait", timeout=IDLE_SECONDS)
+    get_session(request, session_id)
+    return {"result": result}
 
 
 @router.post("/{session_id}/authorize")
 async def authorize_figma(request: Request, session_id: str):
-    return {"result": await get_session(request, session_id).call("authorize", timeout=35)}
+    result = await get_session(request, session_id).call("authorize", timeout=35)
+    get_session(request, session_id)
+    return {"result": result}
 
 
 @router.post("/{session_id}/prompt")
 async def prompt_session(request: Request, session_id: str):
     session = get_session(request, session_id)
     prompt = await read_request(request, Prompt)
+    if managed_only() and (prompt.fields is None or prompt.text is not None or prompt.operation not in OPERATIONS
+                           or not prompt.operation.startswith(session.purpose + ".")):
+        raise SessionError("KIRO_TASK_INVALID", "Use the managed job's structured task and immutable prompt template.")
+    context = getattr(session, 'managed_execution_context', None)
+    if context and context.remote and prompt.fields and prompt.fields.get('fileKey', context.file_key) != context.file_key:
+        raise SessionError('KIRO_TASK_INVALID', 'Use the execution attempt\'s approved Figma file.')
     execution_mode = session.execution_mode
     release = session.prompt_release
     owner = trace_owner(request.headers) if prompt.fields is not None and prompt.operation in PROMPTS else None
+    managed_capture = prompt.fields is not None and prompt.operation in OPERATIONS and managed_trace_enabled(request)
     try:
         if execution_mode == "headless":
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
@@ -346,7 +399,7 @@ async def prompt_session(request: Request, session_id: str):
         fields = await project_screen_fields(prompt.operation, prompt.fields)
         if fields is not prompt.fields:
             prompt = prompt.model_copy(update={"fields": fields})
-        with capture_prompt_run(prompt.operation) if owner else nullcontext() as prompt_run:
+        with capture_prompt_run(prompt.operation) if owner or managed_capture else nullcontext() as prompt_run:
             text = prompt.build(templates=release.templates)
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
@@ -355,8 +408,11 @@ async def prompt_session(request: Request, session_id: str):
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     started = monotonic()
     result = await get_session(request, session_id).call("prompt", {"text": text, "png": prompt.png})
-    if prompt_run is not None:
+    get_session(request, session_id)
+    if prompt_run is not None and owner is not None:
         request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
+    if prompt_run is not None and managed_capture:
+        record_managed_trace(request, prompt_run, release, text, execution_mode)
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
     return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
             "executionMode": execution_mode, "promptReleaseId": release.id,
@@ -365,5 +421,8 @@ async def prompt_session(request: Request, session_id: str):
 
 @router.delete("/{session_id}", status_code=204)
 async def end_session(request: Request, session_id: str):
-    if session := authorize(request).pop(session_id, None):
+    sessions = authorize(request)
+    if session := sessions.get(session_id):
+        require_session_owner(request, session)
+        sessions.pop(session_id, None)
         await session.close()

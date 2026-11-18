@@ -38,6 +38,8 @@ def _check_evidence(operation: str, fields: dict[str, Any]) -> None:
 def evaluate_prompt_provider(
     operation: str, fields: dict[str, Any], provider_name: str, *,
     model: str | None = None, timeout: float = 120, release_id: str | None = None,
+    templates_release=None,
+    provider_override=None,
 ) -> dict[str, Any]:
     """Return the provider's parsed JSON and prompt provenance, without saving a conversion."""
     if operation not in EVALUATION_OPERATIONS:
@@ -46,7 +48,9 @@ def evaluate_prompt_provider(
         raise ProviderError("PROMPT_EVALUATION_INVALID", "Supply the task's structured JSON fields.")
     if release_id is not None and (not isinstance(release_id, str) or not _RELEASE_ID.fullmatch(release_id)):
         raise ProviderError("PROMPT_EVALUATION_INVALID", "Supply a valid prompt release ID.")
-    release = runtime_release(release_id)
+    release = templates_release if templates_release is not None else runtime_release(release_id)
+    if release_id is not None and release.id != release_id:
+        raise ProviderError("PROMPT_EVALUATION_INVALID", "The immutable release pin changed.")
     try:
         _check_evidence(operation, fields)
         builder = build_screen_task if operation.startswith("screen.") else build_story_task
@@ -56,7 +60,7 @@ def evaluate_prompt_provider(
             raise ValueError
     except (ValueError, TypeError, KeyError, RecursionError):
         raise ProviderError("PROMPT_EVALUATION_INVALID", "The task fields or captured evidence do not match this prompt.") from None
-    provider = create_provider(provider_name, model=model, timeout=timeout)
+    provider = provider_override if provider_override is not None else create_provider(provider_name, model=model, timeout=timeout)
     result = provider.complete_rendered(text)
     return {
         "operation": operation,

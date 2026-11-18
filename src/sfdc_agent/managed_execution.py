@@ -1,0 +1,379 @@
+"""Execute a Spring-owned conversion attempt without carrying its service credentials downstream."""
+
+import asyncio
+import base64
+import hmac
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import tempfile
+from threading import BoundedSemaphore
+from typing import Annotated, Literal
+from uuid import UUID
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from starlette.requests import ClientDisconnect
+
+from .managed_prompts import PromptBundle, execution_prompts, runner_token
+from .managed_execution_progress import execution_mode, execution_progress
+from .config import engine_root
+
+router = APIRouter(prefix="/internal/v1", include_in_schema=False)
+
+_REQUEST_BYTES = 4 * 1024 * 1024
+_CHECKPOINT_BYTES = 3 * 1024 * 1024
+_SUMMARY_BYTES = 256 * 1024
+_ARTIFACT_BYTES = 8 * 1024 * 1024
+_OUTPUT_BYTES = 12 * 1024 * 1024
+_CHUNK_BYTES = 64 * 1024
+_WORKER_SLOTS = BoundedSemaphore(2)
+_RUNNER_ENVIRONMENT = (
+    "PATH", "LANG", "LC_ALL", "LC_CTYPE", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
+    "FIGMA_ACCESS_TOKEN", "SFDC_MANAGED_RELEASE_ROOT", "SFDC_MANAGED_AGENT_ORIGIN", "SFDC_MANAGED_ARCHIVE_INDEX",
+    "SFDC_MANAGED_SOURCE_ROOT",
+)
+
+ReleasePin = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")]
+SourceReference = Annotated[str, Field(min_length=1, max_length=2048, pattern=r"^[^\x00-\x1f\x7f]+$")]
+RegistryLabel = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[^\x00-\x1f\x7f]+$")]
+ManifestDigest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+JsonObject = dict[str, JsonValue]
+_ARTIFACT_PART = re.compile(r'^[^./\\:<>|?*\x00-\x1f\x7f][^/\\:<>|?*\x00-\x1f\x7f]*$')
+
+
+class ArchiveSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tenantId: UUID
+    workspaceId: UUID
+    fileKey: Annotated[str, Field(pattern=r"^[A-Za-z0-9]{1,160}$")]
+    sha256: ManifestDigest
+
+
+class SourceDiscoveryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archive: ArchiveSelection | None = None
+    sourceReference: SourceReference | None = None
+    pageId: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
+    version: Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,160}$")] | None = None
+    previewNode: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
+
+    @model_validator(mode="after")
+    def source_kind(self):
+        if bool(self.archive) == bool(self.sourceReference):
+            raise ValueError("Select a local archive or a registered remote source.")
+        return self
+
+
+class ExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    jobId: UUID
+    attempt: Annotated[int, Field(ge=1, le=100, strict=True)]
+    kind: Literal["SCREEN", "STORY"]
+    engine: Literal["NOVA", "KIRO"]
+    operation: Literal["ANALYZE", "GENERATE"] = "ANALYZE"
+    sourceReference: SourceReference
+    designReleaseId: ReleasePin
+    promptReleaseId: ReleasePin
+    promptBundle: PromptBundle | None = None
+    designManifestSha256: ManifestDigest | None = None
+    promptReleaseVersion: RegistryLabel | None = None
+    analysisJobId: UUID | None = None
+    analysis: JsonObject | None = None
+    workflowId: RegistryLabel | None = None
+    archive: ArchiveSelection | None = None
+
+    @model_validator(mode="after")
+    def validate_review(self):
+        if self.operation == "GENERATE":
+            if self.analysisJobId is None or self.analysisJobId == self.jobId or not self.analysis:
+                raise ValueError("Generation requires a prior analysis checkpoint.")
+            if len(_encode_json(self.analysis)) > _CHECKPOINT_BYTES:
+                raise ValueError("Analysis checkpoint is too large.")
+        elif self.analysisJobId is not None or self.analysis is not None or self.workflowId is not None:
+            raise ValueError("Analysis starts without a prior checkpoint.")
+        return self
+
+
+class ExecutionArtifact(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    name: Annotated[str, Field(min_length=1, max_length=240)]
+    mediaType: Literal["image/png", "application/zip", "application/octet-stream"]
+    base64: str
+
+
+class ExecutionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    status: Literal["REVIEW_REQUIRED", "COMPLETED"]
+    title: Annotated[str, Field(min_length=1, max_length=240)]
+    artifacts: Annotated[list[ExecutionArtifact], Field(max_length=512)]
+    summary: JsonObject | None = None
+    checkpoint: JsonObject | None = None
+    promptTraces: list[JsonObject] | None = None
+
+
+class IncompleteExecution(Exception):
+    """Unexpected runner response or process state."""
+
+
+def _encode_json(value: JsonValue) -> bytes:
+    return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
+
+
+def _unique_object(pairs: list[tuple[str, JsonValue]]) -> JsonObject:
+    value = {}
+    for key, member in pairs:
+        if key in value:
+            raise ValueError("Repeated JSON key.")
+        value[key] = member
+    return value
+
+
+def _reject_nonfinite(value: str):
+    raise ValueError("Non-finite JSON number.")
+
+
+def _decode_json(body: bytes | bytearray) -> JsonValue:
+    return json.loads(body.decode(), object_pairs_hook=_unique_object, parse_constant=_reject_nonfinite)
+
+
+def _authorize(request: Request) -> None:
+    token = os.environ.get("SFDC_AGENT_EXECUTION_TOKEN")
+    if not token or not token.strip():
+        raise HTTPException(503, "Managed execution is disabled.")
+    headers = request.headers.getlist("authorization")
+    scheme, _, provided = (headers[0] if len(headers) == 1 else "").partition(" ")
+    if scheme.lower() != "bearer" or not hmac.compare_digest(provided.encode("latin-1"), token.encode()):
+        raise HTTPException(401, "Service authentication required.", headers={"WWW-Authenticate": "Bearer"})
+
+
+async def _parse_request(request: Request, model=ExecutionRequest):
+    body = bytearray()
+    try:
+        async with asyncio.timeout(15):
+            async for chunk in request.stream():
+                if len(body) + len(chunk) > _REQUEST_BYTES:
+                    raise HTTPException(413, "Managed execution request is too large.")
+                body.extend(chunk)
+        return model.model_validate(_decode_json(body))
+    except (ValueError, RecursionError):
+        raise HTTPException(422, "Invalid managed execution request.") from None
+    except TimeoutError:
+        raise HTTPException(408, "Managed execution request timed out.") from None
+    except ClientDisconnect:
+        raise HTTPException(499, "Managed execution request disconnected.") from None
+
+
+def _runner_configuration() -> tuple[str, Path, int]:
+    binary = shutil.which(os.environ.get("SFDC_MANAGED_EXECUTION_NODE", "node"))
+    runner = Path(os.environ.get("SFDC_MANAGED_EXECUTION_RUNNER", engine_root() / "nextbss/server/managed-execution.mjs"))
+    try:
+        timeout = int(os.environ.get("SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS", "540"))
+        runner = runner.resolve(strict=True)
+        if not binary or not runner.is_file() or not 1 <= timeout <= 900:
+            raise ValueError
+    except (OSError, RuntimeError, ValueError):
+        raise HTTPException(503, "Managed execution runner is unavailable.") from None
+    return str(Path(binary).resolve()), runner, timeout
+
+
+def _check_kiro_configuration(request: Request, payload: ExecutionRequest) -> None:
+    if payload.engine != "KIRO":
+        return
+    origin = os.environ.get("SFDC_MANAGED_AGENT_ORIGIN", "")
+    server = request.scope.get("server")
+    local_port = server[1] if server else None
+    if (not local_port or origin != f"http://127.0.0.1:{local_port}"
+            or execution_mode(payload) == 'headless' and not os.environ.get("KIRO_API_KEY", "").strip()):
+        raise HTTPException(503, "Managed Kiro runtime is unavailable.")
+
+
+async def _write_input(process: asyncio.subprocess.Process, payload: bytes) -> None:
+    try:
+        process.stdin.write(payload)
+        await process.stdin.drain()
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    finally:
+        process.stdin.close()
+
+
+async def _read_output(stream: asyncio.StreamReader) -> bytes:
+    output = bytearray()
+    while chunk := await stream.read(_CHUNK_BYTES):
+        if len(output) + len(chunk) > _OUTPUT_BYTES:
+            raise IncompleteExecution
+        output.extend(chunk)
+    return bytes(output)
+
+
+async def _stop_process(process: asyncio.subprocess.Process) -> None:
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)
+        elif process.returncode is None:
+            process.kill()
+    except ProcessLookupError:
+        pass
+    # Drain the killed process's pipe in small chunks so the transport can reap it.
+    while await process.stdout.read(_CHUNK_BYTES):
+        pass
+    await process.wait()
+
+
+async def _run_process(binary: str, runner: Path, scratch: str, timeout: int, payload: bytes,
+                       environment_overrides: dict[str, str] | None = None) -> bytes:
+    environment = {key: os.environ[key] for key in _RUNNER_ENVIRONMENT if key in os.environ}
+    environment.update({"SFDC_EXECUTION_SCRATCH": scratch, "TMPDIR": scratch, "TEMP": scratch, "TMP": scratch})
+    environment.update(environment_overrides or {})
+    token = runner_token()
+    if token:
+        environment["SFDC_MANAGED_PROMPT_CONTEXT"] = token
+    process = await asyncio.create_subprocess_exec(
+        binary, str(runner), cwd=scratch, env=environment, start_new_session=os.name == "posix",
+        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+    )
+    tasks = (asyncio.create_task(_write_input(process, payload)), asyncio.create_task(_read_output(process.stdout)))
+    finished = False
+    try:
+        async with asyncio.timeout(timeout):
+            _, output = await asyncio.gather(*tasks)
+            exit_code = await process.wait()
+        finished = True
+        if exit_code != 0:
+            raise IncompleteExecution
+        return output
+    finally:
+        if not finished:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await _stop_process(process)
+
+
+def _parse_result(output: bytes, operation: str) -> ExecutionResult:
+    result = ExecutionResult.model_validate(_decode_json(output))
+    if result.summary is not None and len(_encode_json(result.summary)) > _SUMMARY_BYTES:
+        raise IncompleteExecution
+    if not result.title.strip():
+        raise IncompleteExecution
+    if operation == "ANALYZE":
+        if result.status != "REVIEW_REQUIRED" or result.artifacts or not result.summary or not result.checkpoint:
+            raise IncompleteExecution
+        if len(_encode_json(result.checkpoint)) > _CHECKPOINT_BYTES:
+            raise IncompleteExecution
+        return result
+    if result.status != "COMPLETED" or not result.artifacts or result.checkpoint is not None:
+        raise IncompleteExecution
+    names = set()
+    total = 0
+    for artifact in result.artifacts:
+        name = artifact.name.casefold()
+        parts = artifact.name.split("/")
+        if name in names or any(not _ARTIFACT_PART.fullmatch(part) or part != part.strip() or part.endswith(".")
+                                for part in parts):
+            raise IncompleteExecution
+        names.add(name)
+        content = base64.b64decode(artifact.base64, validate=True)
+        total += len(content)
+        empty_css = artifact.mediaType == "application/octet-stream" and artifact.name.endswith(".css")
+        if (not content and not empty_css) or total > _ARTIFACT_BYTES:
+            raise IncompleteExecution
+    return result
+
+
+async def _execute(payload: ExecutionRequest) -> ExecutionResult:
+    binary, runner, timeout = _runner_configuration()
+    try:
+        if payload.promptBundle is not None and payload.promptBundle.releaseId != payload.promptReleaseId:
+            raise ValueError("Prompt release pin does not match.")
+        with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
+            encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
+            async with execution_progress(payload, runner_token(), timeout) as context:
+                environment = {'SFDC_MANAGED_KIRO_MODE': context.mode} if context else None
+                output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
+            result = _parse_result(output, payload.operation)
+            return result.model_copy(update={"promptTraces": traces or None})
+    except TimeoutError:
+        raise HTTPException(504, "Managed execution timed out.") from None
+    except (IncompleteExecution, ValueError, OSError, RecursionError):
+        raise HTTPException(502, "Managed execution did not return a usable result.") from None
+
+
+async def _wait_for_disconnect(request: Request) -> None:
+    while (await request.receive())["type"] != "http.disconnect":
+        pass
+
+
+async def _discover_source(payload: SourceDiscoveryRequest):
+    binary, _, _ = _runner_configuration()
+    runner = (engine_root() / "nextbss/server/managed-source-discovery.mjs").resolve(strict=True)
+    encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
+    with tempfile.TemporaryDirectory(prefix="sfdc-source-discovery-") as scratch:
+        output = await _run_process(binary, runner, scratch, 90, encoded)
+    response = _decode_json(output)
+    if isinstance(response, dict) and response.get("code") == "FIGMA_TOKEN_REQUIRED":
+        return JSONResponse({"code": "FIGMA_TOKEN_REQUIRED"}, status_code=503)
+    if isinstance(response, dict) and response.get("code") in {"FIGMA_RATE_LIMITED", "FIGMA_RATE_LIMIT"}:
+        return JSONResponse({"code": "FIGMA_RATE_LIMITED"}, status_code=429)
+    if not isinstance(response, dict) or not isinstance(response.get("result"), dict):
+        raise IncompleteExecution
+    return response["result"]
+
+
+@router.post("/source-discovery")
+async def source_discovery(request: Request):
+    _authorize(request)
+    if not _WORKER_SLOTS.acquire(blocking=False):
+        raise HTTPException(503, "Managed execution is busy.", headers={"Retry-After": "5"})
+    tasks = ()
+    try:
+        payload = await _parse_request(request, SourceDiscoveryRequest)
+        execution = asyncio.create_task(_discover_source(payload))
+        disconnect = asyncio.create_task(_wait_for_disconnect(request))
+        tasks = (execution, disconnect)
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        if execution.done():
+            return execution.result()
+        raise HTTPException(499, "Source discovery request disconnected.")
+    except TimeoutError:
+        raise HTTPException(504, "Source discovery timed out.") from None
+    except (IncompleteExecution, ValueError, OSError, RecursionError):
+        raise HTTPException(422, "The Figma archive could not be inspected.") from None
+    finally:
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        _WORKER_SLOTS.release()
+
+
+@router.post("/executions", response_model=ExecutionResult, response_model_exclude_none=True)
+async def execute(request: Request) -> ExecutionResult:
+    _authorize(request)
+    if not _WORKER_SLOTS.acquire(blocking=False):
+        raise HTTPException(503, "Managed execution is busy.", headers={"Retry-After": "5"})
+    tasks = ()
+    try:
+        payload = await _parse_request(request)
+        _check_kiro_configuration(request, payload)
+        execution = asyncio.create_task(_execute(payload))
+        disconnect = asyncio.create_task(_wait_for_disconnect(request))
+        tasks = (execution, disconnect)
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        if execution.done():
+            return execution.result()
+        raise HTTPException(499, "Managed execution request disconnected.")
+    finally:
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        _WORKER_SLOTS.release()

@@ -117,3 +117,13 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 ```sh
 .venv/bin/sfdc-agent evaluate-prompt story.classification fixture.json --provider azure --release prompts-v1
 ```
+
+## Spring 관리형 Agent
+
+Spring에서 작업·권한·프롬프트 릴리스를 관리하는 서버는 `SFDC_AGENT_MANAGED_ONLY=1`로 실행한다. 이 모드의 HTTP 경로는 `/health`, 서비스 Bearer 인증을 사용하는 `/internal/v1/`, 실행별 인증을 사용하는 `/internal/kiro/sessions`다. 로컬 파일럿 `/runs`, SQLite 프롬프트 관리 `/internal/prompts`, 로컬 디자인 후보 경로는 404를 반환한다. `/health`는 전역 SQLite 활성 프롬프트를 조회하지 않는다.
+
+Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행에 고정된다. 생성, 이벤트 조회, 구조화된 프롬프트 실행, 대기, 승인과 종료에 같은 토큰이 필요하다. 실행이 끝나면 토큰이 폐기되며 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없다. `SFDC_AGENT_EXECUTION_TOKEN` 서비스 Bearer는 Spring과 Agent 사이에서 사용하며 Node 작업 프로세스에 전달하지 않는다.
+
+관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
+
+기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. 로컬 프론트 개발은 `SFDC_AGENT_MANAGED_ONLY`의 기본값으로 기존 경로를 사용한다.
