@@ -46,6 +46,8 @@ async def project_screen_fields(operation: str | None, fields: dict | None) -> d
         if not isinstance(projection, dict):
             raise ValueError("Invalid projection response")
     except (OSError, ValueError, TimeoutError):
+        if evidence.get("componentLibrary") is not None:
+            raise ValueError("The pinned component-library projection is unavailable.") from None
         logger.warning("NextBSS visual projection unavailable for %s", operation)
         return fields
 

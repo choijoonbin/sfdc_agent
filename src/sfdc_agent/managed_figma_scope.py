@@ -35,4 +35,7 @@ def figma_scope_response(_, error):
 
 def remote_figma_environment(scope):
     require_figma_scope(scope)
-    return {'FIGMA_ACCESS_TOKEN': os.environ.get('FIGMA_ACCESS_TOKEN', '')}
+    environment = {'FIGMA_ACCESS_TOKEN': os.environ.get('FIGMA_ACCESS_TOKEN', '')}
+    if os.environ.get('FIGMA_PLAN_ACCESS_TOKEN', '').strip():
+        environment['FIGMA_PLAN_ACCESS_TOKEN'] = os.environ['FIGMA_PLAN_ACCESS_TOKEN']
+    return environment

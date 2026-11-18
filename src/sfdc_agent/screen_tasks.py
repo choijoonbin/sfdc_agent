@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 
 from .prompt_templates import PromptTemplate
+from .component_library import ComponentLibrary
 
 
 class TaskFields(BaseModel):
@@ -99,6 +100,9 @@ class GenerationFields(NodeFields):
     tokenDeclarations: str = Field(max_length=128_000)
     typographyGroups: list[str]
     componentVariants: str = Field(max_length=128_000)
+    novaContract: dict = Field(default_factory=dict)
+    componentLibrary: ComponentLibrary | None = None
+    designReleaseId: str | None = Field(default=None, pattern=r"^nextbss-\d{1,4}(?:\.\d{1,4}){1,2}-[a-f0-9]{64}$")
 
 
 def _json(value) -> str:
@@ -183,7 +187,7 @@ def _generation(args: GenerationFields, template: PromptTemplate) -> str:
     example = _json({
         "fileKey": args.fileKey, "nodeId": args.nodeId, "title": "Actual screen name",
         "width": width, "height": height, "html": "<template>...</template>",
-        "css": "@import 'c/nextBssTokens';\n...",
+        "css": "@import 'c/novaTokens';\n...",
         "javascript": "import { LightningElement } from 'lwc';\nexport default class Screen extends LightningElement {}",
         "notes": [],
     })
@@ -199,7 +203,8 @@ def _generation(args: GenerationFields, template: PromptTemplate) -> str:
         dimensions_line=dimensions_line, reading=reading, rules=template.render("source_rules", version=args.version),
         action_evidence=action_evidence, reviewed=reviewed, additional_rules=template.render("additional_rules"),
         table_rules=table_rules, accordion=template.render("accordion_rules", evidence=accordion_evidence),
-        component_contracts=template.render("component_contracts"), component_variants=args.componentVariants,
+        component_contracts=template.render("component_contracts") + "\nPinned NOVA public contract JSON:\n" + _json(args.novaContract),
+        component_variants=args.componentVariants,
         token_declarations=args.tokenDeclarations, typography_groups=", ".join(args.typographyGroups),
         output_format=template.render("output_format", name=args.name), example=example, payload=payload,
     )
@@ -210,7 +215,7 @@ def _review_plan(args: GenerationFields, template: PromptTemplate) -> str:
         "fileKey": args.fileKey, "nodeId": args.nodeId, "local": args.local,
         "dimensions": args.layoutDimensions.model_dump() if args.layoutDimensions else None,
         "coverage": args.coverage.model_dump() if args.coverage else None,
-        "splitLayout": args.splitLayout, "actions": args.actions,
+        "splitLayout": args.splitLayout, "actions": args.actions, "novaContract": args.novaContract,
     }
     if args.local:
         source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = args.sourceContext

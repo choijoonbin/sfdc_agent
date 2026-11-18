@@ -11,9 +11,10 @@ class ScreenTasksTests(unittest.TestCase):
     evidence = {
         **reference, "name": "nextBssScreen29876x15045",
         "layoutDimensions": {"width": 1380, "height": 1716},
-        "version": "1.9", "tokenDeclarations": "--nb-color-t-blue-600: #3617ce;",
-        "typographyGroups": ["--nb-typography-example"],
+        "version": "1.9", "tokenDeclarations": "--nova-color-t-blue-600: #3617ce;",
+        "typographyGroups": ["--nova-typography-example"],
         "componentVariants": "Button: Filled, Ghost",
+        "novaContract": {"version":"1.0.0", "tokenModule":"c/novaTokens", "modules":[{"name":"novaButton","kind":"ui","tag":"c-nova-button","events":["click"]}]},
     }
 
     def test_capture_analysis_and_metadata_preserve_source_identity(self):
@@ -44,9 +45,14 @@ class ScreenTasksTests(unittest.TestCase):
             "Design context coverage remains incomplete for these nodes: 12:35",
             "original_width and original_height",
             "NOVA verified the selected node's Figma layout as 1380 × 1716px",
-            "NextBSS v1.9",
-            "--nb-color-t-blue-600",
+            "NOVA LWC 1.0.0 contracts (Figma design 1.9)",
+            "--nova-color-t-blue-600",
             "Render each field label once",
+            "Pinned NOVA public contract JSON:",
+            '"tokenModule":"c/novaTokens"',
+            "never JSON.stringify strings",
+            "onrequest_close",
+            "heading, message and actions array",
             "preserve the measured outer size with border-box sizing",
             "Unset widths are zero and an unset stroke color is transparent",
             '"kind":"search","nodeId":"12:44"',
@@ -107,7 +113,7 @@ class ScreenTasksTests(unittest.TestCase):
                 {"nodeId": "12:43", "label": "둘째 열", "width": 118},
             ],
             "empty": {"nodeId": "12:44", "label": "비어 있습니다."},
-            "rowCount": 0, "style": {"--nb-table-header-height": "48px"},
+            "rowCount": 0, "style": {"--nova-table-header-height": "48px"},
         }
         serialized = json.dumps([table], ensure_ascii=False, separators=(",", ":"))
         for source in (
@@ -121,10 +127,10 @@ class ScreenTasksTests(unittest.TestCase):
             self.assertEqual(review.count(serialized), 1)
             self.assertEqual(generation.count(serialized), 1)
             self.assertIn("Do not report those facts as missing.", review)
-            self.assertIn("Bind columns to a JSON string from JSON.stringify", generation)
-            self.assertIn("actual JS array of { id, values }", generation)
+            self.assertIn("Bind collection/object props to actual JS arrays or objects", generation)
+            self.assertIn("rows are { id, cells: [...] }", generation)
             self.assertIn("entry.nodeId in data-figma-node-id on the component host", generation)
-            self.assertIn("pass that measurement to title-baseline", generation)
+            self.assertIn("preserve measured source typography and baseline", generation)
 
     def test_schema_rejects_invalid_source_and_unknown_operation(self):
         with self.assertRaises(ValidationError):

@@ -9,3 +9,6 @@ __pycache__/
 /dist/
 /.idea/
 .DS_Store
+
+# Generated local/CI unit evidence
+/unit-contract-proof.json

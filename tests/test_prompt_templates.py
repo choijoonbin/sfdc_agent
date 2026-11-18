@@ -15,8 +15,8 @@ def template_cases():
     context = {"fileKey": reference["fileKey"], "nodeIds": [reference["nodeId"], "8:12"]}
     remote = {
         **reference, "name": "nextBssScreen15045", "version": "1.9",
-        "tokenDeclarations": "--nb-color-t-blue-600: #3617ce;",
-        "typographyGroups": ["--nb-typography-body", "--nb-typography-title"],
+        "tokenDeclarations": "--nova-color-t-blue-600: #3617ce;",
+        "typographyGroups": ["--nova-typography-body", "--nova-typography-title"],
         "componentVariants": "조회 · Filled",
         "layoutDimensions": {"width": 1380.25, "height": 1716},
     }
@@ -82,7 +82,7 @@ def template_cases():
     }
 
 
-# SHA-256 of the original builders' exact UTF-8 output at ab0166c.
+# SHA-256 of reviewed packaged prompt output. Screen cases use the NOVA 1.0 contract.
 EXPECTED_BASELINE = {
     "analyze": "9585f5b4581adf2f076dffc6031303da81549c1c07fc9dd8e1d6bfd2b66f49b7",
     "analyze_screenshot": "46bd1750b8ccac0dbb1562bf078cd5d254ba8245900e50d0e5bbcabca5987969",
@@ -91,29 +91,29 @@ EXPECTED_BASELINE = {
     "capture_layout": "9ab6213d07799dc91fb7f3ce571d9460fc40fc1366b61463db9b4c0bdf37f2d4",
     "discovery_document": "7e8b2ae8c8f77bca33fe691a892c5643292d7a52787a34a04caa3dfc816d952b",
     "discovery_page": "434c9229985b3521d3ca50c95c81302c62e5502d9e1ac94fbe1936f7a8d14e17",
-    "review_remote": "53f3c9993f1b420c48d104ebeb605ead7df6620d89963cc184151161393300f7",
-    "review_detailed": "4a14fdd98684564db46a4a0cd375519caa2ba719f0f0929507425b275f2865d8",
-    "review_saved": "d22cdeb0efa91721c643913fd82cefb52587336fa439d0154f3d15ed508b5201",
-    "review_local": "f424f70d711d27c8bb8f636c4689a7e7800446936d90c54b823991d626190963",
-    "review_rest": "bc1128a040b8a5ae5e08949a81fcc830c96c4a4c852c9791d5d6712d8b5df736",
-    "generate_remote": "764d6ee82701d45c29249728e875f3d105d8e562e88f1498284add0e0650510e",
-    "generate_without_size": "d9503916ed3d751ae1a6e980960c556e185995ff60b533828975ed8125bc7133",
-    "generate_detailed": "8904f8decc9a622fcf6a0ab16265dc289986054b9085b597c48b9d2d1fc58840",
-    "generate_saved": "b0f30fff150752750c892fbfcf46b1b4fdcacf20e5e53c63d121f3efb7e7b79e",
-    "generate_local": "c41e74149c48f5c84611557dd2befa0ac173f0046c835c4d8ab0559c85fd65c9",
-    "generate_rest": "a8a1b43995e064cc6f172de47809648ed5e89edf8c6ad72561c19251f538f51f",
+    "review_remote": "a5a448ef7b91037fc202f4045ef4667fe3e5319d3b5c77ef601949c6d435cc48",
+    "review_detailed": "e09e7b2cdf71839b2215dd394cc2e283a6388e9b194cd3a3b12bfc904c2f4943",
+    "review_saved": "0141ecda01cbd5efded939fdd8ea21044b88dc31ccd95b370a7fa203774b9f5c",
+    "review_local": "2075dc71aad6d57d104bf7095a1657e920d0bebdeba90038d40386ada8f5b0cc",
+    "review_rest": "11578b71d4d25bfdc4ccf183e94b18f6fce1f40c419220ba647fd7b195997eef",
+    "generate_remote": "a515fd3cdc665cf19df3a5f4f053e7f1a733e72a06870a328aa36ea4ed9f3cb9",
+    "generate_without_size": "f5edacf2f35ba4ce3f8edd23cad20f052f0be4ca175e53ccba66490e163056ed",
+    "generate_detailed": "dae429c2ea77dd35c56f97e0fae9e6fcd8fa501c376bc00bd6fb3338c9b07eed",
+    "generate_saved": "e504bbb01c0fc83aa4b7b0224a025c35e0aca44063e2f764aeec0d4cfc739f54",
+    "generate_local": "1b669d5eab3586d5627a2009f67408de05b39b1a5263dc731a201614055304bc",
+    "generate_rest": "f7f525d84970c704c03d431e76bd7e44b36040532c186169ca44ca9bae030f77",
     "legacy_local_analysis": "9666f8f5fb6f3ed2f4913120f9ecb4f8e554c6f719f21d2890fb77b8c350a891",
-    "repair_remote": "a2f7ee00f6ee0ff02bdbeedf74744f0a611bb55f7f0c419015c466ce83ea4799",
-    "repair_local": "d2dba7b49140059651a1240dac352b1edcb5e86152a4b6deba1d735d7eea864b",
-    "repair_with_evidence": "21ff6b9672391270d44e6293999b871701fd6c530b70eef6851afdc17602037b",
+    "repair_remote": "d36ece139d1baac041eb5761b666399ee55b98579cf5b1c567b1d61e4d89e6a7",
+    "repair_local": "4f4f976eb655b208da8bf6b07f8f6818c04abbbe627f4fb2f79b32d53e02eead",
+    "repair_with_evidence": "6f8206d9267e8da62891780b376b0f9ef6d318de5e8f765ca0fbb580566359b9",
     "plan": "7852ea0f514c8e6ae9af37a9b2b39d536493cf1ec37f42cba4732b61a9f03080",
     "plan_context": "09a5a59763a965dd8e4ae782366c7f4b009be7b5a4f82adbbb46bf3493c06600",
     "plan_repair": "9543a8a7c620efc85224c67082a36f27a3c430af2e4c640b13cc8c44fc7dc4aa",
     "plan_repair_with_evidence": "3ad3d02c2d5c2f77519f08e12bd379338c83b3128d65d4a89cc069576adac828",
     "story_classification": "f11fb038cc987616669fa8fad9dcd9fcddf65bd1f4a3382e8eaf0bf25d72ac8f",
     "story_analysis": "c3ddcc9f19d9e838da2c8a2bb7bf37e4131263249d862dec416fdfbbfb2dc23d",
-    "story_generation": "708bdc8db4d0d4132a731b1b992f09de20a7e4ad111199a5f9ddab63167ff49b",
-    "story_retry": "c4c46db8fcbca1a5341cbd5bb5a917029b4f32f4256714e7c34933837c64da6f",
+    "story_generation": "332703cf791cbf954ffe14664aa486bcd7e261c19787062eded3ded9d17c549c",
+    "story_retry": "bff10e9d4d90d58e5763df58f57fd0934a306ac38f64477f20e691d2c94e4c6e",
 }
 
 

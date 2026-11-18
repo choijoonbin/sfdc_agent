@@ -1,7 +1,7 @@
 @@section main
-Fix the LWC bundle using the already retrieved Figma context. Return the complete original JSON output format with corrected files and unchanged source identity. Do not call Figma again. {{diagnostic}}
+Fix the LWC bundle using the already retrieved Figma context. Return the complete original JSON output format with corrected files and unchanged source identity. Use NOVA 1.0.0 public components and c/novaTokens; do not use retired aggregate or held Spinner/Progress Bar components. Do not call Figma again. {{diagnostic}}
 @@section local
-Fix the LWC bundle from the local Figma source supplied in this session. Return complete JSON with the same source identity and dimensions. {{diagnostic}}
+Fix the LWC bundle from the local Figma source supplied in this session. Return complete JSON with the same source identity and dimensions. Use NOVA 1.0.0 public components and c/novaTokens; do not use retired aggregate or held Spinner/Progress Bar components. {{diagnostic}}
 @@section with_evidence
 {{prompt}}
 

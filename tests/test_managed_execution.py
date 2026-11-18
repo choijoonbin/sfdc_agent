@@ -46,7 +46,7 @@ const raw = Buffer.from(JSON.stringify({analysis,input:{request}}));
 const checkpoint = { id:analysis.id,digest:hash(raw),bytes:raw.toString('base64'),
   request,cwd:process.cwd(),scratch:process.env.SFDC_EXECUTION_SCRATCH,
   receivedServiceToken:Boolean(process.env.SFDC_AGENT_EXECUTION_TOKEN), receivedUnrelatedSecret:Boolean(process.env.UNRELATED_PRIVATE_VALUE),
-  receivedFigmaToken:Boolean(process.env.FIGMA_ACCESS_TOKEN),archiveIndex:process.env.SFDC_MANAGED_ARCHIVE_INDEX };
+  receivedFigmaToken:Boolean(process.env.FIGMA_ACCESS_TOKEN),receivedPlanToken:Boolean(process.env.FIGMA_PLAN_ACCESS_TOKEN),archiveIndex:process.env.SFDC_MANAGED_ARCHIVE_INDEX };
 const view = Buffer.from(JSON.stringify(analysis));
 writeFileSync(join(process.env.SFDC_ANALYSIS_OUTPUT,'public-view.json'),view);
 const manifest = Buffer.from(JSON.stringify({protocolVersion:1,serializerVersion:1,jobId:request.jobId,attempt:request.attempt,

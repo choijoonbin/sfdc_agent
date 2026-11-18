@@ -77,6 +77,10 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
         status, result, _ = await self.request(execution_fixtures.EXECUTION)
         self.assertEqual(status, 200)
         self.assertTrue(result['checkpoint']['receivedFigmaToken'])
+        with patch.dict(os.environ, {'FIGMA_PLAN_ACCESS_TOKEN': 'explicit-plan-fixture'}):
+            status, planned, _ = await self.request({**execution_fixtures.EXECUTION, 'jobId': str(uuid4())})
+        self.assertEqual(status, 200)
+        self.assertTrue(planned['checkpoint']['receivedPlanToken'])
         root = Path(self.directory)
         for name in ('managed-source-discovery.mjs', 'managed-source-reference.mjs'):
             file = root / 'nextbss/server' / name
@@ -98,9 +102,11 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
         for reference, key in [(self.remote, 'FrameDocument'), ('figma-local://local' + 'a'*32 + '/source?node-id=1-2&page-id=1-1', 'local'+'a'*32)]:
             payload = {**execution_fixtures.EXECUTION, 'sourceReference': reference, 'executionScope': B,
                        'archive': {**B, 'fileKey': key, 'sha256': 'a'*64}}
-            status, result, _ = await self.request(payload)
+            with patch.dict(os.environ, {'FIGMA_PLAN_ACCESS_TOKEN': 'explicit-plan-fixture'}):
+                status, result, _ = await self.request(payload)
             self.assertEqual(status, 200, result)
             self.assertFalse(result['checkpoint']['receivedFigmaToken'])
+            self.assertFalse(result['checkpoint']['receivedPlanToken'])
 
     async def test_scope_change_blocks_mcp_discovery_authorize_but_delete_still_reaps(self):
         session = discovery_fixtures.FakeACP(needs_auth=True)

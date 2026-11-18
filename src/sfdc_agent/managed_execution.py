@@ -24,6 +24,7 @@ from .managed_prompts import PromptBundle, execution_prompts, runner_token
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope, execution_mode, execution_progress
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
+from .component_library import ComponentLibrary
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
@@ -91,6 +92,7 @@ class ExecutionRequest(BaseModel):
     promptReleaseId: ReleasePin
     promptBundle: PromptBundle | None = None
     designManifestSha256: ManifestDigest | None = None
+    componentLibrary: ComponentLibrary | None = None
     promptReleaseVersion: RegistryLabel | None = None
     analysisJobId: UUID | None = None
     analysis: JsonObject | None = None
@@ -232,6 +234,28 @@ def _check_kiro_configuration(request: Request, payload: ExecutionRequest) -> No
     if (not local_port or origin != f"http://127.0.0.1:{local_port}"
             or execution_mode(payload) == 'headless' and not os.environ.get("KIRO_API_KEY", "").strip()):
         raise HTTPException(503, "Managed Kiro runtime is unavailable.")
+
+
+def _check_component_library_configuration(payload: ExecutionRequest) -> None:
+    # Null is only the established pre-integration transport representation.
+    # Spring classifies new commands explicitly; the Node selected-release guard
+    # also fences any unversioned request before model work.
+    if payload.componentLibrary is None:
+        return
+    try:
+        path = engine_root() / 'nextbss/engine/managed-runtime-capabilities.json'
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 8192:
+            raise ValueError
+        capabilities = _decode_json(path.read_bytes())
+        if capabilities.get('schemaVersion') != 1 or not isinstance(capabilities.get('generationFamilies'), list):
+            raise ValueError
+        supported = any(item == {'family': payload.componentLibrary.family,
+                                 'libraryVersion': payload.componentLibrary.libraryVersion}
+                        for item in capabilities['generationFamilies'])
+    except (OSError, ValueError, TypeError, AttributeError):
+        raise HTTPException(503, 'RUNTIME_CAPABILITIES_UNAVAILABLE') from None
+    if not supported:
+        raise HTTPException(409, 'RELEASE_RUNTIME_INCOMPATIBLE')
 
 
 async def _write_input(process: asyncio.subprocess.Process, payload: bytes) -> None:
@@ -462,6 +486,7 @@ async def execute(request: Request) -> ExecutionResult:
         if not payload.archive and payload.sourceReference.startswith('https://'):
             require_figma_scope(payload.executionScope)
         _execution_budget(payload, _runner_configuration()[2])
+        _check_component_library_configuration(payload)
         _check_kiro_configuration(request, payload)
         execution = asyncio.create_task(_execute(payload))
         disconnect = asyncio.create_task(_wait_for_disconnect(request))
@@ -473,7 +498,7 @@ async def execute(request: Request) -> ExecutionResult:
             return execution.result()
         raise HTTPException(499, "Managed execution request disconnected.")
     except HTTPException as failure:
-        if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail == 'LIMIT_MISMATCH'):
+        if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail in {'LIMIT_MISMATCH', 'RELEASE_RUNTIME_INCOMPATIBLE', 'RUNTIME_CAPABILITIES_UNAVAILABLE'}):
             return JSONResponse({'code': failure.detail}, status_code=failure.status_code, headers=failure.headers)
         raise
     finally:

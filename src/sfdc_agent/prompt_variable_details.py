@@ -39,10 +39,10 @@ _SOURCE_CONTEXT = {
     "inputControls": [], "actions": [],
 }
 _SOURCE_DIGEST = "a" * 64
-_BUNDLE_NAME = "nextBssExampleScreen"
+_BUNDLE_NAME = "nextBssScreenExample"
 _SCREEN_OUTPUT = {
     **_REFERENCE, "title": "Sample screen", **_DIMENSIONS, "html": "<template>...</template>",
-    "css": "@import 'c/nextBssTokens';\n...",
+    "css": "@import 'c/novaTokens';\n...",
     "javascript": "import { LightningElement } from 'lwc';\nexport default class Screen extends LightningElement {}",
     "notes": [],
 }
@@ -57,7 +57,7 @@ _REVIEWED_ANALYSIS = {
 }
 
 _COMMON = {
-    "version": _text("화면 변환에 적용할 NextBSS 컴포넌트 카탈로그의 버전입니다. 프롬프트 릴리스나 Figma 리비전과 별개입니다.",
+    "version": _text("화면 변환에 적용할 Figma 디자인 기준 버전입니다. NOVA 공통 라이브러리 버전(novaContract.version) 및 프롬프트 릴리스와 별개입니다.",
                      "1.9", "version"),
     "component_variants": _text("등록된 NextBSS 컴포넌트와 각 컴포넌트의 변형 이름을 한 줄씩 나열한 카탈로그 요약입니다.",
                                 "Button: Filled, T-Blue Ghost\nText Field / Text Area: Default", "componentVariants"),
@@ -82,12 +82,12 @@ _COMMON = {
                               "historyTables / sourceContext.historyTables"),
     "accordion": _fragment("아코디언 변형, 펼침 상태와 부모 기준 배치를 확인하게 하는 공통 규칙과 출처별 지시입니다.",
                            "Inspect each Accordion instance and its enclosing layout before generating code."),
-    "component_contracts": _fragment("공통 NextBSS LWC 태그의 지원 속성과 사용 조건을 알려주는 내부 규칙입니다.",
-                                     "Use the documented NextBSS LWC attributes and supported variants."),
-    "token_declarations": _text("활성 NextBSS에서 추출한 색상·간격·모서리·글자 스타일의 CSS 변수 선언입니다.",
-                                "--nb-spacing-8: 8px;\n--nb-radius-6: 6px;", "tokenDeclarations"),
-    "typography_groups": _detail("활성 NextBSS 글자 스타일 토큰의 그룹 이름입니다. 프롬프트에는 쉼표로 연결해 넣습니다.",
-                                 "문자열 배열", ["--nb-typography-body-medium-14"], "typographyGroups"),
+    "component_contracts": _fragment("고정 NOVA 릴리스의 실제 공개 태그·속성·이벤트·슬롯 계약과 사용 조건입니다.",
+                                     "Use the pinned NOVA public contract and actual array/object bindings.", "novaContract"),
+    "token_declarations": _text("고정 NOVA 토큰 모듈에서 추출한 색상·간격·모서리·글자 스타일의 CSS 변수 선언입니다.",
+                                "--nova-spacing-8: 8px;\n--nova-radius-6: 6px;", "tokenDeclarations"),
+    "typography_groups": _detail("고정 NOVA 글자 스타일 토큰의 그룹 이름입니다. 프롬프트에는 쉼표로 연결해 넣습니다.",
+                                 "문자열 배열", ["--nova-typography-body-medium-14"], "typographyGroups"),
     "output_format": _fragment("묶음 이름에 맞춰 모델이 반환할 LWC HTML·CSS·JavaScript의 형식을 안내합니다.",
                                "Return a single JSON object containing html, css, and javascript.", "name"),
     "example": _object("모델이 반환해야 할 Screen 생성 결과의 형식 예시입니다. Agent가 조립하며 입력값은 아닙니다.", _SCREEN_OUTPUT),
@@ -123,7 +123,7 @@ _COMMON = {
                                                  "emptyLabel": "조회 결과가 없습니다.", "rowCount": 0}], "historyTables"),
     "reviewed_analysis": _object("생성에 재사용하는 저장된 Screen 분석입니다. 원본과 NextBSS 기준, 치수, 컴포넌트 매핑, 검토 항목을 포함합니다.",
                                  _REVIEWED_ANALYSIS, "reviewedAnalysis"),
-    "name": _text("생성할 NextBSS LWC 묶음의 API 이름입니다.", _BUNDLE_NAME, "name"),
+    "name": _text("생성할 NOVA 업무 화면 LWC 묶음의 API 이름입니다.", _BUNDLE_NAME, "name"),
     "diagnostic": _text("앞선 분석 또는 생성 결과가 검증을 통과하지 못한 이유입니다. 보정 요청에 사용합니다.",
                         "The LWC template is missing a required closing tag.", "diagnostic"),
     "prompt": _fragment("같은 원본으로 다시 보정할 수 있도록 기존 생성 근거에서 다시 조립한 전체 프롬프트입니다.",
@@ -202,10 +202,10 @@ _BY_OPERATION = {
                              "정수", 48, "maxFacts"),
     },
     "story.generate": {
-        "reviewed": _serialized("저장된 Story 실행 명세와 일치 검증용 해시, 묶음 이름, 배치와 NextBSS 실행 계약입니다.",
+        "reviewed": _serialized("저장된 Story 실행 명세와 일치 검증용 해시, 묶음 이름, 배치와 NOVA 1.0.0 공개 컴포넌트 실행 계약입니다.",
                                 {"specDigest": _SOURCE_DIGEST, "bundleName": _STORY_BUNDLE,
                                  "spec": {"plan": {"startScreenId": "1:2", "screens": [_STORY_SCREEN]}},
-                                 "geometry": {}, "nextBss": {"tokenModule": "c/nextBssTokens"}, "runtimeContract": {}}, "input"),
+                                 "geometry": {}, "nova": {"libraryVersion": "1.0.0", "tokenModule": "c/novaTokens"}, "runtimeContract": {}}, "input"),
         "diagnostic": _serialized("직전 Story 코드 검증이 실패했을 때만 다시 요청하면서 보내는 오류 코드와 메시지입니다.",
                                    {"code": "STORY_KIRO_PREVIEW_COMPILE", "message": "Sample compilation failure"}, "diagnostic"),
         "output_contract": _object("Agent가 조립하는 기대 응답 형식입니다. 명세 해시와 생성 파일, 확인하지 못한 항목을 포함합니다.",
