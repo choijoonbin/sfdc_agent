@@ -19,6 +19,8 @@ from .kiro_gateway import KiroSession, SessionError
 from .managed_execution import (IncompleteExecution, _decode_json, _encode_json, _read_output,
                                 _runner_configuration, _stop_process, _write_input)
 from .managed_prompts import PromptBundle, _authorize, checked_bundle
+from .managed_execution_progress import ExecutionScope
+from .managed_figma_scope import require_figma_scope
 from .screen_tasks import build_screen_task
 
 router = APIRouter(prefix='/internal/v1/figma-discoveries', include_in_schema=False)
@@ -27,6 +29,8 @@ MAX_DISCOVERIES = 64
 MAX_ACTIVE = 4
 REQUEST_BYTES = 4 * 1024 * 1024
 ERRORS = {
+    'FIGMA_PROVIDER_SCOPE_UNAVAILABLE': 'Figma 연결을 사용할 서버 범위를 먼저 구성해주세요.',
+    'FIGMA_PROVIDER_SCOPE_FORBIDDEN': '이 워크스페이스에는 해당 Figma 연결이 배정되지 않았습니다.',
     'KIRO_UNAVAILABLE': 'Kiro 실행 환경을 시작할 수 없습니다.',
     'KIRO_VERSION': 'HTTP MCP를 지원하는 Kiro CLI V3가 필요합니다.',
     'KIRO_MODE_UNAVAILABLE': 'Kiro의 Figma 읽기 전용 모드를 시작하지 못했습니다.',
@@ -63,6 +67,7 @@ class Reference(BaseModel):
 class DiscoveryRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     id: UUID
+    executionScope: ExecutionScope
     reference: Reference
     promptBundle: PromptBundle
     timeoutSeconds: int = Field(strict=True, ge=30, le=LIFETIME_SECONDS)
@@ -163,6 +168,7 @@ class Discoveries:
         await asyncio.gather(*(self.close_job(job) for job in jobs), return_exceptions=True)
 
     async def start(self, payload):
+        require_figma_scope(payload.executionScope)
         remaining = payload.deadlineEpochSeconds - time()
         if remaining <= 0:
             raise HTTPException(410, 'Discovery deadline expired.')
@@ -202,6 +208,8 @@ class Discoveries:
         job = self.jobs.get(str(key))
         if not job:
             raise HTTPException(404, 'Discovery not found.')
+        if job.view['status'] in {'running', 'needs-auth'}:
+            require_figma_scope(job.payload.executionScope)
         return job
 
     def event(self, job, event):
@@ -234,6 +242,7 @@ class Discoveries:
         watcher = None
         try:
             async with asyncio.timeout(min(job.payload.timeoutSeconds, max(0, job.payload.deadlineEpochSeconds - time()))):
+                require_figma_scope(job.payload.executionScope)
                 opening = asyncio.create_task(KiroSession.start())
                 try:
                     job.session = await asyncio.shield(opening)
@@ -243,8 +252,11 @@ class Discoveries:
                     job.session = await opening
                     raise
                 watcher = asyncio.create_task(self.watch_events(job))
+                require_figma_scope(job.payload.executionScope)
                 await job.session.call('open', {'reference': {'fileKey': job.payload.reference.fileKey}, 'readFigma': True}, timeout=65)
+                require_figma_scope(job.payload.executionScope)
                 result = await job.session.call('prompt', {'text': text}, timeout=job.payload.timeoutSeconds)
+                require_figma_scope(job.payload.executionScope)
                 result = await project_discovery(job.payload.reference.model_dump(exclude_none=True), result)
                 job.view = {'id': str(job.payload.id), 'status': 'complete', 'result': result}
         except asyncio.CancelledError:
@@ -267,10 +279,12 @@ class Discoveries:
                 job.session = None
 
     async def authorize(self, job):
+        require_figma_scope(job.payload.executionScope)
         if job.view['status'] != 'needs-auth' or job.view.get('authUrl') or not job.session:
             return job.public_view()
         async def request_authorization():
             try:
+                require_figma_scope(job.payload.executionScope)
                 value = await job.session.call('authorize', timeout=35)
                 if job.view['status'] == 'needs-auth' and (url := auth_url(value)):
                     job.view = {**job.view, 'authUrl': url}

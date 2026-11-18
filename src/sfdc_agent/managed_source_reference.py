@@ -15,6 +15,7 @@ from .managed_execution import (
     _wait_for_disconnect, _finish_owned_cleanup, _cancel_request_tasks, engine_root, IncompleteExecution,
 )
 from .managed_prompts import _authorize
+from .managed_figma_scope import require_figma_scope
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
@@ -32,12 +33,14 @@ class Approval(BaseModel):
 
 
 async def _approve(payload):
+    require_figma_scope(payload.executionScope)
     binary, _, _ = _runner_configuration()
     runner = (engine_root() / "nextbss/server/managed-source-reference.mjs").resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix="sfdc-source-reference-") as scratch:
         output = await _run_process(binary, runner, scratch, 90,
             _encode_json(payload.model_dump(mode="json")),
             {"FIGMA_PLAN_ACCESS_TOKEN": os.environ.get("FIGMA_PLAN_ACCESS_TOKEN", "")}, output_limit=23 * 1024 * 1024)
+    require_figma_scope(payload.executionScope)
     if len(output) > 23 * 1024 * 1024:
         raise IncompleteExecution
     response = _decode_json(output)
@@ -78,6 +81,7 @@ async def approve_source_reference(request: Request):
         raise HTTPException(408, "Source reference request timed out.") from None
     except ClientDisconnect:
         raise HTTPException(499, "Source reference request disconnected.") from None
+    require_figma_scope(payload.executionScope)
     if not _WORKER_SLOTS.acquire(blocking=False):
         return JSONResponse({"code": "EXECUTION_BUSY"}, status_code=503, headers={"Retry-After": "5"})
     tasks = ()

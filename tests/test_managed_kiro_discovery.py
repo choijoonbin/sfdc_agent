@@ -60,8 +60,10 @@ class FakeACP:
 
 class ManagedKiroDiscoveryTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        self.scope = {'tenantId': 'aa000000-0000-4000-8000-000000000001', 'workspaceId': 'ad000000-0000-4000-8000-000000000001'}
+        self.enterContext(patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': self.scope['tenantId'] + '/' + self.scope['workspaceId']}))
         templates = load_baseline_templates()
-        self.raw = {'id': str(uuid4()), 'reference': {'fileKey': 'RealFile', 'nodeId': '1:2', 'selectedPageId': '1:2'},
+        self.raw = {'id': str(uuid4()), 'executionScope': self.scope, 'reference': {'fileKey': 'RealFile', 'nodeId': '1:2', 'selectedPageId': '1:2'},
                     'promptBundle': {'releaseId': 'prompts-v1', 'sha256': template_digest(templates), 'templates': templates},
                     'timeoutSeconds': 30, 'deadlineEpochSeconds': int(time()) + 60}
         self.manager = Discoveries()

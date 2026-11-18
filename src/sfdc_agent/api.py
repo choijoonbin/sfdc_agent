@@ -12,6 +12,7 @@ from .contracts import PilotRequest
 from .design_candidate import router as design_candidate_router
 from .kiro_gateway import SessionError, error_response, kiro_lifespan, kiro_mode, router
 from .managed_execution import router as managed_execution_router
+from .managed_figma_scope import FigmaProviderScopeError, figma_scope_response
 from .managed_source_reference import router as managed_source_reference_router
 from .managed_prompts import router as managed_prompts_router
 from .managed_visual import router as managed_visual_router
@@ -45,6 +46,7 @@ app.include_router(managed_views_router)
 app.include_router(managed_discovery_router)
 app.include_router(managed_execution_progress_router)
 app.add_exception_handler(SessionError, error_response)
+app.add_exception_handler(FigmaProviderScopeError, figma_scope_response)
 app.add_middleware(ManagedModeBoundary)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts())
 

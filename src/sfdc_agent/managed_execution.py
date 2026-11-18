@@ -22,6 +22,7 @@ from starlette.requests import ClientDisconnect
 
 from .managed_prompts import PromptBundle, execution_prompts, runner_token
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope, execution_mode, execution_progress
+from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 
@@ -36,7 +37,7 @@ _CHUNK_BYTES = 64 * 1024
 _WORKER_SLOTS = BoundedSemaphore(2)
 _RUNNER_ENVIRONMENT = (
     "PATH", "LANG", "LC_ALL", "LC_CTYPE", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
-    "FIGMA_ACCESS_TOKEN", "SFDC_MANAGED_RELEASE_ROOT", "SFDC_MANAGED_AGENT_ORIGIN",
+    "SFDC_MANAGED_RELEASE_ROOT", "SFDC_MANAGED_AGENT_ORIGIN",
     "SFDC_MANAGED_SOURCE_ROOT",
 )
 
@@ -58,6 +59,7 @@ class ArchiveSelection(BaseModel):
 
 class SourceDiscoveryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    executionScope: ExecutionScope
     archive: ArchiveSelection | None = None
     sourceReference: SourceReference | None = None
     pageId: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
@@ -68,6 +70,8 @@ class SourceDiscoveryRequest(BaseModel):
     def source_kind(self):
         if bool(self.archive) == bool(self.sourceReference):
             raise ValueError("Select a local archive or a registered remote source.")
+        if self.archive and (self.archive.tenantId != self.executionScope.tenantId or self.archive.workspaceId != self.executionScope.workspaceId):
+            raise ValueError('The selected archive belongs to a different execution scope.')
         return self
 
 
@@ -358,6 +362,7 @@ def _parse_result(output: bytes, operation: str) -> ExecutionResult:
 
 
 async def _execute(payload: ExecutionRequest) -> ExecutionResult:
+    provider_environment = remote_figma_environment(payload.executionScope) if not payload.archive and payload.sourceReference.startswith('https://') else {}
     binary, runner, physical = _runner_configuration()
     timeout = _execution_budget(payload, physical)
     directory = None
@@ -369,7 +374,9 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
             with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
                 encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
                 async with execution_progress(payload, runner_token(), timeout) as context:
-                    environment = {'SFDC_MANAGED_KIRO_MODE': context.mode} if payload.engine == 'KIRO' else {}
+                    environment = dict(provider_environment)
+                    if payload.engine == 'KIRO':
+                        environment['SFDC_MANAGED_KIRO_MODE'] = context.mode
                     if payload.operation == 'ANALYZE':
                         directory = output_directory(payload)
                         environment['SFDC_ANALYSIS_OUTPUT'] = str(directory)
@@ -379,6 +386,8 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                         verify_analysis_output(directory, payload, result, engine_root().resolve(strict=True))
                 if time() >= payload.deadlineEpochSeconds:
                     raise TimeoutError
+                if not payload.archive and payload.sourceReference.startswith('https://'):
+                    require_figma_scope(payload.executionScope)
                 keep = True
                 return result.model_copy(update={"promptTraces": traces or None})
     except TimeoutError:
@@ -396,11 +405,14 @@ async def _wait_for_disconnect(request: Request) -> None:
 
 
 async def _discover_source(payload: SourceDiscoveryRequest):
+    environment = remote_figma_environment(payload.executionScope) if payload.sourceReference else {}
     binary, _, _ = _runner_configuration()
     runner = (engine_root() / "nextbss/server/managed-source-discovery.mjs").resolve(strict=True)
     encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
     with tempfile.TemporaryDirectory(prefix="sfdc-source-discovery-") as scratch:
-        output = await _run_process(binary, runner, scratch, 90, encoded)
+        output = await _run_process(binary, runner, scratch, 90, encoded, environment)
+    if payload.sourceReference:
+        require_figma_scope(payload.executionScope)
     response = _decode_json(output)
     if isinstance(response, dict) and response.get("code") == "FIGMA_TOKEN_REQUIRED":
         return JSONResponse({"code": "FIGMA_TOKEN_REQUIRED"}, status_code=503)
@@ -419,6 +431,8 @@ async def source_discovery(request: Request):
     tasks = ()
     try:
         payload = await _parse_request(request, SourceDiscoveryRequest)
+        if payload.sourceReference:
+            require_figma_scope(payload.executionScope)
         execution = asyncio.create_task(_discover_source(payload))
         disconnect = asyncio.create_task(_wait_for_disconnect(request))
         tasks = (execution, disconnect)
@@ -445,6 +459,8 @@ async def execute(request: Request) -> ExecutionResult:
     tasks = ()
     try:
         payload = await _parse_request(request)
+        if not payload.archive and payload.sourceReference.startswith('https://'):
+            require_figma_scope(payload.executionScope)
         _execution_budget(payload, _runner_configuration()[2])
         _check_kiro_configuration(request, payload)
         execution = asyncio.create_task(_execute(payload))

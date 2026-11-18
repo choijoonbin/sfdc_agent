@@ -41,6 +41,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
             'designReleaseId': 'nextbss-1.9-' + 'a' * 64, 'promptReleaseId': 'prompts-v1',
             'promptBundle': self.bundle.model_dump()})
         self.progress = '/internal/v1/executions/' + str(self.payload.jobId) + '/attempts/1'
+        self.enterContext(patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': str(self.payload.executionScope.tenantId) + '/' + str(self.payload.executionScope.workspaceId)}))
 
     def headers(self):
         return ((b'x-sfdc-managed-prompt', runner_token().encode()), (b'x-sfdc-kiro-purpose', b'screen'))

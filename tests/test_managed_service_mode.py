@@ -24,6 +24,7 @@ BASE = '/internal/kiro/sessions'
 class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1', 'SFDC_AGENT_EXECUTION_TOKEN': 'service-only-test-token',
+                                                 'SFDC_MANAGED_FIGMA_SCOPE': 'aa000000-0000-4000-8000-000000000001/ad000000-0000-4000-8000-000000000001',
                                                  'SFDC_AGENT_SCREEN_KIRO_MODE': 'acp', 'SFDC_AGENT_STORY_KIRO_MODE': 'acp'}))
         templates = load_baseline_templates()
         self.bundle = PromptBundle(releaseId='prompts-v1', sha256=template_digest(templates), templates=templates)

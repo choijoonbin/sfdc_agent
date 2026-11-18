@@ -21,7 +21,8 @@ class ManagedSourceReferenceTests(unittest.IsolatedAsyncioTestCase):
         self.runner.parent.mkdir(parents=True)
         self.runner.write_text('fixture')
         self.slots = BoundedSemaphore(1)
-        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_EXECUTION_TOKEN': 'reference-fixture-token'}))
+        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_EXECUTION_TOKEN': 'reference-fixture-token',
+            'SFDC_MANAGED_FIGMA_SCOPE': 'aa000000-0000-4000-8000-000000000001/ad000000-0000-4000-8000-000000000001'}))
         self.enterContext(patch('sfdc_agent.managed_source_reference.engine_root', return_value=self.root))
         self.enterContext(patch('sfdc_agent.managed_source_reference._WORKER_SLOTS', self.slots))
         self.enterContext(patch('sfdc_agent.managed_source_reference._runner_configuration', return_value=(shutil.which('node'), self.runner, 60)))

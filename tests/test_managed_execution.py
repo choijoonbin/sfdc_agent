@@ -125,6 +125,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
             "SFDC_MANAGED_RELEASE_INGRESS": str(Path(self.directory) / 'ingress'),
             "SFDC_MANAGED_ARCHIVE_INDEX": str(Path(self.directory) / "approved-index.json"),
             "FIGMA_ACCESS_TOKEN": "explicit-figma-test-token",
+            "SFDC_MANAGED_FIGMA_SCOPE": EXECUTION['executionScope']['tenantId'] + '/' + EXECUTION['executionScope']['workspaceId'],
             "UNRELATED_PRIVATE_VALUE": "unrelated-test-secret",
         }, clear=True))
 
@@ -272,7 +273,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         source_runner = root / 'nextbss/server/managed-source-discovery.mjs'
         source_runner.parent.mkdir(parents=True)
         source_runner.write_text('// Trusted source projection fixture')
-        payload = {'sourceReference': 'https://www.figma.com/design/RealFile'}
+        payload = {'sourceReference': 'https://www.figma.com/design/RealFile', 'executionScope': EXECUTION['executionScope']}
         for code, expected_status, expected in (
             ('FIGMA_TOKEN_REQUIRED', 503, {'code': 'FIGMA_TOKEN_REQUIRED'}),
             ('FIGMA_RATE_LIMITED', 429, {'code': 'FIGMA_RATE_LIMITED'}),
@@ -323,7 +324,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         runner.write_text("import { writeFileSync } from 'node:fs';\n"
                           f"writeFileSync({json.dumps(str(marker))}, JSON.stringify({{pid: process.pid, scratch: process.env.SFDC_EXECUTION_SCRATCH}}));\n"
                           "setInterval(() => {}, 10000);\n")
-        pending = asyncio.create_task(self.request({'sourceReference': 'https://www.figma.com/design/RealFile'},
+        pending = asyncio.create_task(self.request({'sourceReference': 'https://www.figma.com/design/RealFile', 'executionScope': EXECUTION['executionScope']},
                                                    disconnect=disconnect, path='/internal/v1/source-discovery'))
         async with asyncio.timeout(5):
             while not marker.is_file():
@@ -346,7 +347,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 499)
             self.assert_source_process_reaped(state)
             with patch(f'{RUNNER_MODULE}._run_process', new=AsyncMock(return_value=b'{"result":{"pages":[]}}')):
-                self.assertEqual((await self.request({'sourceReference': 'https://www.figma.com/design/RealFile'},
+                self.assertEqual((await self.request({'sourceReference': 'https://www.figma.com/design/RealFile', 'executionScope': EXECUTION['executionScope']},
                                                     path='/internal/v1/source-discovery'))[0], 200)
 
     async def test_source_cancel_and_rejected_waiter_do_not_leak_or_cancel_other_work(self):

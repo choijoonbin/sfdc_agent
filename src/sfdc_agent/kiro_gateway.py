@@ -31,6 +31,7 @@ from .prompt_run_values import PromptRunValues, capture_prompt_run, trace_owner
 from .providers import _kiro_environment
 from .service_mode import managed_only
 from .managed_execution_progress import managed_execution_context
+from .managed_figma_scope import require_figma_scope
 
 router = APIRouter(prefix="/internal/kiro/sessions")
 logger = logging.getLogger("uvicorn.error")
@@ -267,6 +268,8 @@ def get_session(request, session_id):
     if session is None or session.closed:
         raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
     require_session_owner(request, session)
+    if managed_only() and (context := getattr(session, 'managed_execution_context', None)) and context.remote:
+        require_figma_scope(context.execution_scope)
     return session
 
 
@@ -296,6 +299,8 @@ async def start_session(request: Request):
         raise HTTPException(422, "Invalid Kiro session purpose.")
     if context and context.purpose != purpose:
         raise HTTPException(422, 'The execution purpose does not match.')
+    if context and context.remote:
+        require_figma_scope(context.execution_scope)
     mode = context.mode if context else kiro_mode(purpose) if purpose in _MODES else "acp"
     if mode not in {"acp", "headless"}:
         raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
@@ -309,6 +314,12 @@ async def start_session(request: Request):
         raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", "프롬프트 릴리스를 불러올 수 없습니다.") from None
     session_id = uuid4().hex
     session = HeadlessKiroSession(read_key(), purpose=purpose) if mode == "headless" else await KiroSession.start()
+    try:
+        if context and context.remote:
+            require_figma_scope(context.execution_scope)
+    except BaseException:
+        await session.close()
+        raise
     if len(sessions) >= MAX_SESSIONS:
         await session.close()
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
@@ -335,6 +346,8 @@ async def start_session(request: Request):
             raise SessionError("KIRO_ABORTED", "Kiro 변환 작업이 중단됐습니다.")
         await opening
         require_session_owner(request, session)
+        if context and context.remote:
+            require_figma_scope(context.execution_scope)
     except BaseException:
         sessions.pop(session_id, None)
         await session.close()

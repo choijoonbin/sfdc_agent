@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .managed_prompts import _authorize, managed_context_alive, require_managed_context
+from .managed_figma_scope import require_figma_scope, FigmaProviderScopeError
 
 router = APIRouter(prefix='/internal/v1/executions', include_in_schema=False)
 _CONTEXTS = {}
@@ -107,6 +108,7 @@ class ExecutionContext:
     remote: bool
     expires: float
     task: asyncio.Task | None = None
+    execution_scope: tuple | None = None
     sessions: set = field(default_factory=set)
     figma_session: object | None = None
     authorization: asyncio.Task | None = None
@@ -175,9 +177,11 @@ async def execution_progress(payload, token, timeout):
     remote = bool(source.scheme == 'https' and source.netloc in {'figma.com', 'www.figma.com'}
                   and match and payload.archive is None)
     file_key = match[1] if remote else None
+    if remote:
+        require_figma_scope(payload.executionScope)
     context = ExecutionContext(str(payload.jobId), payload.attempt, token, payload.kind.lower(),
                                execution_mode(payload) if payload.engine == 'KIRO' else 'nova',
-                               file_key, remote, monotonic() + timeout, asyncio.current_task())
+                               file_key, remote, monotonic() + timeout, asyncio.current_task(), _scope(payload))
     fingerprint = sha256(json.dumps(payload.model_dump(mode='json', exclude_none=True), sort_keys=True,
                                     ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
     key = (context.job_id, context.attempt)
@@ -243,6 +247,7 @@ def _find(job_id, attempt):
         context = _CONTEXTS.get((str(job_id), attempt))
     if not context or not context.alive() or not context.remote or context.purpose != 'screen' or context.mode != 'acp':
         raise HTTPException(404, 'Live ACP execution not found.')
+    require_figma_scope(context.execution_scope)
     return context
 
 
@@ -289,9 +294,12 @@ async def authorize(request: Request, job_id: UUID, attempt: int):
         return context.public_view()
     async def request_authorization():
         try:
+            require_figma_scope(context.execution_scope)
             value = await context.figma_session.call('authorize', timeout=35)
             if context.alive() and context.view['status'] == 'needs-auth' and (url := _figma_url(value)):
                 context.view = {**context.view, 'authUrl': url}
+        except FigmaProviderScopeError:
+            raise
         except Exception:
             raise HTTPException(502, 'Figma authorization is unavailable.') from None
     if not context.authorization or context.authorization.done():
