@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 import re
 from threading import RLock
-from time import monotonic
+from time import monotonic, time
 from urllib.parse import urlsplit
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field
 
 from .managed_prompts import _authorize, managed_context_alive, require_managed_context
 
@@ -17,7 +18,63 @@ router = APIRouter(prefix='/internal/v1/executions', include_in_schema=False)
 _CONTEXTS = {}
 _TOKENS = {}
 _LOCK = RLock()
+_ATTEMPTS = {}
+_RETAINED_ATTEMPTS = 256
+MAX_ATTEMPT = 2147483647
 _PHASES = {'starting', 'connecting', 'figma-connected', 'generating', 'figma-reading', 'analyzing', 'local-analyzing'}
+
+
+class ExecutionScope(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    tenantId: UUID
+    workspaceId: UUID
+
+
+class Cancellation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    executionScope: ExecutionScope
+    deadlineEpochSeconds: int = Field(strict=True, gt=0)
+
+
+def _scope(value):
+    return (str(value.executionScope.tenantId), str(value.executionScope.workspaceId))
+
+
+def _failure(code, status=409):
+    return HTTPException(status, code)
+
+
+def _prune_attempts():
+    now = time()
+    for key, value in list(_ATTEMPTS.items()):
+        if value['deadline'] + 30 <= now and not any(entry.job_id == key for entry in _CONTEXTS.values()):
+            _ATTEMPTS.pop(key, None)
+
+
+def _attempt_stamp(job_id, attempt, scope, deadline, fingerprint=None, *, cancel=False):
+    _prune_attempts()
+    previous = _ATTEMPTS.get(job_id)
+    if previous:
+        if previous['scope'] != scope or previous['attempt'] > attempt:
+            raise _failure('EXECUTION_ATTEMPT_CONFLICT')
+        if previous['attempt'] == attempt:
+            if previous['deadline'] != deadline:
+                raise _failure('EXECUTION_ATTEMPT_CONFLICT')
+            if cancel:
+                previous['status'] = 'cancelled'
+                return previous
+            if previous['status'] == 'cancelled':
+                raise _failure('EXECUTION_CANCELLED')
+            if previous['fingerprint'] != fingerprint:
+                raise _failure('EXECUTION_ATTEMPT_CONFLICT')
+            raise _failure('EXECUTION_ALREADY_RUNNING' if previous['status'] == 'running' else 'EXECUTION_ALREADY_FINISHED')
+    elif len(_ATTEMPTS) >= _RETAINED_ATTEMPTS:
+        # This is not worker admission BUSY: never discard an acknowledged live cancellation.
+        raise _failure('EXECUTION_STATE_UNAVAILABLE', 503)
+    value = {'attempt': attempt, 'scope': scope, 'deadline': deadline, 'fingerprint': fingerprint,
+             'status': 'cancelled' if cancel else 'running'}
+    _ATTEMPTS[job_id] = value
+    return value
 
 
 def _figma_url(value):
@@ -43,20 +100,22 @@ def execution_mode(payload):
 class ExecutionContext:
     job_id: str
     attempt: int
-    token: str
+    token: str | None
     purpose: str
     mode: str
     file_key: str | None
     remote: bool
     expires: float
+    task: asyncio.Task | None = None
     sessions: set = field(default_factory=set)
     figma_session: object | None = None
     authorization: asyncio.Task | None = None
+    cleanup: asyncio.Task | None = None
     closed: bool = False
     view: dict = field(default_factory=lambda: {'status': 'running', 'phase': 'connecting'})
 
     def alive(self):
-        return not self.closed and self.expires > monotonic() and managed_context_alive(self.token)
+        return not self.closed and self.expires > monotonic() and (not self.token or managed_context_alive(self.token))
 
     def public_view(self):
         return {'jobId': self.job_id, 'attempt': self.attempt, **self.view}
@@ -87,28 +146,43 @@ class ExecutionContext:
 
     async def close(self):
         self.closed = True
-        if self.authorization:
-            self.authorization.cancel()
-            await asyncio.gather(self.authorization, return_exceptions=True)
-        await asyncio.gather(*(session.close() for session in self.sessions), return_exceptions=True)
-        self.sessions.clear()
-        self.figma_session = None
+        async def cleanup():
+            if self.authorization:
+                self.authorization.cancel()
+                await asyncio.gather(self.authorization, return_exceptions=True)
+            await asyncio.gather(*(session.close() for session in self.sessions), return_exceptions=True)
+            self.sessions.clear()
+            self.figma_session = None
+        if self.cleanup is None:
+            self.cleanup = asyncio.create_task(cleanup())
+        cancelled = False
+        while not self.cleanup.done():
+            try:
+                await asyncio.shield(self.cleanup)
+            except asyncio.CancelledError:
+                cancelled = True
+        self.cleanup.result()
+        if cancelled:
+            raise asyncio.CancelledError
 
 
 @asynccontextmanager
 async def execution_progress(payload, token, timeout):
-    if payload.engine != 'KIRO' or not token:
-        yield None
-        return
+    from hashlib import sha256
+    import json
     source = urlsplit(payload.sourceReference)
     match = re.match(r'^/(?:design|file)/([A-Za-z0-9]{1,160})(?:/|$)', source.path)
     remote = bool(source.scheme == 'https' and source.netloc in {'figma.com', 'www.figma.com'}
                   and match and payload.archive is None)
     file_key = match[1] if remote else None
-    context = ExecutionContext(str(payload.jobId), payload.attempt, token, payload.kind.lower(), execution_mode(payload),
-                               file_key, remote, monotonic() + timeout)
+    context = ExecutionContext(str(payload.jobId), payload.attempt, token, payload.kind.lower(),
+                               execution_mode(payload) if payload.engine == 'KIRO' else 'nova',
+                               file_key, remote, monotonic() + timeout, asyncio.current_task())
+    fingerprint = sha256(json.dumps(payload.model_dump(mode='json', exclude_none=True), sort_keys=True,
+                                    ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
     key = (context.job_id, context.attempt)
     with _LOCK:
+        _attempt_stamp(context.job_id, context.attempt, _scope(payload), payload.deadlineEpochSeconds, fingerprint)
         previous = [entry for entry in _CONTEXTS.values() if entry.job_id == context.job_id]
         if any(entry.attempt >= context.attempt for entry in previous):
             raise HTTPException(409, 'Execution attempt is already running.')
@@ -116,17 +190,41 @@ async def execution_progress(payload, token, timeout):
             entry.closed = True
             _CONTEXTS.pop((entry.job_id, entry.attempt), None)
         _CONTEXTS[key] = context
-        _TOKENS[token] = context
+        if token:
+            _TOKENS[token] = context
     try:
-        await asyncio.gather(*(entry.close() for entry in previous))
+        await asyncio.gather(*(_retire(entry, context.task) for entry in previous))
         yield context
     finally:
+        try:
+            await context.close()
+        finally:
+            with _LOCK:
+                if _CONTEXTS.get(key) is context:
+                    _CONTEXTS.pop(key, None)
+                if _TOKENS.get(token) is context:
+                    _TOKENS.pop(token, None)
+                stamp = _ATTEMPTS.get(context.job_id)
+                if stamp and stamp['attempt'] == context.attempt and stamp['status'] == 'running':
+                    stamp['status'] = 'finished'
+
+
+async def _retire(context, protected_task=None):
+    context.closed = True
+    if context.task and context.task not in (asyncio.current_task(), protected_task) and not context.task.done():
+        context.task.cancel()
+        await asyncio.gather(context.task, return_exceptions=True)
+    await context.close()
+
+
+@asynccontextmanager
+async def execution_lifespan(app):
+    try:
+        yield
+    finally:
         with _LOCK:
-            if _CONTEXTS.get(key) is context:
-                _CONTEXTS.pop(key, None)
-            if _TOKENS.get(token) is context:
-                _TOKENS.pop(token, None)
-        await context.close()
+            active = list(_CONTEXTS.values())
+        await asyncio.gather(*(_retire(entry, asyncio.current_task()) for entry in active), return_exceptions=True)
 
 
 def managed_execution_context(request):
@@ -139,11 +237,42 @@ def managed_execution_context(request):
 
 
 def _find(job_id, attempt):
+    if not 1 <= attempt <= MAX_ATTEMPT:
+        raise _failure('EXECUTION_ATTEMPT_INVALID', 422)
     with _LOCK:
         context = _CONTEXTS.get((str(job_id), attempt))
     if not context or not context.alive() or not context.remote or context.purpose != 'screen' or context.mode != 'acp':
         raise HTTPException(404, 'Live ACP execution not found.')
     return context
+
+
+@router.post('/{job_id}/attempts/{attempt}/cancel', status_code=204)
+async def cancel(request: Request, job_id: UUID, attempt: int):
+    _authorize(request)
+    if not 1 <= attempt <= MAX_ATTEMPT:
+        raise _failure('EXECUTION_ATTEMPT_INVALID', 422)
+    from .managed_execution import _decode_json
+    body = bytearray()
+    try:
+        async with asyncio.timeout(5):
+            async for chunk in request.stream():
+                if len(body) + len(chunk) > 1024:
+                    raise _failure('EXECUTION_CANCEL_TOO_LARGE', 413)
+                body.extend(chunk)
+        value = Cancellation.model_validate(_decode_json(body))
+    except (ValueError, RecursionError):
+        raise _failure('EXECUTION_CANCEL_INVALID', 422) from None
+    except TimeoutError:
+        raise _failure('EXECUTION_CANCEL_TIMED_OUT', 408) from None
+    if value.deadlineEpochSeconds > time() + 3630:
+        raise _failure('EXECUTION_DEADLINE_INVALID', 422)
+    with _LOCK:
+        current = [entry for entry in _CONTEXTS.values() if entry.job_id == str(job_id) and entry.attempt <= attempt]
+        if value.deadlineEpochSeconds + 30 > time() or current:
+            _attempt_stamp(str(job_id), attempt, _scope(value), value.deadlineEpochSeconds, cancel=True)
+            for entry in current:
+                entry.closed = True
+    await asyncio.gather(*(_retire(entry, asyncio.current_task()) for entry in current))
 
 
 @router.get('/{job_id}/attempts/{attempt}/progress')

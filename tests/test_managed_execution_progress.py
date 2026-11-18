@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from time import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
@@ -34,6 +35,8 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
         templates = load_baseline_templates()
         self.bundle = PromptBundle(releaseId='prompts-v1', sha256=template_digest(templates), templates=templates)
         self.payload = ExecutionRequest.model_validate({'jobId': str(uuid4()), 'attempt': 1, 'kind': 'SCREEN',
+            'executionScope': {'tenantId': str(uuid4()), 'workspaceId': str(uuid4())},
+            'timeoutSeconds': 90, 'deadlineEpochSeconds': int(time()) + 91,
             'engine': 'KIRO', 'sourceReference': 'https://www.figma.com/design/ApprovedFile?node-id=1-2',
             'designReleaseId': 'nextbss-1.9-' + 'a' * 64, 'promptReleaseId': 'prompts-v1',
             'promptBundle': self.bundle.model_dump()})
@@ -122,7 +125,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(HTTPException) as missing:
                 _check_kiro_configuration(request, self.payload)
             self.assertEqual(missing.exception.status_code, 503)
-        archive = {'tenantId': str(uuid4()), 'workspaceId': str(uuid4()), 'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
+        archive = {**self.payload.executionScope.model_dump(mode='json'), 'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
         local = ExecutionRequest.model_validate({**self.payload.model_dump(mode='json'), 'archive': archive})
         self.assertEqual(execution_mode(local), 'acp')
         _check_kiro_configuration(request, local)
@@ -132,7 +135,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
                 _check_kiro_configuration(request, local)
 
     async def test_archive_context_never_grants_remote_mcp_even_when_global_mode_is_acp(self):
-        archive = {'tenantId': str(uuid4()), 'workspaceId': str(uuid4()), 'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
+        archive = {**self.payload.executionScope.model_dump(mode='json'), 'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
         local = ExecutionRequest.model_validate({**self.payload.model_dump(mode='json'), 'archive': archive})
         async with kiro_lifespan(app):
           with execution_prompts(self.bundle):

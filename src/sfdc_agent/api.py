@@ -12,13 +12,14 @@ from .contracts import PilotRequest
 from .design_candidate import router as design_candidate_router
 from .kiro_gateway import SessionError, error_response, kiro_lifespan, kiro_mode, router
 from .managed_execution import router as managed_execution_router
+from .managed_source_reference import router as managed_source_reference_router
 from .managed_prompts import router as managed_prompts_router
 from .managed_visual import router as managed_visual_router
 from .managed_prompt_observability import router as managed_prompt_observability_router
 from .managed_design import router as managed_design_router
 from .managed_views import router as managed_views_router
 from .managed_kiro_discovery import discovery_lifespan, router as managed_discovery_router
-from .managed_execution_progress import router as managed_execution_progress_router
+from .managed_execution_progress import execution_lifespan, router as managed_execution_progress_router
 from .prompt_api import router as prompt_router
 from .prompt_registry import RegistryError, runtime_release
 from .storage import read_json
@@ -26,7 +27,7 @@ from .service_mode import ManagedModeBoundary, managed_only, trusted_hosts
 
 @asynccontextmanager
 async def lifespan(app):
-    async with kiro_lifespan(app), discovery_lifespan(app):
+    async with kiro_lifespan(app), discovery_lifespan(app), execution_lifespan(app):
         yield
 
 
@@ -35,6 +36,7 @@ app.include_router(router)
 app.include_router(prompt_router)
 app.include_router(design_candidate_router)
 app.include_router(managed_execution_router)
+app.include_router(managed_source_reference_router)
 app.include_router(managed_prompts_router)
 app.include_router(managed_visual_router)
 app.include_router(managed_prompt_observability_router)

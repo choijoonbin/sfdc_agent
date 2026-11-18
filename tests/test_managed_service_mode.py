@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from time import time
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ from sfdc_agent.managed_prompts import PromptBundle, execution_prompts, runner_t
 from sfdc_agent.prompt_templates import load_baseline_templates
 from sfdc_agent.service_mode import trusted_hosts
 from tests.test_kiro_gateway import StubSession
+from tests.test_managed_execution import ANALYSIS_SCRIPT
 
 BASE = '/internal/kiro/sessions'
 
@@ -113,21 +115,20 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(session.closed)
         with tempfile.TemporaryDirectory() as temporary:
             runner = Path(temporary) / 'runner.mjs'
-            runner.write_text('''
-                import { readFileSync } from 'node:fs';
-                JSON.parse(readFileSync(0, 'utf8'));
-                process.stdout.write(JSON.stringify({status:'REVIEW_REQUIRED', title:'Managed fixture', artifacts:[],
-                    summary:{title:'Managed fixture'}, checkpoint:{hasBearer:Boolean(process.env.SFDC_AGENT_EXECUTION_TOKEN),
-                    hasJobToken:Boolean(process.env.SFDC_MANAGED_PROMPT_CONTEXT)}}));
-            ''')
+            runner.write_text(ANALYSIS_SCRIPT.replace('receivedFigmaToken:', 'hasJobToken:Boolean(process.env.SFDC_MANAGED_PROMPT_CONTEXT),receivedFigmaToken:'))
+            (Path(temporary) / 'ingress').mkdir()
+            (Path(temporary) / 'managed-runtime.json').write_text(json.dumps({'sha256': 'b' * 64}))
             payload = {'jobId': '8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d', 'attempt': 1, 'kind': 'SCREEN', 'engine': 'NOVA',
-                       'sourceReference': 'https://www.figma.com/design/Fixture', 'designReleaseId': 'standard',
+                       'executionScope': {'tenantId':'aa000000-0000-4000-8000-000000000001','workspaceId':'ad000000-0000-4000-8000-000000000001'},
+                       'timeoutSeconds':10,'deadlineEpochSeconds':int(time())+11,
+                       'sourceReference': 'https://www.figma.com/design/FrameDocument', 'designReleaseId': 'standard',
                        'promptReleaseId': self.bundle.releaseId, 'promptBundle': self.bundle.model_dump()}
             with patch.dict(os.environ, {'SFDC_MANAGED_EXECUTION_RUNNER': str(runner), 'SFDC_MANAGED_EXECUTION_NODE': shutil.which('node'),
-                                         'SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS': '10'}):
+                                         'SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS': '10', 'SFDC_MANAGED_RELEASE_INGRESS': str(Path(temporary)/'ingress')}), \
+                 patch('sfdc_agent.managed_execution.engine_root', return_value=Path(temporary)):
                 status, reply = await self.request('POST', '/internal/v1/executions', payload, bearer='service-only-test-token')
                 self.assertEqual(status, 200)
-                self.assertFalse(reply['checkpoint']['hasBearer'])
+                self.assertFalse(reply['checkpoint']['receivedServiceToken'])
                 self.assertTrue(reply['checkpoint']['hasJobToken'])
 
     async def test_explicit_trusted_hosts_retain_local_defaults_and_reject_wildcards(self):

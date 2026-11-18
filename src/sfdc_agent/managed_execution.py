@@ -10,6 +10,7 @@ import re
 import shutil
 import signal
 import tempfile
+from time import time
 from threading import BoundedSemaphore
 from typing import Annotated, Literal
 from uuid import UUID
@@ -20,12 +21,13 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 from starlette.requests import ClientDisconnect
 
 from .managed_prompts import PromptBundle, execution_prompts, runner_token
-from .managed_execution_progress import execution_mode, execution_progress
+from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope, execution_mode, execution_progress
 from .config import engine_root
+from .managed_analysis_output import output_directory, verify as verify_analysis_output
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
-_REQUEST_BYTES = 4 * 1024 * 1024
+_REQUEST_BYTES = 16 * 1024 * 1024
 _CHECKPOINT_BYTES = 3 * 1024 * 1024
 _SUMMARY_BYTES = 256 * 1024
 _ARTIFACT_BYTES = 8 * 1024 * 1024
@@ -73,7 +75,10 @@ class ExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     jobId: UUID
-    attempt: Annotated[int, Field(ge=1, le=100, strict=True)]
+    attempt: Annotated[int, Field(ge=1, le=MAX_ATTEMPT, strict=True)]
+    executionScope: ExecutionScope
+    timeoutSeconds: Annotated[int, Field(ge=1, le=3600, strict=True)]
+    deadlineEpochSeconds: Annotated[int, Field(gt=0, strict=True)]
     kind: Literal["SCREEN", "STORY"]
     engine: Literal["NOVA", "KIRO"]
     operation: Literal["ANALYZE", "GENERATE"] = "ANALYZE"
@@ -87,9 +92,19 @@ class ExecutionRequest(BaseModel):
     analysis: JsonObject | None = None
     workflowId: RegistryLabel | None = None
     archive: ArchiveSelection | None = None
+    inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
+    sourceVersion: RegistryLabel | None = None
 
     @model_validator(mode="after")
     def validate_review(self):
+        if self.archive and (self.archive.tenantId != self.executionScope.tenantId
+                             or self.archive.workspaceId != self.executionScope.workspaceId):
+            raise ValueError("The selected archive belongs to a different execution scope.")
+        if self.inputMode == 'MEASURED':
+            if self.kind != 'SCREEN' or self.engine != 'NOVA' or not self.archive or self.sourceVersion != 'local-' + self.archive.sha256:
+                raise ValueError('Measured input requires the exact registered Screen archive.')
+        elif self.sourceVersion is not None:
+            raise ValueError('Source version is only supplied for measured input.')
         if self.operation == "GENERATE":
             if self.analysisJobId is None or self.analysisJobId == self.jobId or not self.analysis:
                 raise ValueError("Generation requires a prior analysis checkpoint.")
@@ -108,6 +123,12 @@ class ExecutionArtifact(BaseModel):
     base64: str
 
 
+class AnalysisView(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    protocolVersion: Annotated[int, Field(ge=1, le=1, strict=True)]
+    manifestSha256: ManifestDigest
+
+
 class ExecutionResult(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -117,6 +138,7 @@ class ExecutionResult(BaseModel):
     summary: JsonObject | None = None
     checkpoint: JsonObject | None = None
     promptTraces: list[JsonObject] | None = None
+    analysisView: AnalysisView | None = None
 
 
 class IncompleteExecution(Exception):
@@ -152,6 +174,8 @@ def _authorize(request: Request) -> None:
     scheme, _, provided = (headers[0] if len(headers) == 1 else "").partition(" ")
     if scheme.lower() != "bearer" or not hmac.compare_digest(provided.encode("latin-1"), token.encode()):
         raise HTTPException(401, "Service authentication required.", headers={"WWW-Authenticate": "Bearer"})
+    if 'origin' in request.headers or 'sec-fetch-site' in request.headers:
+        raise HTTPException(403, 'Service requests only.')
 
 
 async def _parse_request(request: Request, model=ExecutionRequest):
@@ -184,6 +208,17 @@ def _runner_configuration() -> tuple[str, Path, int]:
     return str(Path(binary).resolve()), runner, timeout
 
 
+def _execution_budget(payload: ExecutionRequest, physical: int) -> float:
+    if payload.timeoutSeconds > physical:
+        raise HTTPException(409, "LIMIT_MISMATCH")
+    remaining = payload.deadlineEpochSeconds - time()
+    if remaining <= 0:
+        raise HTTPException(410, "EXECUTION_DEADLINE_EXPIRED")
+    if remaining > payload.timeoutSeconds + 30:
+        raise HTTPException(422, "EXECUTION_DEADLINE_INVALID")
+    return min(payload.timeoutSeconds, remaining)
+
+
 def _check_kiro_configuration(request: Request, payload: ExecutionRequest) -> None:
     if payload.engine != "KIRO":
         return
@@ -205,10 +240,10 @@ async def _write_input(process: asyncio.subprocess.Process, payload: bytes) -> N
         process.stdin.close()
 
 
-async def _read_output(stream: asyncio.StreamReader) -> bytes:
+async def _read_output(stream: asyncio.StreamReader, limit: int = _OUTPUT_BYTES) -> bytes:
     output = bytearray()
     while chunk := await stream.read(_CHUNK_BYTES):
-        if len(output) + len(chunk) > _OUTPUT_BYTES:
+        if len(output) + len(chunk) > limit:
             raise IncompleteExecution
         output.extend(chunk)
     return bytes(output)
@@ -228,19 +263,50 @@ async def _stop_process(process: asyncio.subprocess.Process) -> None:
     await process.wait()
 
 
+async def _finish_owned_cleanup(cleanup):
+    task = asyncio.create_task(cleanup)
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            pass
+    return task.result()
+
+
+async def _cancel_request_tasks(tasks):
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 async def _run_process(binary: str, runner: Path, scratch: str, timeout: int, payload: bytes,
-                       environment_overrides: dict[str, str] | None = None) -> bytes:
+                       environment_overrides: dict[str, str] | None = None,
+                       output_limit: int = _OUTPUT_BYTES) -> bytes:
+    if type(output_limit) is not int or not 1 <= output_limit <= 68 * 1024 * 1024:
+        raise ValueError('Invalid managed output bound.')
     environment = {key: os.environ[key] for key in _RUNNER_ENVIRONMENT if key in os.environ}
     environment.update({"SFDC_EXECUTION_SCRATCH": scratch, "TMPDIR": scratch, "TEMP": scratch, "TMP": scratch})
     environment.update(environment_overrides or {})
     token = runner_token()
     if token:
         environment["SFDC_MANAGED_PROMPT_CONTEXT"] = token
-    process = await asyncio.create_subprocess_exec(
+    opening = asyncio.create_task(asyncio.create_subprocess_exec(
         binary, str(runner), cwd=scratch, env=environment, start_new_session=os.name == "posix",
         stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-    )
-    tasks = (asyncio.create_task(_write_input(process, payload)), asyncio.create_task(_read_output(process.stdout)))
+    ))
+    try:
+        process = await asyncio.shield(opening)
+    except BaseException:
+        async def reap_opening():
+            try:
+                child = await opening
+                await _stop_process(child)
+            except (OSError, asyncio.CancelledError):
+                pass
+        await _finish_owned_cleanup(reap_opening())
+        raise
+    tasks = (asyncio.create_task(_write_input(process, payload)), asyncio.create_task(_read_output(process.stdout, output_limit)))
     finished = False
     try:
         async with asyncio.timeout(timeout):
@@ -252,10 +318,12 @@ async def _run_process(binary: str, runner: Path, scratch: str, timeout: int, pa
         return output
     finally:
         if not finished:
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
-            await _stop_process(process)
+            async def cleanup():
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+                await _stop_process(process)
+            await _finish_owned_cleanup(cleanup())
 
 
 def _parse_result(output: bytes, operation: str) -> ExecutionResult:
@@ -265,12 +333,12 @@ def _parse_result(output: bytes, operation: str) -> ExecutionResult:
     if not result.title.strip():
         raise IncompleteExecution
     if operation == "ANALYZE":
-        if result.status != "REVIEW_REQUIRED" or result.artifacts or not result.summary or not result.checkpoint:
+        if result.status != "REVIEW_REQUIRED" or result.artifacts or not result.summary or not result.checkpoint or result.analysisView is None:
             raise IncompleteExecution
         if len(_encode_json(result.checkpoint)) > _CHECKPOINT_BYTES:
             raise IncompleteExecution
         return result
-    if result.status != "COMPLETED" or not result.artifacts or result.checkpoint is not None:
+    if result.status != "COMPLETED" or not result.artifacts or result.checkpoint is not None or result.analysisView is not None:
         raise IncompleteExecution
     names = set()
     total = 0
@@ -290,21 +358,36 @@ def _parse_result(output: bytes, operation: str) -> ExecutionResult:
 
 
 async def _execute(payload: ExecutionRequest) -> ExecutionResult:
-    binary, runner, timeout = _runner_configuration()
+    binary, runner, physical = _runner_configuration()
+    timeout = _execution_budget(payload, physical)
+    directory = None
+    keep = False
     try:
         if payload.promptBundle is not None and payload.promptBundle.releaseId != payload.promptReleaseId:
             raise ValueError("Prompt release pin does not match.")
-        with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
-            encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
-            async with execution_progress(payload, runner_token(), timeout) as context:
-                environment = {'SFDC_MANAGED_KIRO_MODE': context.mode} if context else None
-                output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
-            result = _parse_result(output, payload.operation)
-            return result.model_copy(update={"promptTraces": traces or None})
+        async with asyncio.timeout(timeout):
+            with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
+                encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
+                async with execution_progress(payload, runner_token(), timeout) as context:
+                    environment = {'SFDC_MANAGED_KIRO_MODE': context.mode} if payload.engine == 'KIRO' else {}
+                    if payload.operation == 'ANALYZE':
+                        directory = output_directory(payload)
+                        environment['SFDC_ANALYSIS_OUTPUT'] = str(directory)
+                    output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
+                    result = _parse_result(output, payload.operation)
+                    if directory:
+                        verify_analysis_output(directory, payload, result, engine_root().resolve(strict=True))
+                if time() >= payload.deadlineEpochSeconds:
+                    raise TimeoutError
+                keep = True
+                return result.model_copy(update={"promptTraces": traces or None})
     except TimeoutError:
         raise HTTPException(504, "Managed execution timed out.") from None
     except (IncompleteExecution, ValueError, OSError, RecursionError):
         raise HTTPException(502, "Managed execution did not return a usable result.") from None
+    finally:
+        if directory is not None and not keep:
+            shutil.rmtree(directory, ignore_errors=True)
 
 
 async def _wait_for_disconnect(request: Request) -> None:
@@ -348,32 +431,37 @@ async def source_discovery(request: Request):
     except (IncompleteExecution, ValueError, OSError, RecursionError):
         raise HTTPException(422, "The Figma archive could not be inspected.") from None
     finally:
-        for task in tasks:
-            task.cancel()
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-        _WORKER_SLOTS.release()
+        try:
+            await _finish_owned_cleanup(_cancel_request_tasks(tasks))
+        finally:
+            _WORKER_SLOTS.release()
 
 
 @router.post("/executions", response_model=ExecutionResult, response_model_exclude_none=True)
 async def execute(request: Request) -> ExecutionResult:
     _authorize(request)
     if not _WORKER_SLOTS.acquire(blocking=False):
-        raise HTTPException(503, "Managed execution is busy.", headers={"Retry-After": "5"})
+        return JSONResponse({'code': 'EXECUTION_BUSY'}, status_code=503, headers={'Retry-After': '5'})
     tasks = ()
     try:
         payload = await _parse_request(request)
+        _execution_budget(payload, _runner_configuration()[2])
         _check_kiro_configuration(request, payload)
         execution = asyncio.create_task(_execute(payload))
         disconnect = asyncio.create_task(_wait_for_disconnect(request))
         tasks = (execution, disconnect)
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         if execution.done():
+            if execution.cancelled():
+                raise HTTPException(499, 'EXECUTION_CANCELLED')
             return execution.result()
         raise HTTPException(499, "Managed execution request disconnected.")
+    except HTTPException as failure:
+        if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail == 'LIMIT_MISMATCH'):
+            return JSONResponse({'code': failure.detail}, status_code=failure.status_code, headers=failure.headers)
+        raise
     finally:
-        for task in tasks:
-            task.cancel()
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-        _WORKER_SLOTS.release()
+        try:
+            await _finish_owned_cleanup(_cancel_request_tasks(tasks))
+        finally:
+            _WORKER_SLOTS.release()
