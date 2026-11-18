@@ -8,6 +8,7 @@ const context = fields.sourceContext;
 if (!context?.nodes?.length || context.nodes[0].id !== fields.nodeId) {
   process.stdout.write('{}');
 } else {
+  const { projectKiroNovaContext } = await import(pathToFileURL(resolve(uiRoot, 'nextbss/server/kiro-nova-contract.mjs')).href);
   const fromUi = (path) => import(pathToFileURL(resolve(uiRoot, 'nextbss', 'engine', path)).href);
   const [{ readNextBssStandard }, { rebuildKiroSourceSnapshot }, { extractKiroButtonEvidence }, { projectKiroFormEvidence }] =
     await Promise.all(['generate.mjs', 'kiro-source-snapshot.mjs', 'kiro-button-evidence.mjs', 'kiro-form-projection.mjs'].map(fromUi));
@@ -20,6 +21,6 @@ if (!context?.nodes?.length || context.nodes[0].id !== fields.nodeId) {
     const forms = projectKiroFormEvidence(snapshot, design, context.inputControls);
     const components = new Map((context.verifiedComponents ?? []).map((component) => [component.nodeId, component]));
     for (const button of buttons) components.set(button.nodeId, button);
-    process.stdout.write(JSON.stringify({ verifiedComponents: [...components.values()], ...forms }));
+    process.stdout.write(JSON.stringify(projectKiroNovaContext({ verifiedComponents: [...components.values()], ...forms })));
   }
 }

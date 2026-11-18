@@ -5,7 +5,7 @@ from .story_tasks import build_story_task
 
 
 _FIGMA = {"fileKey": "PromptFixture", "nodeId": "1:2"}
-_SCREEN = {**_FIGMA, "name": "nextBssScreenFixture", "version": "1.9", "tokenDeclarations": "--nb-spacing-8: 8px;",
+_SCREEN = {**_FIGMA, "name": "nextBssScreenFixture", "version": "1.9", "tokenDeclarations": "--nova-spacing-8: 8px;",
            "typographyGroups": [], "componentVariants": "Button: Primary / Enabled",
            "layoutDimensions": {"width": 640, "height": 480}}
 _LOCAL = {**_SCREEN, "local": True, "sourceContext": {"nodes": [{"id": "1:2", "name": "Sample screen"}]},
