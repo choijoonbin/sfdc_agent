@@ -198,7 +198,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(checkpoint["receivedServiceToken"])
             self.assertFalse(checkpoint["receivedUnrelatedSecret"])
             self.assertTrue(checkpoint["receivedFigmaToken"])
-            self.assertEqual(checkpoint["archiveIndex"], os.environ["SFDC_MANAGED_ARCHIVE_INDEX"])
+            self.assertNotIn("archiveIndex", checkpoint)
             working_directories.add(checkpoint["scratch"])
         self.assertEqual(len(working_directories), 2)
 
