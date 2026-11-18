@@ -1,17 +1,21 @@
 """Run one tool-free conversion turn using a Kiro CLI API key."""
 
 import asyncio
+import errno
+import hashlib
 import json
+import logging
 import os
 import re
 import shutil
 import signal
 import stat
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import mkdtemp
 
 from .config import project_root
 from .providers import _kiro_environment
+from .kiro_processes import OwnedProcesses, ProcessCleanupError
 
 
 IDLE_SECONDS = 16 * 60
@@ -21,6 +25,7 @@ _KEY_PATTERN = re.compile(r"ksk_[A-Za-z0-9_-]{1,500}")
 _KEY_ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?KIRO_API_KEY\s*=\s*(.*?)\s*$")
 _API_KEY_STATUS = re.compile(r"[\s#>*`_\-]*Authenticated with API key[\s.*`_]*")
 _AGENT_NAME = "sfdc-conversion-headless"
+logger = logging.getLogger(__name__)
 
 
 class SessionError(Exception):
@@ -130,15 +135,67 @@ def prepare_workspace(home: Path) -> Path:
     return workspace
 
 
-async def _terminate(process):
+async def _terminate(process, owned, tasks):
+    for task in tasks:
+        if not task.done():
+            task.cancel()
+    failure = None
     try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+        await owned.quiesce()
+    except (ProcessCleanupError, OSError, TimeoutError) as error:
+        failure = error
+        # Even unavailable process metadata must not leave the direct, unreaped
+        # child group running. Detached ownership remains unproven/fail-closed.
+        if process.returncode is None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+    await asyncio.gather(*tasks, return_exceptions=True)
     # Release the pipe transport even when cancellation came while stdout was full.
-    if process.stdout is not None:
-        await process.stdout.read()
-    await process.wait()
+    async with asyncio.timeout(2):
+        if process.stdout is not None:
+            while await process.stdout.read(64 * 1024):
+                pass
+        await process.wait()
+    if failure is not None:
+        raise failure
+
+
+async def _settle_cleanup(operation, primary=None):
+    cleanup = asyncio.ensure_future(operation)
+    interrupted = False
+    while not cleanup.done():
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError:
+            interrupted = True
+    result = await cleanup
+    if interrupted and primary is None:
+        raise asyncio.CancelledError
+    return result
+
+
+async def _cleanup_workspace(home):
+    for attempt in range(4):
+        try:
+            await asyncio.to_thread(shutil.rmtree, home)
+            return
+        except FileNotFoundError:
+            return
+        except OSError as error:
+            if error.errno not in {errno.ENOTEMPTY, errno.EBUSY} or attempt == 3:
+                raise
+            await asyncio.sleep(0.03 * (attempt + 1))
+
+
+def _retain_completed_response(home, result):
+    """Retain a completed CLI response; the caller still validates business data."""
+    body = json.dumps({"version": 1, "validation": "CLI_STREAM_ONLY", "response": result,
+        "textSha256": hashlib.sha256(result["text"].encode()).hexdigest()}, ensure_ascii=False).encode()
+    fd = os.open(home / "completed-response.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(body)
 
 
 async def _send_input(process, prompt):
@@ -162,30 +219,60 @@ async def _read_output(process, limit):
 
 
 async def _execute(binary, args, workspace, env, timeout, *, prompt=None, limit=_STREAM_LIMIT):
-    try:
-        process = await asyncio.create_subprocess_exec(
+    creation = asyncio.create_task(asyncio.create_subprocess_exec(
             binary, *args, cwd=workspace, env=env, start_new_session=True,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-        )
+        ))
+    try:
+        process = await asyncio.shield(creation)
+    except asyncio.CancelledError as cancelled:
+        try:
+            process = await _settle_cleanup(creation, cancelled)
+            await _settle_cleanup(_terminate(process, OwnedProcesses(process, workspace), ()), cancelled)
+        except (ProcessCleanupError, OSError, TimeoutError):
+            cancelled.cleanup_incomplete = True
+            cancelled.add_note("KIRO_PROCESS_CLEANUP_FAILED")
+            logger.error("Kiro spawn cleanup failed; cancellation retained")
+        raise
     except OSError:
         raise SessionError("KIRO_UNAVAILABLE", "Kiro CLI 실행 파일을 시작하지 못했습니다.") from None
     tasks = (asyncio.create_task(_send_input(process, prompt)), asyncio.create_task(_read_output(process, limit)))
-    settled = False
+    owned = OwnedProcesses(process, workspace)
+    primary = None
     try:
         async with asyncio.timeout(timeout):
+            # process.wait() can itself wait for inherited stdout EOF. Observe the
+            # direct child's return code while concurrently draining bounded output.
+            while process.returncode is None:
+                for task in tasks:
+                    if task.done():
+                        task.result()
+                await owned.observe()
+                await asyncio.sleep(0.25)
+            await owned.quiesce()
             _, output = await asyncio.gather(*tasks)
             status = await process.wait()
-            settled = True
             return status, output
     except TimeoutError:
-        raise SessionError("KIRO_TIMEOUT", "Kiro 헤드리스 응답 시간이 초과됐습니다.") from None
+        primary = SessionError("KIRO_TIMEOUT", "Kiro 헤드리스 응답 시간이 초과됐습니다.")
+        raise primary from None
+    except ProcessCleanupError as error:
+        primary = SessionError("KIRO_PROCESS_CLEANUP_FAILED", "Kiro 자식 프로세스 정리를 확인할 수 없습니다.")
+        raise primary from error
+    except BaseException as error:
+        primary = error
+        raise
     finally:
-        for task in tasks:
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
-        if not settled:
-            await _terminate(process)
+        try:
+            await _settle_cleanup(_terminate(process, owned, tasks), primary)
+        except (ProcessCleanupError, OSError, TimeoutError) as error:
+            if primary is None:
+                primary = SessionError("KIRO_PROCESS_CLEANUP_FAILED", "Kiro 자식 프로세스 정리를 확인할 수 없습니다.")
+                primary.cleanup_incomplete = True
+                raise primary from error
+            primary.add_note("KIRO_PROCESS_CLEANUP_FAILED")
+            primary.cleanup_incomplete = True
+            logger.error("Kiro owned-process cleanup failed; primary outcome retained")
 
 
 class HeadlessKiroSession:
@@ -234,7 +321,10 @@ class HeadlessKiroSession:
         binary = str(Path(binary).resolve())
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
-        with TemporaryDirectory(prefix="sfdc-kiro-headless-") as root:
+        root = mkdtemp(prefix="sfdc-kiro-headless-")
+        result = None
+        primary = None
+        try:
             home = Path(root)
             workspace = prepare_workspace(home)
             env = {key: value for key, value in os.environ.items() if key in _kiro_environment
@@ -256,7 +346,28 @@ class HeadlessKiroSession:
             status, output = await _execute(binary, args, workspace, env, remaining, prompt=prompt)
             if status:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
-            return parse_output(output)
+            result = parse_output(output)
+            return result
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            if not getattr(primary, "cleanup_incomplete", False):
+                try:
+                    await _settle_cleanup(_cleanup_workspace(Path(root)), primary)
+                except OSError as error:
+                    if result is not None:
+                        try:
+                            _retain_completed_response(Path(root), result)
+                        except OSError as retention_error:
+                            logger.error("Kiro completed response retention failed")
+                            raise SessionError("KIRO_WORKSPACE_CLEANUP_FAILED", "Kiro 임시 작업공간 정리를 확인할 수 없습니다.") from retention_error
+                        logger.warning("Kiro completed CLI response retained privately after quiescent workspace cleanup failure")
+                    if primary is not None:
+                        primary.add_note("KIRO_WORKSPACE_CLEANUP_FAILED")
+                        logger.error("Kiro workspace cleanup failed; primary outcome retained")
+                    elif result is None:
+                        raise SessionError("KIRO_WORKSPACE_CLEANUP_FAILED", "Kiro 임시 작업공간 정리를 확인할 수 없습니다.") from error
 
     async def close(self):
         if self.closed:
