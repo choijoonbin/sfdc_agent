@@ -122,6 +122,10 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 
 Spring에서 작업·권한·프롬프트 릴리스를 관리하는 서버는 `SFDC_AGENT_MANAGED_ONLY=1`로 실행한다. 이 모드의 HTTP 경로는 `/health`, 서비스 Bearer 인증을 사용하는 `/internal/v1/`, 실행별 인증을 사용하는 `/internal/kiro/sessions`다. 로컬 파일럿 `/runs`, SQLite 프롬프트 관리 `/internal/prompts`, 로컬 디자인 후보 경로는 404를 반환한다. `/health`는 전역 SQLite 활성 프롬프트를 조회하지 않는다.
 
+원격 Figma REST·Plan·MCP 자격 증명을 사용하는 프로세스는 운영자가 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정한다. Spring과 Agent에 동일한 정규 UUID 쌍을 설정한다. 원격 호출은 요청 범위와 현재 배정을 확인하며 배정 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`으로 반환한다. 관리자 원본 등록은 해당 작업공간의 데이터 사용 권한을 관리한다. 소유 관계가 확인된 명시적 아카이브와 LOCAL 입력은 배정과 독립적으로 사용할 수 있다.
+
+`SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS`는 Spring과 Agent의 공통 물리 실행 상한이며 기본값은 540초, 허용 범위는 1–900초다. Spring은 테넌트 정책과 물리 상한을 적용한 절대 마감을 각 시도에 고정한다. 작업별 취소는 자식 프로세스 종료와 슬롯 반환을 확인한 뒤 응답한다.
+
 Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행에 고정된다. 생성, 이벤트 조회, 구조화된 프롬프트 실행, 대기, 승인과 종료에 같은 토큰이 필요하다. 실행이 끝나면 토큰이 폐기되며 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없다. `SFDC_AGENT_EXECUTION_TOKEN` 서비스 Bearer는 Spring과 Agent 사이에서 사용하며 Node 작업 프로세스에 전달하지 않는다.
 
 관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
