@@ -15,6 +15,7 @@ from .managed_execution import router as managed_execution_router
 from .kiro_readiness import router as kiro_readiness_router
 from .managed_figma_scope import FigmaProviderScopeError, figma_scope_response
 from .managed_source_reference import router as managed_source_reference_router
+from .managed_source_revisions import router as managed_source_revisions_router
 from .managed_prompts import router as managed_prompts_router
 from .managed_visual import router as managed_visual_router
 from .managed_prompt_observability import router as managed_prompt_observability_router
@@ -40,6 +41,7 @@ app.include_router(design_candidate_router)
 app.include_router(managed_execution_router)
 app.include_router(kiro_readiness_router)
 app.include_router(managed_source_reference_router)
+app.include_router(managed_source_revisions_router)
 app.include_router(managed_prompts_router)
 app.include_router(managed_visual_router)
 app.include_router(managed_prompt_observability_router)

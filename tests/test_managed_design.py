@@ -7,9 +7,11 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from sfdc_agent.managed_design import DesignBuild, check_output_directory, output_directory, run_build
 from sfdc_agent.managed_execution import IncompleteExecution
+from sfdc_agent.managed_figma_scope import FigmaProviderScopeError
 
 
 class ManagedDesignTests(unittest.IsolatedAsyncioTestCase):
@@ -84,3 +86,71 @@ class ManagedDesignTests(unittest.IsolatedAsyncioTestCase):
         (output / "untrusted").symlink_to(self.directory)
         with self.assertRaises(IncompleteExecution):
             check_output_directory(output)
+
+    def remote_payload(self):
+        return {**self.payload.model_dump(mode="json"),
+                "sources": {"library": {"fileKey": "ApprovedLibrary", "revision": "SavedVersion"}},
+                "executionScope": {"tenantId": "aa000000-0000-4000-8000-000000000001",
+                                   "workspaceId": "ad000000-0000-4000-8000-000000000001"}}
+
+    async def test_remote_build_requires_scope_before_creating_output_or_child(self):
+        remote = self.remote_payload()
+        with self.assertRaises(ValidationError):
+            DesignBuild.model_validate({**remote, "executionScope": None})
+        with patch.dict(os.environ, {"SFDC_MANAGED_FIGMA_SCOPE": str(uuid4()) + "/" + str(uuid4())}), \
+                patch("sfdc_agent.managed_design._run_process", new=AsyncMock()) as process:
+            with self.assertRaises(FigmaProviderScopeError) as forbidden:
+                await run_build(DesignBuild.model_validate(remote))
+            self.assertEqual(forbidden.exception.status_code, 403)
+            process.assert_not_called()
+        self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+
+    async def test_only_allocated_remote_build_receives_access_token_without_plan_or_mcp(self):
+        remote = self.remote_payload()
+        scope = remote["executionScope"]
+        with patch.dict(os.environ, {"SFDC_MANAGED_FIGMA_SCOPE": scope["tenantId"] + "/" + scope["workspaceId"],
+                                    "FIGMA_ACCESS_TOKEN": "scoped-access-fixture", "FIGMA_PLAN_ACCESS_TOKEN": "plan-fixture",
+                                    "FIGMA_MCP_TOKEN": "mcp-fixture"}), \
+                patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response())) as process:
+            await run_build(DesignBuild.model_validate(remote))
+        environment = process.call_args.args[-1]
+        self.assertEqual(environment["FIGMA_ACCESS_TOKEN"], "scoped-access-fixture")
+        self.assertNotIn("FIGMA_PLAN_ACCESS_TOKEN", environment)
+        self.assertNotIn("FIGMA_MCP_TOKEN", environment)
+
+    async def test_offline_rebuild_does_not_receive_any_global_figma_credentials(self):
+        with patch.dict(os.environ, {"SFDC_MANAGED_FIGMA_SCOPE": "invalid", "FIGMA_ACCESS_TOKEN": "access-fixture",
+                                    "FIGMA_PLAN_ACCESS_TOKEN": "plan-fixture"}), \
+                patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response())) as process:
+            await run_build(self.payload)
+        self.assertFalse(any(key.startswith("FIGMA_") for key in process.call_args.args[-1]))
+
+    async def test_scope_revocation_discards_completed_remote_output(self):
+        remote = self.remote_payload()
+        scope = remote["executionScope"]
+        async def revoked(*args):
+            os.environ["SFDC_MANAGED_FIGMA_SCOPE"] = str(uuid4()) + "/" + str(uuid4())
+            return self.response()
+        with patch.dict(os.environ, {"SFDC_MANAGED_FIGMA_SCOPE": scope["tenantId"] + "/" + scope["workspaceId"]}), \
+                patch("sfdc_agent.managed_design._run_process", new=revoked):
+            with self.assertRaises(FigmaProviderScopeError):
+                await run_build(DesignBuild.model_validate(remote))
+        self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+
+    async def test_provider_rate_limit_is_typed_and_does_not_retain_build_output(self):
+        checks = [{"label": "Figma 원본 조회", "status": "failed", "code": "FIGMA_RATE_LIMITED",
+                   "httpStatus": 429, "retryAfterSeconds": 66568, "detail": "Wait for the provider."}]
+        with patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response(
+                status="BLOCKED", checks=checks, compatible=False, reproduced=False))):
+            result = await run_build(self.payload)
+        self.assertEqual(result.checks[0].retryAfterSeconds, 66568)
+        self.assertEqual(result.checks[0].httpStatus, 429)
+        self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+
+    async def test_provider_wait_longer_than_one_day_is_not_lost_or_retried(self):
+        checks = [{"label": "Figma", "status": "failed", "code": "FIGMA_RATE_LIMITED", "retryAfterSeconds": 31 * 86400}]
+        with patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response(
+                status="BLOCKED", checks=checks, compatible=False, reproduced=False))) as process:
+            result = await run_build(self.payload)
+        self.assertEqual(result.checks[0].retryAfterSeconds, 31 * 86400)
+        self.assertEqual(process.await_count, 1)

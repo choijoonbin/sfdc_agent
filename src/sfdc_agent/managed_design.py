@@ -10,9 +10,11 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import engine_root
+from .managed_execution_progress import ExecutionScope
+from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .managed_execution import (
     IncompleteExecution, _WORKER_SLOTS, _authorize, _decode_json, _encode_json,
     _parse_request, _run_process, _runner_configuration, _wait_for_disconnect,
@@ -42,6 +44,15 @@ class DesignBuild(BaseModel):
     baseManifestSha256: Digest
     designVersion: Annotated[str, Field(pattern=r"^\d+\.\d+(?:\.\d+)?$")]
     sources: DesignSources
+    executionScope: ExecutionScope | None = None
+
+    @model_validator(mode="after")
+    def remote_scope(self):
+        # Spring normalizes identical base tuples out of sources. Only actual
+        # remote changes receive provider credentials; offline rebuilds do not.
+        if (self.sources.guide or self.sources.library) and self.executionScope is None:
+            raise ValueError("Remote design sources require an explicit execution scope.")
+        return self
 
 
 class BuildCheck(BaseModel):
@@ -49,6 +60,11 @@ class BuildCheck(BaseModel):
     label: Annotated[str, Field(min_length=1, max_length=200)]
     status: Literal["passed", "failed"]
     detail: Annotated[str, Field(max_length=1000)] | None = None
+    code: Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,80}$")] | None = None
+    httpStatus: Annotated[int, Field(ge=400, le=599, strict=True)] | None = None
+    # Match requestFigma's bounded ten-digit delta-seconds parser. Long genuine
+    # provider waits must remain visible; this value never schedules a retry.
+    retryAfterSeconds: Annotated[int, Field(ge=0, le=9_999_999_999, strict=True)] | None = None
 
 
 class DesignBuildResult(BaseModel):
@@ -94,6 +110,8 @@ def check_output_directory(directory: Path) -> None:
 
 
 async def run_build(payload: DesignBuild) -> DesignBuildResult:
+    remote = bool(payload.sources.guide or payload.sources.library)
+    provider = remote_figma_environment(payload.executionScope) if remote else {}
     binary, _, _ = _runner_configuration()
     runner = engine_root() / "nextbss/server/managed-design-release.mjs"
     if not runner.is_file():
@@ -104,6 +122,10 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
         with tempfile.TemporaryDirectory(prefix="sfdc-design-build-") as scratch:
             overrides = {"SFDC_DESIGN_BUILD_ID": str(payload.buildId), "SFDC_DESIGN_BUILD_OUTPUT": str(directory),
                          "SFDC_MANAGED_RELEASE_INGRESS": str(directory.parent)}
+            # This operation reads normal REST source metadata only. It must
+            # never inherit a Plan/MCP identity or another workspace's token.
+            if remote:
+                overrides["FIGMA_ACCESS_TOKEN"] = provider["FIGMA_ACCESS_TOKEN"]
             sources = os.environ.get("SFDC_MANAGED_DESIGN_SOURCES")
             if sources:
                 overrides["SFDC_MANAGED_DESIGN_SOURCES"] = sources
@@ -112,6 +134,8 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
         if len(output) > 128 * 1024:
             raise IncompleteExecution
         result = DesignBuildResult.model_validate(_decode_json(output))
+        if remote:
+            require_figma_scope(payload.executionScope)
         if result.buildId != payload.buildId:
             raise IncompleteExecution
         if result.status == "VALIDATED" and (not result.releaseId or not result.manifestSha256
