@@ -4,11 +4,11 @@
 
 ## Spring 통합 실시간 개발 (`dev`)
 
-프론트·백엔드·Agent는 모두 `dev` 브랜치에서 개발합니다. 기존 백엔드 없는 프론트·Agent 코드는 `dev_fe`로 보존했습니다. 통합 개발 환경은 `SFDC_BACK`에서 `python3 scripts/live-development.py start`로 실행하며, Agent는 개발 전용 `127.0.0.1:8767`에서 Python 변경을 자동 반영합니다. UI 진입점은 `https://localhost:4188`입니다.
+프론트·백엔드·Agent는 모두 `dev` 브랜치에서 개발합니다. Main 진입점은 `https://localhost:4186`이며, Spring은 `127.0.0.1:8080`, Agent는 `127.0.0.1:8766`을 사용합니다. `SFDC_BACK`에서 `python3 scripts/live-development.py start`로 실행하면 각 PRIMARY 소스의 UI 변경, Java 변경, Python 변경을 반영합니다. 기존 PostgreSQL·Keycloak과 사용자·권한·업무 데이터·연동 설정을 그대로 사용합니다.
 
-실행·종료·검증·로그 위치는 [통합 개발 안내](../SFDC_BACK/docs/local-live-development.md)를 확인하세요. 아래 8765/4175 직접 실행은 기존 PoC용이며 통합 환경과 함께 중복 실행하지 않습니다.
+실행·종료·검증·로그 위치는 [통합 개발 안내](../SFDC_BACK/docs/local-live-development.md)를 확인하세요. 백엔드 없이 동작하던 프론트·Agent와 해당 웹 실행 안내는 [`dev_fe` 브랜치](https://github.com/choijoonbin/sfdc_agent/blob/dev_fe/README.md)에 보존합니다.
 
-## 기존 NOVA 4175용 에이전트 서버 실행
+## 개발 준비와 실행
 
 모든 명령은 `SFDC_Agent` 저장소 루트에서 실행한다. Python 3.11 이상과 로컬 Kiro CLI가 필요하다.
 
@@ -21,7 +21,24 @@ python3.11 -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock -e .
 ```
 
-### 서버 기동
+### Main 통합 환경 기동
+
+`SFDC_BACK`에서 통합 시작 명령을 실행한다. Main Agent의 실행 모드와 자격 증명 참조는 통합 환경 설정으로 관리한다.
+
+```sh
+cd ../SFDC_BACK
+python3 scripts/live-development.py start
+```
+
+Agent 상태는 다음 주소에서 확인한다.
+
+```sh
+curl -fsS http://127.0.0.1:8766/health
+```
+
+### 독립 CLI API 서버
+
+비교 파일럿과 API 디버깅에 사용하는 독립 서버는 `SFDC_Agent`에서 `serve` 명령으로 실행한다. 기본 주소는 `127.0.0.1:8765`다. Main의 관리형 Agent는 위 통합 시작 명령으로 실행한다.
 
 Screen과 Story에서 API 키로 Kiro를 실행하려면 `KIRO_API_KEY` 환경 변수를 설정한다. 환경 변수가 없으면 저장소 루트의 Git 제외 파일 `.env.kiro.local`에서 `KIRO_API_KEY=...` 한 줄을 읽는다. 이 파일은 실행 사용자 소유의 일반 파일이어야 하며 권한은 `0600`으로 유지한다. 서버 환경에서는 시크릿 저장소로 환경 변수를 주입한다.
 
@@ -30,8 +47,6 @@ SFDC_AGENT_SCREEN_KIRO_MODE=headless \
 SFDC_AGENT_STORY_KIRO_MODE=headless \
 .venv/bin/sfdc-agent serve
 ```
-
-Agent는 `127.0.0.1:8765`에서 실행된다. NOVA를 처음 띄우려면 별도 터미널에서 `SFDC_Ui` 저장소의 `npm run dev`를 실행한다. `https://localhost:4175`에서 **Screen to LWC → Kiro 변환** 또는 **Story to LWC → Kiro 분석·LWC 생성**을 실행하는 동안 Agent 터미널을 열어 둔다.
 
 다른 터미널에서 서버 상태를 확인한다.
 
@@ -43,7 +58,7 @@ curl -fsS http://127.0.0.1:8765/health
 
 ### Kiro CLI 로그인 사용
 
-`SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 기본값은 각각 `acp`다. 로컬 Kiro CLI 로그인으로 두 기능을 실행하려면 두 값을 `acp`로 지정한다. Screen에서 Figma MCP 연결이 필요하면 브라우저에서 승인한다.
+독립 CLI API 서버에서 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 기본값은 각각 `acp`다. 로컬 Kiro CLI 로그인으로 두 기능을 실행하려면 두 값을 `acp`로 지정한다. Screen에서 Figma MCP 연결이 필요하면 브라우저에서 승인한다.
 
 ```sh
 SFDC_AGENT_SCREEN_KIRO_MODE=acp \
@@ -57,7 +72,7 @@ Screen은 Figma REST에서 선택한 노드의 원본을 읽는다. REST를 사�
 
 Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분석으로 생성한다. 원본을 확보할 수 없으면 변환 화면에 원인을 표시한다. Story의 실행 모드는 생성 영수증 `generationReceipt.executionMode`와 Agent 로그에서 확인한다. 새 Story 분석으로 검증하면 저장된 LWC 결과를 재사용하지 않는다.
 
-`kiro_gateway.py`가 세션·작업 요청을 관리하고, `screen_tasks.py`와 `story_tasks.py`가 분석·생성 프롬프트를 구성한다. `kiro_acp.mjs`는 로컬 Kiro CLI와 통신한다. 원본 처리, NOVA 생성, LWC 컴파일, 검토·저장과 Salesforce 세션은 `SFDC_Ui`에서 처리한다. UI 연동 코드가 바뀌어 Vite를 다시 시작한 경우 Salesforce 세션을 다시 연결해야 할 수 있다.
+`kiro_gateway.py`가 모델 세션·작업 요청을 관리하고, `screen_tasks.py`와 `story_tasks.py`가 분석·생성 프롬프트를 구성한다. `kiro_acp.mjs`는 로컬 Kiro CLI와 통신한다. Agent는 `SFDC_Ui/nextbss` 엔진을 사용해 원본 처리·NOVA 생성·LWC 컴파일을 수행한다. Main의 작업 상태·결과 저장·권한·Salesforce 세션은 Spring이 관리하고, 프론트는 화면과 API 연결을 담당한다.
 
 ## CLI 비교 파일럿 실행
 
@@ -75,7 +90,7 @@ Kiro 파일럿은 로컬 CLI 인증과 CLI에서 설정한 모델을 사용한�
 
 ## Azure OpenAI 준비
 
-Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 사용한다. Dthub의 AI Hub와 같은 방식으로 Entra ID `client_credentials` 토큰을 받고, Azure OpenAI Chat Completions 요청에 Bearer 토큰과 AI Hub 구독 키를 함께 보낸다. 분석 결과는 기존 스키마로 검증하며 LWC는 NOVA 생성기로 만든다. 4175의 대화형 버튼과 기본 파일럿 공급자는 Kiro를 사용한다.
+Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 사용한다. Dthub의 AI Hub와 같은 방식으로 Entra ID `client_credentials` 토큰을 받고, Azure OpenAI Chat Completions 요청에 Bearer 토큰과 AI Hub 구독 키를 함께 보낸다. 분석 결과는 기존 스키마로 검증하며 LWC는 NOVA 생성기로 만든다. 기본 파일럿 공급자는 Kiro이며 Azure는 명시적으로 선택한다.
 
 | 설정 | 키 |
 | --- | --- |
@@ -112,13 +127,11 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 
 ## 프롬프트 관리
 
-4175 개발 작업공간의 상단 사용자 메뉴에서 **프롬프트 관리**를 열면 Screen 9종, Story 3종의 활성 본문과 사용 가능한 변수를 볼 수 있다. **초안 저장 → 검증 → 활성화**로 적용하고, 이력에서 이전에 활성화한 버전을 복원한다. 검증은 템플릿 변수와 코드에 포함된 합성 입력의 렌더링을 검사한다. 실제 Figma 변환 품질은 모델 시험과 Screen·Story 회귀 검사에서 확인한다.
+Main의 **프롬프트 관리**는 Spring API와 PostgreSQL을 기준으로 초안·릴리스·활성 버전·변경 이력과 편집 권한을 관리한다. Agent는 Spring이 실행별로 고정해 전달한 프롬프트 릴리스와 해시를 사용한다. 템플릿 검증은 변수와 입력 구조를 검사하고, 실제 Figma 변환 품질은 모델 시험과 Screen·Story 회귀 검사에서 확인한다.
 
-최초 릴리스 `prompts-v1`은 `src/sfdc_agent/prompt_templates_v1/`에 보존한다. 초안과 확정 버전, 활성 릴리스, 변경 이력은 Agent가 `.prompt-management/prompts.sqlite3`에 저장한다. `SFDC_AGENT_PROMPT_DB`로 별도 경로를 지정할 수 있다. 진행 중인 작업과 저장된 분석은 생성·보정에서 시작할 때의 릴리스를 사용한다. 릴리스 정보가 없는 이전 분석은 최초 버전을 사용한다. 변경 이력을 다른 환경으로 옮길 때는 SQLite 백업을 사용한다.
+독립 CLI 파일럿은 별도의 SQLite 프롬프트 저장소 `.prompt-management/prompts.sqlite3`를 사용하며 `SFDC_AGENT_PROMPT_DB`로 경로를 지정할 수 있다. 이 저장소는 Main의 활성 프롬프트와 권한을 변경하지 않는다. 최초 릴리스 `prompts-v1`은 `src/sfdc_agent/prompt_templates_v1/`에 보존한다. CLI에서 진행 중인 작업과 저장된 분석은 시작할 때의 릴리스를 사용하며, 릴리스 정보가 없는 이전 분석은 최초 버전을 사용한다. 독립 CLI 이력을 다른 환경으로 옮길 때는 SQLite 백업을 사용한다.
 
-4175 서버와 Agent에 같은 서버 전용 `SFDC_AGENT_PROMPT_ADMIN_TOKEN`을 설정하고, 4175에 편집과 활성화를 담당할 Salesforce 사용자 ID를 `SFDC_UI_PROMPT_EDITOR_IDS`, `SFDC_UI_PROMPT_PUBLISHER_IDS`로 지정한다. 로컬 파일로 관리할 경우 Agent는 `.prompt-management/admin-token`을 읽고, 4175는 `SFDC_Ui/.prompt-management/access.json`의 `token`, `editorIds`, `publisherIds`를 읽는다. 두 파일은 실행 사용자 소유와 `0600` 권한을 사용한다. 설정한 계정이 Salesforce에 연결된 세션에서 편집하거나 활성화할 수 있다.
-
-같은 릴리스의 텍스트 프롬프트를 다른 모델에서 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma MCP 도구를 직접 호출하는 작업은 기존 Kiro 경로에서 실행한다.
+독립 CLI에서 같은 릴리스의 텍스트 프롬프트를 다른 모델로 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 CLI 저장소의 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma MCP 도구를 직접 호출하는 작업은 기존 Kiro 경로에서 실행한다.
 
 ```sh
 .venv/bin/sfdc-agent evaluate-prompt story.classification fixture.json --provider azure --release prompts-v1
@@ -136,4 +149,4 @@ Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행�
 
 관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
 
-기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. 로컬 프론트 개발은 `SFDC_AGENT_MANAGED_ONLY`의 기본값으로 기존 경로를 사용한다.
+기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. Main 통합 환경은 `SFDC_AGENT_MANAGED_ONLY=1`을 사용하며, 독립 CLI 파일럿 API는 기본 비관리형 모드를 사용한다.
