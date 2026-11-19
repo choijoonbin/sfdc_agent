@@ -2,7 +2,13 @@
 
 `SFDC_Agent`는 NOVA의 Screen·Story Kiro 분석과 LWC 코드 생성을 처리한다. CLI 파일럿은 `SFDC_Ui/nextbss`의 원본 파서, NextBSS 표준, LWC 생성기와 브라우저 검사기를 사용해 변환 결과를 비교한다. 파일럿 작업 상태는 SQLite에 기록하고, 모델 제안·LWC 번들·PNG·비교 보고서는 실행별 폴더에 저장한다.
 
-## NOVA 4175용 에이전트 서버 실행
+## Spring 통합 실시간 개발 (`dev`)
+
+프론트·백엔드·Agent는 모두 `dev` 브랜치에서 개발합니다. 기존 백엔드 없는 프론트·Agent 코드는 `dev_fe`로 보존했습니다. 통합 개발 환경은 `SFDC_BACK`에서 `python3 scripts/live-development.py start`로 실행하며, Agent는 개발 전용 `127.0.0.1:8767`에서 Python 변경을 자동 반영합니다. UI 진입점은 `https://localhost:4188`입니다.
+
+실행·종료·검증·로그 위치는 [통합 개발 안내](../SFDC_BACK/docs/local-live-development.md)를 확인하세요. 아래 8765/4175 직접 실행은 기존 PoC용이며 통합 환경과 함께 중복 실행하지 않습니다.
+
+## 기존 NOVA 4175용 에이전트 서버 실행
 
 모든 명령은 `SFDC_Agent` 저장소 루트에서 실행한다. Python 3.11 이상과 로컬 Kiro CLI가 필요하다.
 
