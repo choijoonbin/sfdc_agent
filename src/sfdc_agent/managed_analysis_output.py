@@ -34,8 +34,8 @@ def invalid():
     return ValueError('ANALYSIS_OUTPUT_INVALID')
 
 
-def output_directory(payload):
-    configured = os.environ.get('SFDC_MANAGED_RELEASE_INGRESS', '')
+def output_directory(payload, *, root=None):
+    configured = root if root is not None else os.environ.get('SFDC_MANAGED_RELEASE_INGRESS', '')
     if not configured:
         raise HTTPException(503, 'Analysis ingress is unavailable.')
     try:

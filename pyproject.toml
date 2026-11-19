@@ -9,6 +9,9 @@ description = "Figma-to-LWC model orchestration for SFDC_Ui"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.115,<1", "pydantic>=2.10,<3", "uvicorn>=0.34,<1"]
 
+[project.optional-dependencies]
+aws = ["boto3>=1.40,<2"]
+
 [project.scripts]
 sfdc-agent = "sfdc_agent.cli:main"
 

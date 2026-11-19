@@ -28,6 +28,7 @@ from .config import engine_root
 from .component_library import ComponentLibrary
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
+from .managed_object_storage import ManagedObjectStorage, storage_io
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
@@ -404,20 +405,34 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     keep = False
     context = None
     try:
+        storage = ManagedObjectStorage.configured()
         async with asyncio.timeout(timeout):
             with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
                 encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
                 async with execution_progress(payload, runner_token(), timeout) as context:
                     environment = dict(provider_environment)
+                    if storage:
+                        environment.update(await storage_io(storage.prepare, scratch, archive=payload.archive,
+                            release_id=payload.designReleaseId, manifest_sha=payload.designManifestSha256,
+                            deadline=payload.deadlineEpochSeconds))
                     if payload.engine == 'KIRO':
                         environment['SFDC_MANAGED_KIRO_MODE'] = context.mode
                     if payload.operation == 'ANALYZE':
-                        directory = output_directory(payload)
+                        if storage:
+                            ingress = Path(scratch).resolve(strict=True) / 'ingress'
+                            ingress.mkdir(mode=0o700)
+                            directory = output_directory(payload, root=ingress)
+                        else:
+                            directory = output_directory(payload)
                         environment['SFDC_ANALYSIS_OUTPUT'] = str(directory)
                     output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
                     result = _parse_result(output, payload.operation)
                     if directory:
                         verify_analysis_output(directory, payload, result, engine_root().resolve(strict=True))
+                        if storage:
+                            await storage_io(storage.publish_output, directory,
+                                f'analysis/{payload.jobId}/{payload.attempt}', 'manifest.json',
+                                result.analysisView.manifestSha256, analysis=True, deadline=payload.deadlineEpochSeconds)
                 if time() >= payload.deadlineEpochSeconds:
                     raise TimeoutError
                 if not payload.archive and payload.sourceReference.startswith('https://'):
@@ -446,7 +461,14 @@ async def _discover_source(payload: SourceDiscoveryRequest):
     runner = (engine_root() / "nextbss/server/managed-source-discovery.mjs").resolve(strict=True)
     encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
     with tempfile.TemporaryDirectory(prefix="sfdc-source-discovery-") as scratch:
-        output = await _run_process(binary, runner, scratch, 90, encoded, environment)
+        deadline = time() + 90
+        storage = ManagedObjectStorage.configured()
+        if storage and payload.archive:
+            environment.update(await storage_io(storage.prepare, scratch, archive=payload.archive, deadline=deadline))
+        remaining = deadline - time() if storage else 90
+        if remaining <= 0:
+            raise TimeoutError
+        output = await _run_process(binary, runner, scratch, remaining, encoded, environment)
     if payload.sourceReference:
         require_figma_scope(payload.executionScope)
     response = _decode_json(output)

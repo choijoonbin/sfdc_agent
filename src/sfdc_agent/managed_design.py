@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import stat
 import tempfile
+from time import time
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .config import engine_root
 from .managed_execution_progress import ExecutionScope
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
+from .managed_object_storage import ManagedObjectStorage, storage_io
 from .managed_execution import (
     IncompleteExecution, _WORKER_SLOTS, _authorize, _decode_json, _encode_json,
     _parse_request, _run_process, _runner_configuration, _wait_for_disconnect,
@@ -79,8 +81,8 @@ class DesignBuildResult(BaseModel):
     reproduced: bool
 
 
-def output_directory(build_id: UUID) -> Path:
-    configured = os.environ.get("SFDC_MANAGED_RELEASE_INGRESS", "")
+def output_directory(build_id: UUID, *, root=None) -> Path:
+    configured = root if root is not None else os.environ.get("SFDC_MANAGED_RELEASE_INGRESS", "")
     if not configured:
         raise HTTPException(503, "Design build ingress is not configured.")
     try:
@@ -116,42 +118,59 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
     runner = engine_root() / "nextbss/server/managed-design-release.mjs"
     if not runner.is_file():
         raise HTTPException(503, "The design build runner is unavailable.")
-    directory = output_directory(payload.buildId)
+    directory = None
     keep = False
     try:
+        storage = ManagedObjectStorage.configured()
         with tempfile.TemporaryDirectory(prefix="sfdc-design-build-") as scratch:
+            if storage:
+                ingress = Path(scratch).resolve(strict=True) / 'ingress'
+                ingress.mkdir(mode=0o700)
+                directory = output_directory(payload.buildId, root=ingress)
+            else:
+                directory = output_directory(payload.buildId)
             overrides = {"SFDC_DESIGN_BUILD_ID": str(payload.buildId), "SFDC_DESIGN_BUILD_OUTPUT": str(directory),
                          "SFDC_MANAGED_RELEASE_INGRESS": str(directory.parent)}
+            deadline = time() + 900
+            if storage:
+                overrides.update(await storage_io(storage.prepare, scratch, release_id=payload.baseReleaseId,
+                    manifest_sha=payload.baseManifestSha256, design_sources=True, deadline=deadline))
             # This operation reads normal REST source metadata only. It must
             # never inherit a Plan/MCP identity or another workspace's token.
             if remote:
                 overrides["FIGMA_ACCESS_TOKEN"] = provider["FIGMA_ACCESS_TOKEN"]
             sources = os.environ.get("SFDC_MANAGED_DESIGN_SOURCES")
-            if sources:
+            if sources and not storage:
                 overrides["SFDC_MANAGED_DESIGN_SOURCES"] = sources
-            output = await _run_process(binary, runner, scratch, 900,
+            remaining = deadline - time() if storage else 900
+            if remaining <= 0:
+                raise TimeoutError
+            output = await _run_process(binary, runner, scratch, remaining,
                                         _encode_json(payload.model_dump(mode="json", exclude_none=True)), overrides)
-        if len(output) > 128 * 1024:
-            raise IncompleteExecution
-        result = DesignBuildResult.model_validate(_decode_json(output))
-        if remote:
-            require_figma_scope(payload.executionScope)
-        if result.buildId != payload.buildId:
-            raise IncompleteExecution
-        if result.status == "VALIDATED" and (not result.releaseId or not result.manifestSha256
-                                            or not result.outputManifestSha256
-                                            or not result.checks or any(check.status != "passed" for check in result.checks)):
-            raise IncompleteExecution
-        if result.status == "VALIDATED":
-            check_output_directory(directory)
-            keep = True
-        return result
+            if len(output) > 128 * 1024:
+                raise IncompleteExecution
+            result = DesignBuildResult.model_validate(_decode_json(output))
+            if remote:
+                require_figma_scope(payload.executionScope)
+            if result.buildId != payload.buildId:
+                raise IncompleteExecution
+            if result.status == "VALIDATED" and (not result.releaseId or not result.manifestSha256
+                                                or not result.outputManifestSha256
+                                                or not result.checks or any(check.status != "passed" for check in result.checks)):
+                raise IncompleteExecution
+            if result.status == "VALIDATED":
+                check_output_directory(directory)
+                if storage:
+                    await storage_io(storage.publish_output, directory, str(payload.buildId),
+                        'output-manifest.json', result.outputManifestSha256, deadline=deadline)
+                keep = not storage
+            return result
     except TimeoutError:
         raise HTTPException(504, "Design build timed out.") from None
     except (IncompleteExecution, ValueError, OSError):
         raise HTTPException(502, "The design build did not return a verified result.") from None
     finally:
-        if not keep:
+        if directory is not None and not keep:
             shutil.rmtree(directory, ignore_errors=True)
 
 

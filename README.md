@@ -150,3 +150,32 @@ Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행�
 관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
 
 기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. Main 통합 환경은 `SFDC_AGENT_MANAGED_ONLY=1`을 사용하며, 독립 CLI 파일럿 API는 기본 비관리형 모드를 사용한다.
+
+## 관리형 로컬/S3 저장소
+
+로컬은 기본 `SFDC_STORAGE_PROVIDER=local`을 유지한다. 기존 `SFDC_MANAGED_SOURCE_ROOT`, `SFDC_MANAGED_RELEASE_ROOT`, `SFDC_MANAGED_RELEASE_INGRESS`, `SFDC_MANAGED_DESIGN_SOURCES`와 업무 파일을 계속 사용하며 boto3는 설치하거나 불러올 필요가 없다.
+
+개발·운영 서버는 이미지 빌드 때 `pip install '.[aws]'`로 선택 의존성을 설치하고, 배포 플랫폼이 Parameter Store의 승인된 값을 Agent 환경에 주입한다. Spring이 읽은 Parameter Store 값은 Agent 프로세스에 자동 전달되지 않는다.
+
+| 환경값 | 서버 설정 |
+| --- | --- |
+| `SFDC_STORAGE_PROVIDER` | `s3` |
+| `SFDC_STORAGE_S3_BUCKET` | Spring과 동일한 비공개 업무 버킷 |
+| `SFDC_STORAGE_S3_PREFIX` | Spring과 동일한 환경별 prefix |
+| `AWS_REGION` | S3와 Parameter Store의 승인된 리전 |
+| `SFDC_AGENT_EXECUTION_TOKEN`, source scope, Kiro/공급자 키 | 해당 Agent 역할에 필요한 값만 Parameter Store에서 주입 |
+
+AWS 인증은 실행 역할을 사용한다. 정적 AWS 키를 이미지·저장소에 넣거나 Node 자식 프로세스로 전달하지 않는다. Agent는 요청에서 고정한 `.fig` 원본과 디자인 릴리스를 S3에서 작업별 비공개 임시 공간으로 받아 크기·SHA·경로를 검사한다. 사용자 업로드 원본은 100MiB, 릴리스 파일 합계는 128MiB이며 관리자 디자인 원본은 별도 상한 256MiB/개를 적용한다. 작업 종료·취소 시 임시 공간을 정리하고, 취소된 전송이 종료되기 전에 작업 공간을 삭제하지 않는다.
+
+분석 출력은 `release-ingress/analysis/<jobId>/<attempt>/`, 디자인 빌드는 `release-ingress/<buildId>/`에 기록한다. 기존 출력 검증 후 파일을 불변 업로드하고, 해시가 고정된 `manifest.json` 또는 `output-manifest.json`을 마지막에 업로드한다. 같은 키가 이미 있으면 실제 내용을 확인하며, 파일 충돌이나 일부 전송 실패를 완료로 처리하지 않는다. 업무 상태·작업 큐·활성 릴리스는 PostgreSQL의 Spring 관리 모델을 유지한다.
+
+관리자 디자인 원본 인덱스는 `<prefix>/figma-sources/design-sources/index.json`에 다음 구조로 보관한다. `objectKey`는 `figma-sources` 영역 안의 상대키이며 각 원본의 크기와 SHA를 정확히 지정한다. Agent가 이를 작업별 로컬 경로 인덱스로 변환하므로 서버 간 절대경로 공유가 필요하지 않다.
+
+```json
+{
+  "guide": {"objectKey": "design-sources/guide.fig", "sha256": "<64자리 SHA-256>", "sizeBytes": 13346218},
+  "library": {"objectKey": "design-sources/library.fig", "sha256": "<64자리 SHA-256>", "sizeBytes": 150462817}
+}
+```
+
+위 크기는 구조 설명용이다. 실제 파일의 측정값과 SHA를 사용해야 한다. 이 구성은 AWS 리소스를 만들거나 기존 로컬 원본을 자동 업로드하지 않는다. 버킷·파라미터·권한은 배포 환경에서 준비한다. [Boto3 인증 체인](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html), [S3 조건부 업로드](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/put_object.html)를 따른다.

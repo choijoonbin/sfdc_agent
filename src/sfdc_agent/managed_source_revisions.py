@@ -26,6 +26,7 @@ from .managed_prompts import _authorize
 from .managed_execution import ArchiveSelection
 from .prompt_release_id import PromptReleaseId
 from .component_library import ComponentLibrary
+from .managed_object_storage import ManagedObjectStorage, storage_io
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
@@ -221,8 +222,18 @@ async def run_revision(payload):
     # No Figma, MCP, model or service credentials are forwarded. Both local and
     # remote parents use the same immutable recorded native plan offline.
     with tempfile.TemporaryDirectory(prefix="sfdc-source-revision-") as scratch:
-        output = await _run_process(binary, runner, scratch, timeout,
-            _encode_json(payload.model_dump(mode="json", exclude_none=True)), {}, output_limit=_OUTPUT_LIMIT)
+        deadline = time() + timeout
+        storage = ManagedObjectStorage.configured()
+        environment = {}
+        if storage:
+            environment.update(await storage_io(storage.prepare, scratch, archive=payload.archive,
+                release_id=payload.pins.design.sourceId, manifest_sha=payload.pins.design.manifestSha256,
+                deadline=deadline))
+        remaining = deadline - time() if storage else timeout
+        if remaining <= 0:
+            raise TimeoutError
+        output = await _run_process(binary, runner, scratch, remaining,
+            _encode_json(payload.model_dump(mode="json", exclude_none=True)), environment, output_limit=_OUTPUT_LIMIT)
     if len(output) > _OUTPUT_LIMIT:
         raise IncompleteExecution
     value = _decode_json(output)
