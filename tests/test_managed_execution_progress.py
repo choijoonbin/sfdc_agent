@@ -125,7 +125,8 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, {'SFDC_AGENT_SCREEN_KIRO_MODE': 'headless'}):
             with self.assertRaises(HTTPException) as missing:
                 _check_kiro_configuration(request, self.payload)
-            self.assertEqual(missing.exception.status_code, 503)
+            self.assertEqual(missing.exception.status_code, 502)
+            self.assertEqual(missing.exception.detail, 'KIRO_KEY_INVALID')
         archive = {**self.payload.executionScope.model_dump(mode='json'), 'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
         local = ExecutionRequest.model_validate({**self.payload.model_dump(mode='json'), 'archive': archive})
         self.assertEqual(execution_mode(local), 'acp')

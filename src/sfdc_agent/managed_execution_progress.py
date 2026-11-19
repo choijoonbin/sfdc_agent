@@ -114,6 +114,7 @@ class ExecutionContext:
     authorization: asyncio.Task | None = None
     cleanup: asyncio.Task | None = None
     closed: bool = False
+    auth_error: str | None = None
     view: dict = field(default_factory=lambda: {'status': 'running', 'phase': 'connecting'})
 
     def alive(self):
@@ -121,6 +122,11 @@ class ExecutionContext:
 
     def public_view(self):
         return {'jobId': self.job_id, 'attempt': self.attempt, **self.view}
+
+    def record_auth_error(self, code):
+        from .kiro_readiness import AUTH_ERROR_CODES
+        if self.alive() and code in AUTH_ERROR_CODES:
+            self.auth_error = code
 
     def bind(self, session, read_figma):
         self.sessions.add(session)

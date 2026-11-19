@@ -347,9 +347,14 @@ class HeadlessKiroSession:
             if status:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
             result = parse_output(output)
+            from .kiro_readiness import record_model_success
+            record_model_success(self._key)
             return result
         except BaseException as error:
             primary = error
+            if isinstance(error, SessionError):
+                from .kiro_readiness import record_auth_failure
+                record_auth_failure(self._key, error.code)
             raise
         finally:
             if not getattr(primary, "cleanup_incomplete", False):

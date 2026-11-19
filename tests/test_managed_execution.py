@@ -178,7 +178,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 503)
             self.assertEqual(reply, {"detail": "Managed Kiro runtime is unavailable."})
         self.write_runner(ANALYSIS_SCRIPT)
-        with patch.dict(os.environ, {"KIRO_API_KEY": "present", "SFDC_MANAGED_AGENT_ORIGIN": "http://127.0.0.1:18765"}):
+        with patch.dict(os.environ, {"KIRO_API_KEY": "ksk_synthetic_fixture", "SFDC_MANAGED_AGENT_ORIGIN": "http://127.0.0.1:18765"}):
             status, reply, _ = await self.request(payload)
         self.assertEqual(status, 200)
         self.assertEqual(reply["checkpoint"]["request"]["engine"], "KIRO")
@@ -190,7 +190,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         release_id = 'prompts-nova-' + 'c' * 64
         bundle = {'releaseId': release_id, 'sha256': template_digest(templates), 'templates': templates}
         self.write_runner(ANALYSIS_SCRIPT)
-        with patch.dict(os.environ, {'KIRO_API_KEY': 'synthetic-key', 'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:18765'}):
+        with patch.dict(os.environ, {'KIRO_API_KEY': 'ksk_synthetic_fixture', 'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:18765'}):
             for engine in ('NOVA', 'KIRO'):
                 with self.subTest(engine=engine):
                     status, reply, _ = await self.request({**EXECUTION, 'engine': engine,
@@ -201,6 +201,48 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(received['promptBundle'], bundle)
                     self.assertEqual(received['engine'], engine)
                     self.assertFalse(reply['checkpoint']['receivedServiceToken'])
+
+    async def test_headless_missing_or_malformed_key_stops_before_worker_with_safe_code(self):
+        payload = {**EXECUTION, 'engine': 'KIRO'}
+        for value, code in ((None, 'KIRO_KEY_MISSING'), ('', 'KIRO_KEY_INVALID'),
+                            ('malformed synthetic fixture', 'KIRO_KEY_INVALID')):
+            environment = {'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:18765',
+                           'SFDC_AGENT_ROOT': self.directory}
+            if value is not None:
+                environment['KIRO_API_KEY'] = value
+            with self.subTest(code=code), patch.dict(os.environ, environment), patch(
+                    f'{RUNNER_MODULE}._run_process', new_callable=AsyncMock) as worker:
+                status, reply, _ = await self.request(payload)
+            self.assertEqual(status, 502)
+            self.assertEqual(reply, {'code': code})
+            worker.assert_not_awaited()
+
+    async def test_worker_failure_preserves_only_its_live_gateway_auth_error(self):
+        from starlette.requests import Request
+        from sfdc_agent.kiro_gateway import error_response
+        from sfdc_agent.kiro_headless import SessionError
+        from sfdc_agent.managed_execution import IncompleteExecution
+        from sfdc_agent.managed_prompts import runner_token, template_digest
+        from sfdc_agent.prompt_templates import load_baseline_templates
+        templates = load_baseline_templates()
+        payload = {**EXECUTION, 'engine': 'KIRO', 'promptBundle': {
+            'releaseId': EXECUTION['promptReleaseId'], 'sha256': template_digest(templates), 'templates': templates}}
+        for code in ('KIRO_KEY_MISSING', 'KIRO_KEY_INVALID', 'KIRO_KEY_AUTH_REQUIRED', 'KIRO_LOGIN_REQUIRED', 'KIRO_TIMEOUT'):
+            async def failed_worker(*args, **kwargs):
+                owner = runner_token()
+                self.assertIsNotNone(owner)
+                request = Request({'type': 'http', 'headers': [(b'x-sfdc-managed-prompt', owner.encode())], 'app': app})
+                error_response(request, SessionError(code, 'private synthetic provider detail'))
+                raise IncompleteExecution
+            with self.subTest(code=code), patch.dict(os.environ, {
+                    'SFDC_AGENT_MANAGED_ONLY': '1', 'KIRO_API_KEY': 'ksk_synthetic_fixture',
+                    'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:18765'}), patch(
+                    f'{RUNNER_MODULE}._run_process', side_effect=failed_worker):
+                status, reply, _ = await self.request(payload)
+            self.assertEqual(status, 502)
+            self.assertEqual(reply, {'code': code} if code != 'KIRO_TIMEOUT'
+                             else {'detail': 'Managed execution did not return a usable result.'})
+            self.assertNotIn('private synthetic provider detail', json.dumps(reply))
 
     async def test_invalid_or_mismatched_prompt_pins_stop_before_worker_start(self):
         from sfdc_agent.managed_prompts import template_digest

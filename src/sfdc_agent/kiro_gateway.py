@@ -282,7 +282,22 @@ def require_session_owner(request, session):
             raise HTTPException(403, 'The execution attempt ended.')
 
 
-def error_response(_, error):
+def error_response(request, error):
+    # Only the current execution owner can contribute an allowlisted diagnostic.
+    # Never carry the provider's free-form message through the worker boundary.
+    if managed_only():
+        try:
+            context = managed_execution_context(request)
+            if context is not None:
+                session_id = request.path_params.get('session_id')
+                if session_id:
+                    session = request.app.state.kiro_sessions.get(session_id)
+                    if session is None or getattr(session, 'managed_execution_context', None) is not context:
+                        raise HTTPException(403, 'The session belongs to a different managed job.')
+                    require_session_owner(request, session)
+                context.record_auth_error(error.code)
+        except HTTPException:
+            pass
     return JSONResponse({"error": {"code": error.code, "message": str(error)}}, status_code=502)
 
 

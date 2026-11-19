@@ -27,6 +27,7 @@ from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
 from .component_library import ComponentLibrary
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
+from .kiro_readiness import AUTH_ERROR_CODES
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
@@ -234,9 +235,16 @@ def _check_kiro_configuration(request: Request, payload: ExecutionRequest) -> No
     origin = os.environ.get("SFDC_MANAGED_AGENT_ORIGIN", "")
     server = request.scope.get("server")
     local_port = server[1] if server else None
-    if (not local_port or origin != f"http://127.0.0.1:{local_port}"
-            or execution_mode(payload) == 'headless' and not os.environ.get("KIRO_API_KEY", "").strip()):
+    if not local_port or origin != f"http://127.0.0.1:{local_port}":
         raise HTTPException(503, "Managed Kiro runtime is unavailable.")
+    if execution_mode(payload) == 'headless':
+        from .kiro_headless import SessionError, read_key
+        try:
+            read_key()
+        except SessionError as error:
+            if error.code in AUTH_ERROR_CODES:
+                raise HTTPException(502, error.code) from None
+            raise
 
 
 def _check_component_library_configuration(payload: ExecutionRequest) -> None:
@@ -394,6 +402,7 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     timeout = _execution_budget(payload, physical)
     directory = None
     keep = False
+    context = None
     try:
         async with asyncio.timeout(timeout):
             with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
@@ -418,6 +427,8 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     except TimeoutError:
         raise HTTPException(504, "Managed execution timed out.") from None
     except (IncompleteExecution, ValueError, OSError, RecursionError):
+        if context is not None and context.auth_error in AUTH_ERROR_CODES:
+            raise HTTPException(502, context.auth_error) from None
         raise HTTPException(502, "Managed execution did not return a usable result.") from None
     finally:
         if directory is not None and not keep:
@@ -499,7 +510,7 @@ async def execute(request: Request) -> ExecutionResult:
             return execution.result()
         raise HTTPException(499, "Managed execution request disconnected.")
     except HTTPException as failure:
-        if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail in {'LIMIT_MISMATCH', 'RELEASE_RUNTIME_INCOMPATIBLE', 'RUNTIME_CAPABILITIES_UNAVAILABLE'}):
+        if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail in AUTH_ERROR_CODES | {'LIMIT_MISMATCH', 'RELEASE_RUNTIME_INCOMPATIBLE', 'RUNTIME_CAPABILITIES_UNAVAILABLE'}):
             return JSONResponse({'code': failure.detail}, status_code=failure.status_code, headers=failure.headers)
         raise
     finally:
