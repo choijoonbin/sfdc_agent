@@ -26,6 +26,11 @@ _KEY_ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?KIRO_API_KEY\s*=\s*(.*?)\s*$")
 _API_KEY_STATUS = re.compile(r"[\s#>*`_\-]*Authenticated with API key[\s.*`_]*")
 _AGENT_NAME = "sfdc-conversion-headless"
 logger = logging.getLogger(__name__)
+_FAILURE_CODES = frozenset({
+    "KIRO_UNAVAILABLE", "KIRO_KEY_AUTH_REQUIRED", "KIRO_HEADLESS_FAILED", "KIRO_HEADLESS_INVALID",
+    "KIRO_HEADLESS_INCOMPLETE", "KIRO_HEADLESS_TOOL_CALL", "KIRO_OUTPUT_TOO_LARGE", "KIRO_TIMEOUT",
+    "KIRO_PROCESS_CLEANUP_FAILED", "KIRO_WORKSPACE_CLEANUP_FAILED",
+})
 
 
 class SessionError(Exception):
@@ -62,7 +67,7 @@ def read_key() -> str:
     return value
 
 
-def parse_output(stdout: bytes) -> dict:
+def parse_output(stdout: bytes, *, diagnostics=None) -> dict:
     if len(stdout) > _STREAM_LIMIT:
         raise SessionError("KIRO_OUTPUT_TOO_LARGE", "Kiro 출력이 허용된 크기를 초과했습니다.")
     terminal = None
@@ -76,6 +81,8 @@ def parse_output(stdout: bytes) -> dict:
             event_type, data = event["type"], event["data"]
             if not isinstance(event_type, str) or not isinstance(data, dict):
                 raise ValueError
+            if diagnostics is not None:
+                diagnostics["parsed_events"] += 1
             if session_id := data.get("sessionId"):
                 if not isinstance(session_id, str):
                     raise ValueError
@@ -324,6 +331,8 @@ class HeadlessKiroSession:
         root = mkdtemp(prefix="sfdc-kiro-headless-")
         result = None
         primary = None
+        stage = "identity"
+        diagnostics = {"exit_status": None, "stdout_bytes": None, "parsed_events": 0}
         try:
             home = Path(root)
             workspace = prepare_workspace(home)
@@ -335,6 +344,7 @@ class HeadlessKiroSession:
                         "KIRO_API_KEY": self._key})
             status, identity = await _execute(binary, ("whoami", "--format", "plain"), workspace, env,
                                               min(timeout, 15), limit=16 * 1024)
+            diagnostics.update(exit_status=status, stdout_bytes=len(identity))
             lines = identity.decode("utf-8", errors="replace").splitlines()
             if status or not any(_API_KEY_STATUS.fullmatch(line) for line in lines):
                 raise SessionError("KIRO_KEY_AUTH_REQUIRED", "Kiro가 API 키 인증을 확인하지 못했습니다. 키와 실행 환경을 확인해 주세요.")
@@ -343,16 +353,23 @@ class HeadlessKiroSession:
             remaining = deadline - loop.time()
             if remaining <= 0:
                 raise SessionError("KIRO_TIMEOUT", "Kiro 헤드리스 응답 시간이 초과됐습니다.")
+            stage = "model"
+            diagnostics = {"exit_status": None, "stdout_bytes": None, "parsed_events": 0}
             status, output = await _execute(binary, args, workspace, env, remaining, prompt=prompt)
+            diagnostics.update(exit_status=status, stdout_bytes=len(output))
             if status:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
-            result = parse_output(output)
+            stage = "parse"
+            result = parse_output(output, diagnostics=diagnostics)
             from .kiro_readiness import record_model_success
             record_model_success(self._key)
             return result
         except BaseException as error:
             primary = error
             if isinstance(error, SessionError):
+                code = error.code if error.code in _FAILURE_CODES else "KIRO_SESSION_FAILED"
+                # Unreturned measurements stay null. Never retain CLI text or exception messages.
+                logger.warning("Kiro headless failure %s", json.dumps({"stage": stage, "code": code, **diagnostics}))
                 from .kiro_readiness import record_auth_failure
                 record_auth_failure(self._key, error.code)
             raise
