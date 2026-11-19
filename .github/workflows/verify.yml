@@ -30,20 +30,20 @@ jobs:
       - name: Require the approved private runtime dependency
         env:
           RUNTIME_REF: ${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
-          RUNTIME_TOKEN: ${{ secrets.SFDC_RUNTIME_READ_TOKEN }}
+          RUNTIME_SSH_KEY: ${{ secrets.SFDC_RUNTIME_READ_SSH_KEY }}
         run: |
           python3 - <<'PY'
           import os,re
           if not re.fullmatch(r'[a-f0-9]{40}', os.environ.get('RUNTIME_REF', '')):
               raise SystemExit('Set SFDC_UI_RUNTIME_REF to the approved immutable UI commit SHA; branch fallback is forbidden.')
-          if not os.environ.get('RUNTIME_TOKEN'):
-              raise SystemExit('Configure SFDC_RUNTIME_READ_TOKEN with read-only access to the private sfdc_ui runtime repository.')
+          if not os.environ.get('RUNTIME_SSH_KEY'):
+              raise SystemExit('Configure SFDC_RUNTIME_READ_SSH_KEY with a read-only SSH deploy key for the private sfdc_ui runtime repository.')
           PY
       - uses: actions/checkout@v6
         with:
           repository: choijoonbin/sfdc_ui
           ref: ${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
-          token: ${{ secrets.SFDC_RUNTIME_READ_TOKEN }}
+          ssh-key: ${{ secrets.SFDC_RUNTIME_READ_SSH_KEY }}
           path: SFDC_Ui
           persist-credentials: false
       - uses: actions/setup-node@v6
