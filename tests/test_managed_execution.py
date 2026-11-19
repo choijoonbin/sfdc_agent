@@ -183,6 +183,45 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(reply["checkpoint"]["request"]["engine"], "KIRO")
 
+    async def test_published_nova_prompt_pin_reaches_both_workers_without_losing_its_snapshot(self):
+        from sfdc_agent.managed_prompts import template_digest
+        from sfdc_agent.prompt_templates import load_baseline_templates
+        templates = load_baseline_templates()
+        release_id = 'prompts-nova-' + 'c' * 64
+        bundle = {'releaseId': release_id, 'sha256': template_digest(templates), 'templates': templates}
+        self.write_runner(ANALYSIS_SCRIPT)
+        with patch.dict(os.environ, {'KIRO_API_KEY': 'synthetic-key', 'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:18765'}):
+            for engine in ('NOVA', 'KIRO'):
+                with self.subTest(engine=engine):
+                    status, reply, _ = await self.request({**EXECUTION, 'engine': engine,
+                                                          'promptReleaseId': release_id, 'promptBundle': bundle})
+                    self.assertEqual(status, 200)
+                    received = reply['checkpoint']['request']
+                    self.assertEqual(received['promptReleaseId'], release_id)
+                    self.assertEqual(received['promptBundle'], bundle)
+                    self.assertEqual(received['engine'], engine)
+                    self.assertFalse(reply['checkpoint']['receivedServiceToken'])
+
+    async def test_invalid_or_mismatched_prompt_pins_stop_before_worker_start(self):
+        from sfdc_agent.managed_prompts import template_digest
+        from sfdc_agent.prompt_templates import load_baseline_templates
+        templates = load_baseline_templates()
+        bundle = {'releaseId': 'prompts-nova-' + 'c' * 64,
+                  'sha256': template_digest(templates), 'templates': templates}
+        invalid = ('prompts-nova-' + 'c' * 63, 'prompts-nova-' + 'C' * 64,
+                   'prompts-nova-' + 'g' * 64, '../prompts-v1', 'prompts-v1/extra')
+        worker = AsyncMock()
+        with patch(f'{RUNNER_MODULE}._run_process', new=worker):
+            for release_id in (*invalid, 'prompts-v1'):
+                with self.subTest(release_id=release_id):
+                    status, reply, _ = await self.request({**EXECUTION, 'promptReleaseId': release_id,
+                                                          'promptBundle': bundle})
+                    self.assertEqual((status, reply), (422, {'detail': 'Invalid managed execution request.'}))
+            status, _, _ = await self.request({**EXECUTION, 'promptReleaseId': bundle['releaseId'],
+                                              'promptBundle': {**bundle, 'releaseId': invalid[0]}})
+            self.assertEqual(status, 422)
+        worker.assert_not_called()
+
     async def test_review_response_keeps_checkpoint_separate_and_uses_unique_cleaned_scratch(self):
         self.write_runner(ANALYSIS_SCRIPT)
         working_directories = set()

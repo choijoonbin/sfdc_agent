@@ -13,13 +13,14 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .config import project_root
 from .prompt_registry import PROMPTS, PromptRegistry, RegistryError, runtime_release
+from .prompt_release_id import PromptReleaseId
 from .prompt_run_values import trace_owner
 from .prompt_templates import template_placeholders
 
 
 router = APIRouter(prefix="/internal/prompts")
 Version = Annotated[str, Field(pattern=r"^v[1-9][0-9]{0,8}$")]
-Release = Annotated[str, Field(pattern=r"^prompts-(?:v1|[a-f0-9]{32})$")]
+Release = PromptReleaseId
 
 
 class Change(BaseModel):

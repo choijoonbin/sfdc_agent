@@ -1,10 +1,10 @@
 """Evaluate a shared conversion prompt with an explicitly selected provider."""
 
 import hashlib
-import re
 from typing import Any
 
 from .prompt_registry import runtime_release
+from .prompt_release_id import is_prompt_release_id
 from .providers import ProviderError, create_provider
 from .screen_tasks import build_screen_task
 from .story_tasks import build_story_task
@@ -16,7 +16,6 @@ EVALUATION_OPERATIONS = (
 )
 _REPAIRS = {"screen.repair", "screen.plan.repair"}
 _REVIEWED = {"screen.generate", "screen.repair"}
-_RELEASE_ID = re.compile(r"prompts-(?:v1|[a-f0-9]{32})")
 
 
 def _check_evidence(operation: str, fields: dict[str, Any]) -> None:
@@ -46,7 +45,7 @@ def evaluate_prompt_provider(
         raise ProviderError("PROMPT_EVALUATION_UNSUPPORTED", "Choose a task that can run from saved evidence without Figma MCP.")
     if not isinstance(fields, dict):
         raise ProviderError("PROMPT_EVALUATION_INVALID", "Supply the task's structured JSON fields.")
-    if release_id is not None and (not isinstance(release_id, str) or not _RELEASE_ID.fullmatch(release_id)):
+    if release_id is not None and not is_prompt_release_id(release_id):
         raise ProviderError("PROMPT_EVALUATION_INVALID", "Supply a valid prompt release ID.")
     release = templates_release if templates_release is not None else runtime_release(release_id)
     if release_id is not None and release.id != release_id:

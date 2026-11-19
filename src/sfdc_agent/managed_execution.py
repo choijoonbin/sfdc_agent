@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 from starlette.requests import ClientDisconnect
 
 from .managed_prompts import PromptBundle, execution_prompts, runner_token
+from .prompt_release_id import PromptReleaseId
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope, execution_mode, execution_progress
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
@@ -89,7 +90,7 @@ class ExecutionRequest(BaseModel):
     operation: Literal["ANALYZE", "GENERATE"] = "ANALYZE"
     sourceReference: SourceReference
     designReleaseId: ReleasePin
-    promptReleaseId: ReleasePin
+    promptReleaseId: PromptReleaseId
     promptBundle: PromptBundle | None = None
     designManifestSha256: ManifestDigest | None = None
     componentLibrary: ComponentLibrary | None = None
@@ -103,6 +104,8 @@ class ExecutionRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_review(self):
+        if self.promptBundle is not None and self.promptBundle.releaseId != self.promptReleaseId:
+            raise ValueError("Prompt release pin does not match.")
         if self.archive and (self.archive.tenantId != self.executionScope.tenantId
                              or self.archive.workspaceId != self.executionScope.workspaceId):
             raise ValueError("The selected archive belongs to a different execution scope.")
@@ -392,8 +395,6 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     directory = None
     keep = False
     try:
-        if payload.promptBundle is not None and payload.promptBundle.releaseId != payload.promptReleaseId:
-            raise ValueError("Prompt release pin does not match.")
         async with asyncio.timeout(timeout):
             with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
                 encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))

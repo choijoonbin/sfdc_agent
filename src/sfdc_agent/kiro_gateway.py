@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .kiro_screen_projection import project_screen_fields
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
+from .prompt_release_id import PromptReleaseId
 from .managed_prompts import (
     managed_context_alive,
     managed_trace_enabled,
@@ -75,7 +76,7 @@ class OpenSession(BaseModel):
     model_config = ConfigDict(extra="forbid")
     fileKey: str | None = Field(default=None, pattern=r"^[A-Za-z0-9]{1,128}$")
     readFigma: bool = False
-    promptReleaseId: str | None = Field(default=None, pattern=r"^prompts-(?:v1|[a-f0-9]{32})$")
+    promptReleaseId: PromptReleaseId | None = None
 
     @model_validator(mode="after")
     def restrict_figma(self):

@@ -17,7 +17,7 @@ from sfdc_agent.story_tasks import build_story_task
 class ManagedPromptObservabilityTest(unittest.TestCase):
     def setUp(self):
         templates = load_baseline_templates()
-        self.bundle = PromptBundle(releaseId="prompts-v1", sha256=template_digest(templates), templates=templates)
+        self.bundle = PromptBundle(releaseId="prompts-nova-" + "c" * 64, sha256=template_digest(templates), templates=templates)
 
     def request(self, body=None, token=None, auth=True):
         headers = [(b"authorization", b"Bearer service-token")] if auth else []
@@ -48,7 +48,7 @@ class ManagedPromptObservabilityTest(unittest.TestCase):
         payload = {"operation": "story.classification", "provider": "openai", "model": "test-model",
                    "fields": {"evidence": '{"headings":[],"screens":[],"links":[]}'},
                    "promptBundle": self.bundle.model_dump()}
-        response = {"operation": "story.classification", "provider": "openai", "promptReleaseId": "prompts-v1",
+        response = {"operation": "story.classification", "provider": "openai", "promptReleaseId": self.bundle.releaseId,
                     "promptDigest": "a" * 64, "promptBytes": 100, "result": {"accessToken": "private-response", "workflows": []}}
         with patch.dict("os.environ", {"SFDC_AGENT_EXECUTION_TOKEN": "service-token"}), patch(
             "sfdc_agent.managed_prompt_observability.evaluate_prompt_provider", return_value=response) as provider:

@@ -1,0 +1,299 @@
+{
+  "schemaVersion" : 1,
+  "description" : "Synthetic Java-serialized Spring execution requests; no user data, private prompts or provider calls.",
+  "cases" : [ {
+    "name" : "nova-baseline",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "NOVA",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-v1",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-v1",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  }, {
+    "name" : "kiro-baseline",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "KIRO",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-v1",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-v1",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  }, {
+    "name" : "nova-uuid",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "NOVA",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-0123456789abcdef0123456789abcdef",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-0123456789abcdef0123456789abcdef",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  }, {
+    "name" : "kiro-uuid",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "KIRO",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-0123456789abcdef0123456789abcdef",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-0123456789abcdef0123456789abcdef",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  }, {
+    "name" : "nova-nova",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "NOVA",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-nova-c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-nova-c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  }, {
+    "name" : "kiro-nova",
+    "request" : {
+      "jobId" : "8b9ed4d2-ffb7-4fd5-9e14-1d4b1ec8b42d",
+      "attempt" : 1,
+      "kind" : "SCREEN",
+      "engine" : "KIRO",
+      "operation" : "ANALYZE",
+      "sourceReference" : "https://www.figma.com/design/ContractOnly?node-id=1-2",
+      "designReleaseId" : "nextbss-1.9-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "promptReleaseId" : "prompts-nova-c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+      "designManifestSha256" : "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "promptReleaseVersion" : "contract-synthetic",
+      "promptBundle" : {
+        "releaseId" : "prompts-nova-c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "sha256" : "c9b79979d3f79558c85bce595afd6ff5cf7910683d0e28813a5b4342425844eb",
+        "templates" : {
+          "screen.analyze.local" : "Synthetic contract fixture.\n{{node_id}}\n{{source_context}}\n",
+          "screen.analyze" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.capture" : "@@section main\nSynthetic contract fixture.\n{{screenshot}}\n{{metadata}}\n\n@@section metadata\nSynthetic contract fixture.\n{{reference}}\n",
+          "screen.discovery" : "@@section main\nSynthetic contract fixture.\n{{reference}}\n{{kind}}\n\n@@section page\nSynthetic contract fixture.\n\n\n@@section document\nSynthetic contract fixture.\n\n",
+          "screen.generate" : "@@section main\nSynthetic contract fixture.\n{{source_instruction}}\n{{file_key}}\n{{node_url}}\n{{file_key}}\n{{node_id}}\n{{source_identity}}\n{{dimensions_line}}\n{{reading}}\n{{rules}}\n{{action_evidence}}\n{{reviewed}}\n{{additional_rules}}\n{{table_rules}}\n{{accordion}}\n{{component_contracts}}\n{{component_variants}}\n{{token_declarations}}\n{{typography_groups}}\n{{output_format}}\n{{example}}\n{{payload}}\n\n@@section rest_source_instruction\nSynthetic contract fixture.\n\n\n@@section rest_source_identity\nSynthetic contract fixture.\n\n\n@@section rest_layout_evidence\nSynthetic contract fixture.\n\n\n@@section rest_source_label\nSynthetic contract fixture.\n\n\n@@section local_source_instruction\nSynthetic contract fixture.\n\n\n@@section local_source_identity\nSynthetic contract fixture.\n\n\n@@section local_layout_evidence\nSynthetic contract fixture.\n\n\n@@section local_source_label\nSynthetic contract fixture.\n\n\n@@section rest_reading\nSynthetic contract fixture.\n\n\n@@section local_reading\nSynthetic contract fixture.\n\n\n@@section local_payload\nSynthetic contract fixture.\n{{source_label}}\n{{source_context}}\n{{source_label}}\n\n@@section local_action_evidence\nSynthetic contract fixture.\n\n\n@@section local_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section saved_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_instruction\nSynthetic contract fixture.\n\n\n@@section remote_source_identity\nSynthetic contract fixture.\n\n\n@@section remote_layout_evidence\nSynthetic contract fixture.\n\n\n@@section saved_reading\nSynthetic contract fixture.\n\n\n@@section remote_reading\nSynthetic contract fixture.\n\n\n@@section split_reading\nSynthetic contract fixture.\n{{nodes_read}}\n\n@@section root_reading\nSynthetic contract fixture.\n\n\n@@section split_layout_reading\nSynthetic contract fixture.\n{{split_layout}}\n\n@@section unresolved_reading\nSynthetic contract fixture.\n{{unresolved_nodes}}\n\n@@section recovered_reading\nSynthetic contract fixture.\n\n\n@@section saved_layout_reading\nSynthetic contract fixture.\n\n\n@@section remote_layout_reading\nSynthetic contract fixture.\n\n\n@@section captured_context\nSynthetic contract fixture.\n{{node_id}}\n{{context_text}}\n{{node_id}}\n\n@@section remote_action_evidence\nSynthetic contract fixture.\n{{actions}}\n\n@@section saved_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section remote_accordion_evidence\nSynthetic contract fixture.\n\n\n@@section dimensions\nSynthetic contract fixture.\n{{layout_evidence}}\n{{width}}\n{{height}}\n\n@@section source_rules\nSynthetic contract fixture.\n{{version}}\n\n@@section accordion_rules\nSynthetic contract fixture.\n{{evidence}}\n\n@@section history_table_rules\nSynthetic contract fixture.\n\n\n@@section history_source\nSynthetic contract fixture.\n{{history_tables}}\n\n@@section reviewed_plan\nSynthetic contract fixture.\n{{reviewed_analysis}}\n\n@@section additional_rules\nSynthetic contract fixture.\n\n\n@@section component_contracts\nSynthetic contract fixture.\n\n\n@@section output_format\nSynthetic contract fixture.\n{{name}}\n",
+          "screen.metadata" : "Synthetic contract fixture.\n{{arguments}}\n",
+          "screen.plan.repair" : "Synthetic contract fixture.\n{{diagnostic}}\n",
+          "screen.plan" : "@@section main\nSynthetic contract fixture.\n{{source_digest}}\n{{source}}\n{{context}}\n\n@@section context\nSynthetic contract fixture.\n{{context}}\n",
+          "screen.repair" : "@@section main\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section local\nSynthetic contract fixture.\n{{diagnostic}}\n\n@@section with_evidence\nSynthetic contract fixture.\n{{prompt}}\n{{diagnostic}}\n{{previous_draft}}\n",
+          "screen.review-plan" : "Synthetic contract fixture.\n{{version}}\n{{component_variants}}\n{{source}}\n",
+          "story.analysis" : "Synthetic contract fixture.\n{{categories}}\n{{max_facts}}\n{{evidence}}\n",
+          "story.classification" : "Synthetic contract fixture.\n{{evidence}}\n",
+          "story.generate" : "@@section main\nSynthetic contract fixture.\n{{output_contract}}\n{{reviewed}}\n\n@@section retry\nSynthetic contract fixture.\n{{diagnostic}}\n"
+        }
+      },
+      "executionScope" : {
+        "tenantId" : "aa000000-0000-4000-8000-000000000001",
+        "workspaceId" : "ad000000-0000-4000-8000-000000000001"
+      },
+      "timeoutSeconds" : 540,
+      "deadlineEpochSeconds" : 2100000000,
+      "inputMode" : "SOURCE",
+      "componentLibrary" : {
+        "schemaVersion" : 1,
+        "family" : "NOVA_PUBLIC",
+        "libraryVersion" : "1.0.0",
+        "descriptorSha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contractSha256" : "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "moduleManifestSha256" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokenCssSha256" : "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }
+  } ]
+}

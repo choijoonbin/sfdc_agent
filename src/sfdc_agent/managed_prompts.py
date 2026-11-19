@@ -14,6 +14,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
 from .prompt_registry import PROMPTS, _release
+from .prompt_release_id import PromptReleaseId
 from .prompt_templates import load_baseline_templates, template_placeholders, validate_template
 from .prompt_validation import preview_operation
 from .prompt_variable_details import prompt_variable_details
@@ -27,7 +28,7 @@ _LOCK = RLock()
 
 class PromptBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    releaseId: str = Field(pattern=r"^prompts-(?:v1|[a-f0-9]{32})$")
+    releaseId: PromptReleaseId
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     templates: dict[str, str] = Field(min_length=13, max_length=13)
 

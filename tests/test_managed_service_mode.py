@@ -132,6 +132,27 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(reply['checkpoint']['receivedServiceToken'])
                 self.assertTrue(reply['checkpoint']['hasJobToken'])
 
+    async def test_imported_nova_prompt_pin_opens_only_its_managed_kiro_context(self):
+        release_id = 'prompts-nova-' + 'c' * 64
+        bundle = self.bundle.model_copy(update={'releaseId': release_id})
+        session = StubSession()
+        async with kiro_lifespan(app):
+            with execution_prompts(bundle):
+                token = runner_token()
+                with patch.object(KiroSession, 'start', return_value=session) as start, patch(
+                    'sfdc_agent.kiro_gateway.runtime_release', side_effect=AssertionError('Must use the scoped bundle')
+                ):
+                    status, opened = await self.request('POST', BASE, {'promptReleaseId': release_id}, token=token,
+                                                       extra=((b'x-sfdc-kiro-purpose', b'screen'),))
+                    self.assertEqual(status, 200)
+                    self.assertEqual(opened['promptReleaseId'], release_id)
+                    start.assert_awaited_once()
+                    status, _ = await self.request('POST', BASE, {'promptReleaseId': 'prompts-nova-' + 'd' * 64}, token=token,
+                                                   extra=((b'x-sfdc-kiro-purpose', b'screen'),))
+                    self.assertEqual(status, 403)
+                    self.assertEqual((await self.request('DELETE', BASE + '/' + opened['id'], token=token))[0], 204)
+        self.assertTrue(session.closed)
+
     async def test_explicit_trusted_hosts_retain_local_defaults_and_reject_wildcards(self):
         with patch.dict(os.environ, {'SFDC_AGENT_TRUSTED_HOSTS': 'agent.internal,agent.service.local'}):
             self.assertEqual(trusted_hosts(), ['localhost', '127.0.0.1', 'agent.internal', 'agent.service.local'])
