@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "baseline": "NOVA Prompt v1.0.0",
+  "templates": {
+    "screen.analyze.local": [
+      {"section": "main", "placeholders": {"node_id": 1, "source_context": 1}}
+    ],
+    "screen.analyze": [
+      {"section": "main", "placeholders": {"arguments": 1}}
+    ],
+    "screen.capture": [
+      {"section": "main", "placeholders": {"metadata": 1, "screenshot": 1}},
+      {"section": "metadata", "placeholders": {"reference": 1}}
+    ],
+    "screen.discovery": [
+      {"section": "main", "placeholders": {"kind": 1, "reference": 1}},
+      {"section": "page", "placeholders": {}},
+      {"section": "document", "placeholders": {}}
+    ],
+    "screen.generate": [
+      {"section": "main", "placeholders": {"accordion": 1, "action_evidence": 1, "additional_rules": 1, "component_contracts": 1, "component_variants": 1, "dimensions_line": 1, "example": 1, "file_key": 2, "node_id": 1, "node_url": 1, "output_format": 1, "payload": 1, "reading": 1, "reviewed": 1, "rules": 1, "source_identity": 1, "source_instruction": 1, "table_rules": 1, "token_declarations": 1, "typography_groups": 1}},
+      {"section": "rest_source_instruction", "placeholders": {}},
+      {"section": "rest_source_identity", "placeholders": {}},
+      {"section": "rest_layout_evidence", "placeholders": {}},
+      {"section": "rest_source_label", "placeholders": {}},
+      {"section": "local_source_instruction", "placeholders": {}},
+      {"section": "local_source_identity", "placeholders": {}},
+      {"section": "local_layout_evidence", "placeholders": {}},
+      {"section": "local_source_label", "placeholders": {}},
+      {"section": "rest_reading", "placeholders": {}},
+      {"section": "local_reading", "placeholders": {}},
+      {"section": "local_payload", "placeholders": {"source_context": 1, "source_label": 2}},
+      {"section": "local_action_evidence", "placeholders": {}},
+      {"section": "local_accordion_evidence", "placeholders": {}},
+      {"section": "saved_source_instruction", "placeholders": {}},
+      {"section": "remote_source_instruction", "placeholders": {}},
+      {"section": "remote_source_identity", "placeholders": {}},
+      {"section": "remote_layout_evidence", "placeholders": {}},
+      {"section": "saved_reading", "placeholders": {}},
+      {"section": "remote_reading", "placeholders": {}},
+      {"section": "split_reading", "placeholders": {"nodes_read": 1}},
+      {"section": "root_reading", "placeholders": {}},
+      {"section": "split_layout_reading", "placeholders": {"split_layout": 1}},
+      {"section": "unresolved_reading", "placeholders": {"unresolved_nodes": 1}},
+      {"section": "recovered_reading", "placeholders": {}},
+      {"section": "saved_layout_reading", "placeholders": {}},
+      {"section": "remote_layout_reading", "placeholders": {}},
+      {"section": "captured_context", "placeholders": {"context_text": 1, "node_id": 2}},
+      {"section": "remote_action_evidence", "placeholders": {"actions": 1}},
+      {"section": "saved_accordion_evidence", "placeholders": {}},
+      {"section": "remote_accordion_evidence", "placeholders": {}},
+      {"section": "dimensions", "placeholders": {"height": 1, "layout_evidence": 1, "width": 1}},
+      {"section": "source_rules", "placeholders": {"version": 1}},
+      {"section": "accordion_rules", "placeholders": {"evidence": 1}},
+      {"section": "history_table_rules", "placeholders": {}},
+      {"section": "history_source", "placeholders": {"history_tables": 1}},
+      {"section": "reviewed_plan", "placeholders": {"reviewed_analysis": 1}},
+      {"section": "additional_rules", "placeholders": {}},
+      {"section": "component_contracts", "placeholders": {}},
+      {"section": "output_format", "placeholders": {"name": 1}}
+    ],
+    "screen.metadata": [
+      {"section": "main", "placeholders": {"arguments": 1}}
+    ],
+    "screen.plan.repair": [
+      {"section": "main", "placeholders": {"diagnostic": 1}}
+    ],
+    "screen.plan": [
+      {"section": "main", "placeholders": {"context": 1, "source": 1, "source_digest": 1}},
+      {"section": "context", "placeholders": {"context": 1}}
+    ],
+    "screen.repair": [
+      {"section": "main", "placeholders": {"diagnostic": 1}},
+      {"section": "local", "placeholders": {"diagnostic": 1}},
+      {"section": "with_evidence", "placeholders": {"diagnostic": 1, "previous_draft": 1, "prompt": 1}}
+    ],
+    "screen.review-plan": [
+      {"section": "main", "placeholders": {"component_variants": 1, "source": 1, "version": 1}}
+    ],
+    "story.analysis": [
+      {"section": "main", "placeholders": {"categories": 1, "evidence": 1, "max_facts": 1}}
+    ],
+    "story.classification": [
+      {"section": "main", "placeholders": {"evidence": 1}}
+    ],
+    "story.generate": [
+      {"section": "main", "placeholders": {"output_contract": 1, "reviewed": 1}},
+      {"section": "retry", "placeholders": {"diagnostic": 1}}
+    ]
+  }
+}

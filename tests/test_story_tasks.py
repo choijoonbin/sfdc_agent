@@ -12,10 +12,10 @@ class StoryTaskTests(unittest.TestCase):
             "evidence": evidence, "categories": categories, "maxFacts": 48,
         })
 
-        self.assertTrue(prompt.startswith("NOVA storyboard specification prompt v2\n"))
+        self.assertTrue(prompt.startswith("# NOVA Prompt v1.0.0 · Storyboard Specification\n"))
         self.assertIn("Use up to 48 high-priority facts", prompt)
         self.assertIn(categories, prompt.splitlines())
-        self.assertEqual(prompt.splitlines()[-1], evidence)
+        self.assertEqual(prompt.rstrip().splitlines()[-1], evidence)
         with self.assertRaises(ValueError):
             build_story_task("story.analysis", {"evidence": evidence, "categories": "[]", "maxFacts": 48})
 
@@ -30,13 +30,14 @@ class StoryTaskTests(unittest.TestCase):
         self.assertEqual(contract["specDigest"], digest)
         self.assertEqual(list(contract["files"]), [bundle + suffix for suffix in (".html", ".css", ".js")])
         self.assertIn(reviewed, prompt.splitlines())
-        self.assertTrue(prompt.endswith("Retry diagnostic: " + diagnostic))
+        self.assertIn("## Retry diagnostic data", prompt)
+        self.assertTrue(prompt.rstrip().endswith(diagnostic))
         with self.assertRaises(ValueError):
             build_story_task("story.generate", {"input": reviewed, "diagnostic": '{"code":"invalid"}'})
 
     def test_classification_rejects_non_object_evidence(self):
         evidence = '{"headings":[],"screens":[],"links":[]}'
-        self.assertTrue(build_story_task("story.classification", {"evidence": evidence}).endswith(evidence))
+        self.assertTrue(build_story_task("story.classification", {"evidence": evidence}).rstrip().endswith(evidence))
         with self.assertRaises(ValueError):
             build_story_task("story.classification", {"evidence": "[]"})
 

@@ -161,7 +161,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
                 'operation': 'story.analysis', 'fields': {'evidence': evidence, 'categories': '{}', 'maxFacts': 1},
             })
             self.assertEqual(status, 200)
-            self.assertTrue(session.calls[-1][1]['text'].endswith(evidence))
+            self.assertTrue(session.calls[-1][1]['text'].rstrip().endswith(evidence))
 
             digest = 'e' * 64
             reviewed = json.dumps({'specDigest': digest, 'bundleName': 'nextBssStoryTest'})
@@ -172,7 +172,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 200)
             self.assertIn('nextBssStoryTest.html', story_prompt)
             self.assertIn(digest, story_prompt)
-            self.assertTrue(story_prompt.endswith(reviewed))
+            self.assertTrue(story_prompt.rstrip().endswith(reviewed))
             self.assertEqual(reply['promptBytes'], len(story_prompt.encode()))
 
             self.assertEqual(await self.request('DELETE', path), (204, None))
@@ -228,7 +228,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence'),
                              (200, {'run': None}))
             _, reply = await self.request('POST', path, story, extra_headers=alice)
-            self.assertTrue(session.calls[-1][1]['text'].endswith(original))
+            self.assertTrue(session.calls[-1][1]['text'].rstrip().endswith(original))
             self.assertNotIn('values', reply)
             status, response = await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence')
             self.assertEqual(status, 200)

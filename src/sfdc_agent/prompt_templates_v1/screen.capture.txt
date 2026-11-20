@@ -1,4 +1,19 @@
 @@section main
-Call the official Figma MCP get_screenshot tool exactly once with these arguments: {{screenshot}}.{{metadata}} Return only OK after the requested tool calls.
+# Objective
+
+Capture the selected Figma screen for NOVA.
+
+## Tool instructions
+
+- Call the official Figma MCP `get_screenshot` tool exactly once with these arguments:
+
+{{screenshot}}
+
+{{metadata}}
+
+- Return only `OK` after the requested tool calls.
+
 @@section metadata
- Also call get_metadata exactly once with {{reference}} for the selected node's layout width and height.
+## Additional layout metadata
+
+- Also call `get_metadata` exactly once with {{reference}} for the selected node's layout width and height.

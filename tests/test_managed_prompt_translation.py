@@ -30,6 +30,16 @@ Keep `{\"mode\":\"strict\"}` and this object {\"rows\":[1,2]} unchanged.
 ```
 """
 
+MARKDOWN_SOURCE = """# Objective
+
+- Read the source.
+  - Keep the nested rule.
+
+## Output contract
+
+1. Return one object.
+"""
+
 
 class FakeProvider:
     name = "fixture"
@@ -129,6 +139,47 @@ class ManagedPromptTranslationTest(unittest.TestCase):
         self.assertEqual(attempts, 3)
         self.assertIn("previous attempt failed", provider.tasks[1])
         self.assertNotIn("previous attempt failed", provider.tasks[0])
+
+    def test_preserves_markdown_heading_and_list_structure_exactly(self):
+        masked, protected = protect_prompt(MARKDOWN_SOURCE)
+        self.assertNotRegex(masked, r"(?m)^#{1,6} |^[ \t]*(?:[-+*]|\d+[.)]) ")
+        self.assertIn("# ", protected.values())
+        self.assertIn("  - ", protected.values())
+        self.assertIn("1. ", protected.values())
+
+        result = translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider())
+        self.assertEqual(
+            re.findall(r"(?m)^ {0,3}#{1,6}[ \t]+", result.body),
+            re.findall(r"(?m)^ {0,3}#{1,6}[ \t]+", MARKDOWN_SOURCE),
+        )
+        self.assertEqual(
+            re.findall(r"(?m)^[ \t]{0,12}(?:[-+*]|\d+[.)])[ \t]+", result.body),
+            re.findall(r"(?m)^[ \t]{0,12}(?:[-+*]|\d+[.)])[ \t]+", MARKDOWN_SOURCE),
+        )
+
+    def test_retries_then_rejects_changed_markdown_structure(self):
+        attempts = 0
+
+        def change_heading_level_until_third(body):
+            nonlocal attempts
+            attempts += 1
+            return body if attempts == 3 else "#" + body
+
+        result = translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(change_heading_level_until_third))
+        self.assertEqual(attempts, 3)
+        self.assertTrue(result.body.startswith("# Objective"))
+
+        def reorder_heading_prefixes(body):
+            tokens = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)
+            first_heading, second_heading = tokens[0], tokens[3]
+            return body.replace(first_heading, "__SWAP__", 1).replace(
+                second_heading, first_heading, 1,
+            ).replace("__SWAP__", second_heading, 1)
+
+        with self.assertRaisesRegex(ProviderError, "protected prompt syntax"):
+            translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(reorder_heading_prefixes))
+        with self.assertRaisesRegex(ProviderError, "protected prompt syntax"):
+            translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(lambda body: "* 새 목록\n" + body))
 
     def test_structure_retries_share_one_bounded_request_time_budget(self):
         attempts = 0

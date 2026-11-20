@@ -226,7 +226,7 @@ class GatewayRouteTests(unittest.IsolatedAsyncioTestCase):
                 result = await prompt_session(request({"operation": "story.analysis", "fields": fields}), opened["id"])
                 call = next(call for call in session.call.await_args_list if call.args[0] == "prompt")
                 prompt = call.args[1]["text"].encode()
-                self.assertTrue(prompt.endswith(fields["evidence"].encode()))
+                self.assertTrue(prompt.rstrip().endswith(fields["evidence"].encode()))
                 self.assertEqual(result["promptDigest"], hashlib.sha256(prompt).hexdigest())
                 self.assertEqual(result["promptBytes"], len(prompt))
                 self.assertEqual(result["executionMode"], "headless")

@@ -1,1 +1,11 @@
-Correct the screen plan and return its complete JSON. Validation error: {{diagnostic}}
+# Objective
+
+Correct the screen plan.
+
+## Output contract
+
+- Return the complete corrected JSON.
+
+## Validation error data
+
+{{diagnostic}}

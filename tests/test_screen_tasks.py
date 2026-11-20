@@ -22,7 +22,7 @@ class ScreenTasksTests(unittest.TestCase):
             **self.reference, "maxDimension": 4096, "readLayout": True,
         })
         self.assertIn('"maxDimension":4096,"enableBase64Response":true', capture)
-        self.assertIn('get_metadata exactly once with {"fileKey":"FixtureFile","nodeId":"29876:15045"}', capture)
+        self.assertIn('`get_metadata` exactly once with {"fileKey":"FixtureFile","nodeId":"29876:15045"}', capture)
         analysis = build_screen_task("screen.analyze", {
             "fileKey": "FixtureFile", "nodeIds": ["29876:15045"], "includeScreenshot": True,
         })
@@ -151,4 +151,5 @@ class ScreenTasksTests(unittest.TestCase):
         self.assertIn('{"id":"29876:15045"}', prompt)
         self.assertIn("Pinned evidence", prompt)
         repair = build_screen_task("screen.plan.repair", {"diagnostic": "Invalid scope"})
-        self.assertIn('Validation error: "Invalid scope"', repair)
+        self.assertIn("## Validation error data", repair)
+        self.assertIn('"Invalid scope"', repair)
