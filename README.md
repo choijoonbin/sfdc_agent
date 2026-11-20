@@ -149,6 +149,8 @@ Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행�
 
 관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
 
+활성 프롬프트의 한글 참고 번역은 서비스 인증 전용 `POST /internal/v1/prompts/translations`에서 생성한다. 영문 원문과 릴리스 해시는 변경하지 않으며 `{{변수}}`, `@@section`, JSON·코드·URL·도구 식별자는 모델 호출 전에 보호하고 응답 후 무결성을 다시 검사한다. 기본 공급자는 로컬 Kiro이고 `SFDC_AGENT_TRANSLATION_PROVIDER=kiro|openai|azure`, `SFDC_AGENT_TRANSLATION_MODEL`, `SFDC_AGENT_TRANSLATION_TIMEOUT_SECONDS`로 별도 지정할 수 있다. 번역 캐시를 식별하는 `SFDC_AGENT_TRANSLATION_PROFILE_VERSION`과 `SFDC_AGENT_TRANSLATION_GLOSSARY_VERSION`은 Spring의 `SFDC_PROMPT_TRANSLATION_PROFILE_VERSION`, `SFDC_PROMPT_TRANSLATION_GLOSSARY_VERSION`과 각각 같은 값을 사용하고, 번역 규칙이나 용어집 변경 시 두 서비스를 한 배포에서 함께 올린다. Spring이 번역 상태와 본문을 보관하며 Agent는 원문이나 번역문을 로컬에 저장하지 않는다.
+
 기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. Main 통합 환경은 `SFDC_AGENT_MANAGED_ONLY=1`을 사용하며, 독립 CLI 파일럿 API는 기본 비관리형 모드를 사용한다.
 
 ## 관리형 로컬/S3 저장소

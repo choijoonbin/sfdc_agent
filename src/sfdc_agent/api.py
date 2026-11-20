@@ -19,6 +19,7 @@ from .managed_source_revisions import router as managed_source_revisions_router
 from .managed_prompts import router as managed_prompts_router
 from .managed_visual import router as managed_visual_router
 from .managed_prompt_observability import router as managed_prompt_observability_router
+from .managed_prompt_translation import router as managed_prompt_translation_router
 from .managed_design import router as managed_design_router
 from .managed_views import router as managed_views_router
 from .managed_kiro_discovery import discovery_lifespan, router as managed_discovery_router
@@ -45,6 +46,7 @@ app.include_router(managed_source_revisions_router)
 app.include_router(managed_prompts_router)
 app.include_router(managed_visual_router)
 app.include_router(managed_prompt_observability_router)
+app.include_router(managed_prompt_translation_router)
 app.include_router(managed_design_router)
 app.include_router(managed_views_router)
 app.include_router(managed_discovery_router)
