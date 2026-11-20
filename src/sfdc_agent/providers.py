@@ -108,6 +108,8 @@ class KiroProvider:
             "timeoutMs": round(self.timeout * 1000),
         }, ensure_ascii=False)
         env = {key: value for key, value in os.environ.items() if key in _kiro_environment}
+        if api_key := os.environ.get("KIRO_API_KEY"):
+            env["KIRO_API_KEY"] = api_key
         try:
             result = subprocess.run(
                 ["node", str(bridge)],

@@ -1,7 +1,9 @@
 import asyncio
 from hashlib import sha256
 import json
+import os
 import re
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from uuid import uuid4
@@ -17,7 +19,7 @@ from sfdc_agent.managed_prompt_translation import (
     translate,
     translate_prompt,
 )
-from sfdc_agent.providers import ProviderError
+from sfdc_agent.providers import KiroProvider, ProviderError
 
 
 SOURCE = """@@section main
@@ -36,8 +38,10 @@ class FakeProvider:
     def __init__(self, mutate=None):
         self.mutate = mutate
         self.evidence = None
+        self.tasks = []
 
     def complete(self, task, evidence, schema):
+        self.tasks.append(task)
         self.evidence = evidence
         body = evidence["body"].replace("Read ", "읽으세요 ").replace(" with ", " 그리고 ")
         if self.mutate:
@@ -68,6 +72,21 @@ def request(value, auth=True, browser=False):
 
 
 class ManagedPromptTranslationTest(unittest.TestCase):
+    def test_kiro_translation_forwards_only_the_required_authentication_environment(self):
+        process = SimpleNamespace(returncode=0, stdout='{"text":"{\\"ok\\":true}"}')
+        with patch.dict(os.environ, {
+            "HOME": "/isolated/home",
+            "PATH": "/synthetic/bin",
+            "KIRO_API_KEY": "synthetic-kiro-key",
+            "UNRELATED_SECRET": "must-not-be-forwarded",
+        }, clear=True), patch("sfdc_agent.providers.subprocess.run", return_value=process) as run:
+            self.assertEqual(KiroProvider(30).complete_rendered("translate"), {"ok": True})
+
+        environment = run.call_args.kwargs["env"]
+        self.assertEqual(environment["KIRO_API_KEY"], "synthetic-kiro-key")
+        self.assertEqual(environment["HOME"], "/isolated/home")
+        self.assertNotIn("UNRELATED_SECRET", environment)
+
     def test_masks_and_restores_prompt_syntax_before_returning_korean_reference(self):
         provider = FakeProvider()
         result = translate_prompt(payload(), provider)
@@ -91,6 +110,45 @@ class ManagedPromptTranslationTest(unittest.TestCase):
             translate_prompt(payload(), FakeProvider(duplicate))
         with self.assertRaisesRegex(ProviderError, "source hash changed"):
             translate_prompt(payload(digest="a" * 64), FakeProvider())
+
+    def test_retries_structure_failures_without_relaxing_the_integrity_check(self):
+        attempts = 0
+
+        def reorder_until_third(body):
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                first, second = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[:2]
+                return body.replace(first, "__SWAP__", 1).replace(second, first, 1).replace("__SWAP__", second, 1)
+            return body
+
+        provider = FakeProvider(reorder_until_third)
+        result = translate_prompt(payload(), provider)
+
+        self.assertIn("읽으세요", result.body)
+        self.assertEqual(attempts, 3)
+        self.assertIn("previous attempt failed", provider.tasks[1])
+        self.assertNotIn("previous attempt failed", provider.tasks[0])
+
+    def test_structure_retries_share_one_bounded_request_time_budget(self):
+        attempts = 0
+
+        def reorder_until_third(body):
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                first, second = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[:2]
+                return body.replace(first, "__SWAP__", 1).replace(second, first, 1).replace("__SWAP__", second, 1)
+            return body
+
+        provider = FakeProvider(reorder_until_third)
+        with patch("sfdc_agent.managed_prompt_translation.monotonic", side_effect=[0, 0, 30, 60]), patch(
+            "sfdc_agent.managed_prompt_translation.create_provider", return_value=provider,
+        ) as create:
+            result = translate_prompt(payload())
+
+        self.assertIn("읽으세요", result.body)
+        self.assertEqual([call.kwargs["timeout"] for call in create.call_args_list], [120, 90, 60])
 
     def test_protection_roundtrip_requires_every_generated_token_once(self):
         masked, protected = protect_prompt(SOURCE)
