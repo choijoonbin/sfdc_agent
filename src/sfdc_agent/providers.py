@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import os
 import re
-import subprocess
-from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -40,13 +39,6 @@ _instructions = (
 )
 _json_fence = re.compile(r"\A```(?:json)?\s*\n(.*?)\n```\Z", re.IGNORECASE | re.DOTALL)
 _max_response_bytes = 2 * 1024 * 1024
-_kiro_environment = {
-    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "TMPDIR", "TMP", "TEMP",
-    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
-    "SSL_CERT_FILE", "SSL_CERT_DIR", "NOVA_KIRO_CLI",
-}
-
-
 def _unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -88,7 +80,7 @@ def _evidence_text(evidence: dict[str, Any] | str) -> str:
 
 
 class KiroProvider:
-    """Use the isolated ACP client with its local CLI login."""
+    """Use the isolated non-interactive Kiro API-key transport."""
 
     name = "kiro"
     model = None
@@ -102,42 +94,23 @@ class KiroProvider:
         return self.complete_rendered(f"{_prompt(task, schema)}\n\nSource evidence (JSON):\n{_evidence_text(evidence)}")
 
     def complete_rendered(self, text: str) -> dict[str, Any]:
-        bridge = Path(__file__).with_name("kiro_provider.mjs")
-        payload = json.dumps({
-            "prompt": text,
-            "timeoutMs": round(self.timeout * 1000),
-        }, ensure_ascii=False)
-        env = {key: value for key, value in os.environ.items() if key in _kiro_environment}
-        if api_key := os.environ.get("KIRO_API_KEY"):
-            env["KIRO_API_KEY"] = api_key
+        # The synchronous provider protocol is invoked from a bounded worker
+        # thread. Keep Kiro authentication on the same key-only headless path
+        # as Screen and Story conversion; never fall back to ACP/local login.
+        from .kiro_headless import HeadlessKiroSession, SessionError, read_key
+
+        async def complete() -> str:
+            session = HeadlessKiroSession(read_key(), purpose="provider")
+            try:
+                response = await session.call("prompt", {"text": text}, timeout=self.timeout)
+                return response["text"]
+            finally:
+                await session.close()
+
         try:
-            result = subprocess.run(
-                ["node", str(bridge)],
-                input=payload,
-                text=True,
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                env=env,
-                timeout=self.timeout + 10,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            raise ProviderError("KIRO_TIMEOUT", "Kiro exceeded the configured time limit.") from None
-        except OSError:
-            raise ProviderError("KIRO_BRIDGE_FAILED", "The Node bridge for Kiro could not start.") from None
-        response = _parse_object(result.stdout)
-        if result.returncode:
-            code = response.get("error")
-            if not isinstance(code, str) or not re.fullmatch(r"KIRO_[A-Z_]+", code):
-                code = "KIRO_BRIDGE_FAILED"
-            message = {
-                "KIRO_LOGIN_REQUIRED": "The local Kiro CLI requires a login.",
-                "KIRO_TIMEOUT": "Kiro exceeded the configured time limit.",
-                "KIRO_INCOMPLETE": "Kiro did not complete a tool-free response.",
-            }.get(code, "The local Kiro request did not complete.")
-            raise ProviderError(code, message)
-        return _parse_object(response.get("text"))
+            return _parse_object(asyncio.run(complete()))
+        except SessionError as error:
+            raise ProviderError(error.code, "The configured Kiro API-key request did not complete.") from None
 
 
 class _NoRedirect(HTTPRedirectHandler):

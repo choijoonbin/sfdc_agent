@@ -3,9 +3,8 @@ from hashlib import sha256
 import json
 import os
 import re
-from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -82,20 +81,19 @@ def request(value, auth=True, browser=False):
 
 
 class ManagedPromptTranslationTest(unittest.TestCase):
-    def test_kiro_translation_forwards_only_the_required_authentication_environment(self):
-        process = SimpleNamespace(returncode=0, stdout='{"text":"{\\"ok\\":true}"}')
-        with patch.dict(os.environ, {
-            "HOME": "/isolated/home",
-            "PATH": "/synthetic/bin",
-            "KIRO_API_KEY": "synthetic-kiro-key",
-            "UNRELATED_SECRET": "must-not-be-forwarded",
-        }, clear=True), patch("sfdc_agent.providers.subprocess.run", return_value=process) as run:
+    def test_kiro_translation_uses_the_key_only_headless_transport(self):
+        with patch("sfdc_agent.kiro_headless.read_key", return_value="ksk_test_only") as read_key, patch(
+            "sfdc_agent.kiro_headless.HeadlessKiroSession",
+        ) as factory:
+            factory.return_value.call = AsyncMock(return_value={"text": '{"ok":true}'})
+            factory.return_value.close = AsyncMock()
+
             self.assertEqual(KiroProvider(30).complete_rendered("translate"), {"ok": True})
 
-        environment = run.call_args.kwargs["env"]
-        self.assertEqual(environment["KIRO_API_KEY"], "synthetic-kiro-key")
-        self.assertEqual(environment["HOME"], "/isolated/home")
-        self.assertNotIn("UNRELATED_SECRET", environment)
+        read_key.assert_called_once_with()
+        factory.assert_called_once_with("ksk_test_only", purpose="provider")
+        factory.return_value.call.assert_awaited_once_with("prompt", {"text": "translate"}, timeout=30)
+        factory.return_value.close.assert_awaited_once_with()
 
     def test_masks_and_restores_prompt_syntax_before_returning_korean_reference(self):
         provider = FakeProvider()
@@ -121,24 +119,40 @@ class ManagedPromptTranslationTest(unittest.TestCase):
         with self.assertRaisesRegex(ProviderError, "source hash changed"):
             translate_prompt(payload(digest="a" * 64), FakeProvider())
 
-    def test_retries_structure_failures_without_relaxing_the_integrity_check(self):
+    def test_retries_non_permutation_structure_failures_without_relaxing_the_integrity_check(self):
         attempts = 0
 
-        def reorder_until_third(body):
+        def duplicate_until_third(body):
             nonlocal attempts
             attempts += 1
             if attempts < 3:
-                first, second = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[:2]
-                return body.replace(first, "__SWAP__", 1).replace(second, first, 1).replace("__SWAP__", second, 1)
+                first = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[0]
+                return body.replace(first, first + first, 1)
             return body
 
-        provider = FakeProvider(reorder_until_third)
+        provider = FakeProvider(duplicate_until_third)
         result = translate_prompt(payload(), provider)
 
         self.assertIn("읽으세요", result.body)
         self.assertEqual(attempts, 3)
         self.assertIn("previous attempt failed", provider.tasks[1])
         self.assertNotIn("previous attempt failed", provider.tasks[0])
+
+    def test_canonicalizes_a_byte_exact_token_permutation_before_restore(self):
+        attempts = 0
+
+        def reorder(body):
+            nonlocal attempts
+            attempts += 1
+            first, second = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[:2]
+            return body.replace(first, "__SWAP__", 1).replace(
+                second, first, 1,
+            ).replace("__SWAP__", second, 1)
+
+        result = translate_prompt(payload(), FakeProvider(reorder))
+
+        self.assertEqual(attempts, 1)
+        self.assertLess(result.body.index("@@section main"), result.body.index("{{source_context}}"))
 
     def test_preserves_markdown_heading_and_list_structure_exactly(self):
         masked, protected = protect_prompt(MARKDOWN_SOURCE)
@@ -176,23 +190,26 @@ class ManagedPromptTranslationTest(unittest.TestCase):
                 second_heading, first_heading, 1,
             ).replace("__SWAP__", second_heading, 1)
 
-        with self.assertRaisesRegex(ProviderError, "protected prompt syntax"):
-            translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(reorder_heading_prefixes))
+        reordered = translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(reorder_heading_prefixes))
+        self.assertEqual(
+            re.findall(r"(?m)^ {0,3}#{1,6}[ \t]+", reordered.body),
+            re.findall(r"(?m)^ {0,3}#{1,6}[ \t]+", MARKDOWN_SOURCE),
+        )
         with self.assertRaisesRegex(ProviderError, "protected prompt syntax"):
             translate_prompt(payload(MARKDOWN_SOURCE), FakeProvider(lambda body: "* 새 목록\n" + body))
 
     def test_structure_retries_share_one_bounded_request_time_budget(self):
         attempts = 0
 
-        def reorder_until_third(body):
+        def duplicate_until_third(body):
             nonlocal attempts
             attempts += 1
             if attempts < 3:
-                first, second = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[:2]
-                return body.replace(first, "__SWAP__", 1).replace(second, first, 1).replace("__SWAP__", second, 1)
+                first = re.findall(r"__NOVA_TRANSLATION_TOKEN_[A-Za-z0-9_]+__", body)[0]
+                return body.replace(first, first + first, 1)
             return body
 
-        provider = FakeProvider(reorder_until_third)
+        provider = FakeProvider(duplicate_until_third)
         with patch("sfdc_agent.managed_prompt_translation.monotonic", side_effect=[0, 0, 30, 60]), patch(
             "sfdc_agent.managed_prompt_translation.create_provider", return_value=provider,
         ) as create:

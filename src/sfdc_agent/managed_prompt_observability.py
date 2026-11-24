@@ -29,39 +29,13 @@ class Evaluation(BaseModel):
     promptBundle: PromptBundle
 
 
-class _ManagedHeadlessProvider:
-    name = "kiro"
-    model = None
-
-    def __init__(self, purpose):
-        self.purpose = purpose
-
-    def complete_rendered(self, text):
-        from .kiro_headless import HeadlessKiroSession, SessionError, read_key
-        from .providers import _parse_object
-        async def complete():
-            session = HeadlessKiroSession(read_key(), purpose=self.purpose)
-            try:
-                response = await session.call("prompt", {"text": text}, timeout=120)
-                return _parse_object(response["text"])
-            finally:
-                await session.close()
-        try:
-            return asyncio.run(complete())
-        except SessionError as error:
-            raise ProviderError(error.code, "The configured managed Kiro execution did not complete.") from None
-
-
 def managed_provider(payload):
     if payload.provider != "kiro":
         return None, "provider"
-    purpose = "story" if payload.operation.startswith("story.") else "screen"
-    mode = os.environ.get("SFDC_AGENT_" + purpose.upper() + "_KIRO_MODE", "acp")
-    if mode not in {"headless", "acp"}:
-        raise ProviderError("KIRO_MODE_INVALID", "Choose the configured Kiro execution mode.")
     if payload.model:
         raise ProviderError("KIRO_MODEL_CONFIG", "The managed Kiro service owns its model selection.")
-    return (_ManagedHeadlessProvider(purpose) if mode == "headless" else None), mode
+    from .providers import KiroProvider
+    return KiroProvider(120), "headless"
 
 
 def private_value(value, depth=0):
@@ -90,19 +64,15 @@ def configured_providers():
         pass
     installed = Path.home() / ".local/bin/kiro-cli"
     binary = shutil.which(os.environ.get("NOVA_KIRO_CLI", str(installed) if installed.is_file() else "kiro-cli"))
-    kiro_operations = []
-    for purpose in ("screen", "story"):
-        mode = os.environ.get("SFDC_AGENT_" + purpose.upper() + "_KIRO_MODE", "acp")
-        configured = bool(binary and mode == "acp")
-        if binary and mode == "headless":
-            from .kiro_headless import SessionError, read_key
-            try:
-                read_key()
-                configured = True
-            except SessionError:
-                pass
-        if configured:
-            kiro_operations.extend(operation for operation in EVALUATION_OPERATIONS if operation.startswith(purpose + "."))
+    configured = False
+    if binary:
+        from .kiro_headless import SessionError, read_key
+        try:
+            read_key()
+            configured = True
+        except SessionError:
+            pass
+    kiro_operations = list(EVALUATION_OPERATIONS) if configured else []
     return [
         {"key": "kiro", "label": "Kiro", "configured": bool(kiro_operations), "configuredOperations": kiro_operations},
         {"key": "openai", "label": "OpenAI", "configured": bool(os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_MODEL"))},

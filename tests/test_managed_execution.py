@@ -227,7 +227,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         templates = load_baseline_templates()
         payload = {**EXECUTION, 'engine': 'KIRO', 'promptBundle': {
             'releaseId': EXECUTION['promptReleaseId'], 'sha256': template_digest(templates), 'templates': templates}}
-        for code in ('KIRO_KEY_MISSING', 'KIRO_KEY_INVALID', 'KIRO_KEY_AUTH_REQUIRED', 'KIRO_LOGIN_REQUIRED', 'KIRO_TIMEOUT'):
+        for code in ('KIRO_KEY_MISSING', 'KIRO_KEY_INVALID', 'KIRO_KEY_AUTH_REQUIRED', 'KIRO_TIMEOUT'):
             async def failed_worker(*args, **kwargs):
                 owner = runner_token()
                 self.assertIsNotNone(owner)

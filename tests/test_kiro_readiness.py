@@ -1,16 +1,11 @@
 import json
 import os
-from time import monotonic
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from starlette.requests import Request
-
 from sfdc_agent.api import app
 from sfdc_agent import kiro_readiness
-from sfdc_agent.kiro_gateway import error_response
 from sfdc_agent.kiro_headless import HeadlessKiroSession, SessionError
-from sfdc_agent.managed_execution_progress import ExecutionContext
 
 
 KEY = 'ksk_synthetic_readiness_fixture'
@@ -91,16 +86,8 @@ class ReadinessTests(unittest.TestCase):
             self.assertEqual(self.screen()['reasonCode'], 'KIRO_UNAVAILABLE')
         with patch.dict(os.environ, {'SFDC_AGENT_SCREEN_KIRO_MODE': 'unsupported'}):
             state = self.screen()
-            self.assertIsNone(state['executionMode'])
-            self.assertEqual(state['reasonCode'], 'KIRO_MODE_INVALID')
-
-    def test_acp_development_configuration_does_not_claim_cli_login_or_read_a_key(self):
-        with patch.dict(os.environ, {'SFDC_AGENT_SCREEN_KIRO_MODE': 'acp', 'SFDC_AGENT_STORY_KIRO_MODE': 'acp'}), patch(
-            'sfdc_agent.kiro_headless.read_key', side_effect=AssertionError('ACP must not read key')):
-            state = self.screen()
-        self.assertTrue(state['configured'])
+        self.assertEqual(state['executionMode'], 'headless')
         self.assertEqual(state['authentication'], 'UNKNOWN')
-        self.assertEqual(state['reasonCode'], 'KIRO_CLI_AUTH_NOT_CHECKED')
 
 
 class ReadinessRouteTests(unittest.IsolatedAsyncioTestCase):
@@ -176,38 +163,3 @@ class HeadlessEvidenceTests(unittest.IsolatedAsyncioTestCase):
                     await session.close()
                 self.assertEqual(self.state()['authentication'], expected)
                 self.assertEqual(run.call_count, 2 if chat else 1)
-
-
-class ContextErrorTests(unittest.TestCase):
-    def context(self):
-        return ExecutionContext('fixture-job', 1, None, 'screen', 'headless', None, False, monotonic() + 30)
-
-    def test_unknown_codes_and_closed_or_expired_attempts_cannot_record_an_auth_error(self):
-        context = self.context()
-        context.record_auth_error('KIRO_TIMEOUT')
-        self.assertIsNone(context.auth_error)
-        context.closed = True
-        context.record_auth_error('KIRO_KEY_AUTH_REQUIRED')
-        self.assertIsNone(context.auth_error)
-        context.closed = False
-        context.expires = monotonic() - 1
-        context.record_auth_error('KIRO_LOGIN_REQUIRED')
-        self.assertIsNone(context.auth_error)
-
-    def test_gateway_only_records_the_current_live_session_owner(self):
-        own = self.context()
-        foreign = self.context()
-        session = type('Session', (), {'managed_execution_context': foreign})()
-        request = Request({'type': 'http', 'headers': [], 'path_params': {'session_id': 'foreign'}, 'app': app})
-        error = SessionError('KIRO_LOGIN_REQUIRED', 'synthetic private message')
-        with patch('sfdc_agent.kiro_gateway.managed_only', return_value=True), patch(
-                'sfdc_agent.kiro_gateway.managed_execution_context', return_value=own), patch.object(
-                app.state, 'kiro_sessions', {'foreign': session}, create=True), patch(
-                'sfdc_agent.kiro_gateway.require_session_owner') as require_owner:
-            error_response(request, error)
-            self.assertIsNone(own.auth_error)
-            require_owner.assert_not_called()
-            session.managed_execution_context = own
-            error_response(request, error)
-            self.assertEqual(own.auth_error, 'KIRO_LOGIN_REQUIRED')
-            require_owner.assert_called_once_with(request, session)

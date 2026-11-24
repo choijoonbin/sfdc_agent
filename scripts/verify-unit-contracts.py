@@ -15,7 +15,7 @@ REQUIRED = (
     'package.json', 'package-lock.json',
     'nextbss/engine/component-library.mjs', 'nextbss/engine/managed-runtime-capabilities.json',
     'nextbss/server/managed-execution.mjs', 'nextbss/server/managed-analysis-output.mjs',
-    'nextbss/server/managed-original-analysis.mjs', 'nextbss/server/managed-kiro-discovery.mjs',
+    'nextbss/server/managed-original-analysis.mjs',
     'nextbss/server/kiro-nova-contract.mjs', 'nextbss/shared/preview-validation-protocol.mjs',
     'nextbss/design-system/nova-library.json', 'nextbss/design-system/nova-public-contract.json',
     'nextbss/design-system/nova-module-manifest.json', 'nextbss/design-system/lwc/novaTokens/novaTokens.css',
@@ -32,7 +32,7 @@ const {readComponentLibrary,assertManagedLibraryCompatible}=await fromRoot('next
 const library=await readComponentLibrary(path=>readFile(resolve(root,'nextbss/design-system',path),'utf8'));
 await assertManagedLibraryCompatible(library.tuple);
 for(const path of ['nextbss/server/managed-execution.mjs','nextbss/server/managed-analysis-output.mjs',
-  'nextbss/server/managed-original-analysis.mjs','nextbss/server/managed-kiro-discovery.mjs',
+  'nextbss/server/managed-original-analysis.mjs',
   'nextbss/shared/preview-validation-protocol.mjs']) await fromRoot(path);
 process.stdout.write(JSON.stringify({modules:library.modules.size,componentLibrary:library.tuple}));
 """

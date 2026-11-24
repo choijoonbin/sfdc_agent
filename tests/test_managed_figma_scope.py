@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 from pathlib import Path
@@ -12,12 +11,10 @@ from sfdc_agent.api import app
 from sfdc_agent.managed_figma_scope import FigmaProviderScopeError, require_figma_scope
 from sfdc_agent.managed_execution import ExecutionRequest
 from sfdc_agent.managed_execution_progress import execution_progress
-from sfdc_agent.managed_kiro_discovery import discovery_lifespan
 from sfdc_agent.managed_prompts import PromptBundle, execution_prompts, runner_token, template_digest
 from sfdc_agent.prompt_templates import load_baseline_templates
 from sfdc_agent.kiro_gateway import kiro_lifespan
 from tests import test_managed_execution as execution_fixtures
-from tests import test_managed_kiro_discovery as discovery_fixtures
 from tests import test_kiro_gateway as gateway_fixtures
 
 
@@ -36,8 +33,6 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
         templates = load_baseline_templates()
         self.bundle = PromptBundle(releaseId='prompts-v1', sha256=template_digest(templates), templates=templates)
         self.remote = execution_fixtures.EXECUTION['sourceReference']
-        self.discovery = {'id': str(uuid4()), 'executionScope': B, 'reference': {'fileKey': 'FrameDocument'},
-                          'promptBundle': self.bundle.model_dump(), 'timeoutSeconds': 30, 'deadlineEpochSeconds': int(time()) + 60}
 
     def test_only_a_canonical_trusted_pair_allocates_the_provider_credential(self):
         for invalid in ('', 'tenant/workspace', ALLOCATION + '/', ' ' + ALLOCATION, ALLOCATION.upper()):
@@ -50,27 +45,22 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
             require_figma_scope(SimpleNamespace(**B))
         self.assertEqual(failure.exception.status_code, 403)
 
-    async def test_all_four_entrypoints_block_foreign_scope_before_any_child_or_acp(self):
+    async def test_all_remote_entrypoints_block_foreign_scope_before_any_child(self):
         paths = [('/internal/v1/executions', {**execution_fixtures.EXECUTION, 'executionScope': B}),
                  ('/internal/v1/source-discovery', {'sourceReference': self.remote, 'executionScope': B}),
-                 ('/internal/v1/source-reference', {'reference': self.remote + '?node-id=1-2&version-id=Fixed', 'executionScope': B}),
-                 ('/internal/v1/figma-discoveries', self.discovery)]
-        async with discovery_lifespan(app):
-            with patch('sfdc_agent.managed_execution._run_process', new=AsyncMock()) as execution, \
-                    patch('sfdc_agent.managed_source_reference._run_process', new=AsyncMock()) as reference, \
-                    patch('sfdc_agent.managed_kiro_discovery.KiroSession.start', new=AsyncMock()) as acp:
+                 ('/internal/v1/source-reference', {'reference': self.remote + '?node-id=1-2&version-id=Fixed', 'executionScope': B})]
+        with patch('sfdc_agent.managed_execution._run_process', new=AsyncMock()) as execution, \
+                patch('sfdc_agent.managed_source_reference._run_process', new=AsyncMock()) as reference:
+            for path, payload in paths:
+                with self.subTest(path=path):
+                    status, body, _ = await self.request(payload, path=path)
+                    self.assertEqual((status, body), (403, FORBIDDEN))
+            execution.assert_not_awaited()
+            reference.assert_not_awaited()
+            with patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': ''}):
                 for path, payload in paths:
-                    with self.subTest(path=path):
-                        status, body, _ = await self.request(payload, path=path)
-                        self.assertEqual((status, body), (403, FORBIDDEN))
-                self.assertFalse(app.state.figma_discoveries.jobs)
-                execution.assert_not_awaited()
-                reference.assert_not_awaited()
-                acp.assert_not_awaited()
-                with patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': ''}):
-                    for path, payload in paths:
-                        status, body, _ = await self.request(payload, path=path)
-                        self.assertEqual((status, body), (503, {'code': 'FIGMA_PROVIDER_SCOPE_UNAVAILABLE'}))
+                    status, body, _ = await self.request(payload, path=path)
+                    self.assertEqual((status, body), (503, {'code': 'FIGMA_PROVIDER_SCOPE_UNAVAILABLE'}))
 
     async def test_allocated_rest_paths_forward_only_their_trusted_credential(self):
         self.write_runner(execution_fixtures.ANALYSIS_SCRIPT)
@@ -108,27 +98,9 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(result['checkpoint']['receivedFigmaToken'])
             self.assertFalse(result['checkpoint']['receivedPlanToken'])
 
-    async def test_scope_change_blocks_mcp_discovery_authorize_but_delete_still_reaps(self):
-        session = discovery_fixtures.FakeACP(needs_auth=True)
-        async with discovery_lifespan(app):
-            with patch('sfdc_agent.managed_kiro_discovery.KiroSession.start', new=AsyncMock(return_value=session)):
-                payload = {**self.discovery, 'executionScope': A}
-                status, _, _ = await self.request(payload, path='/internal/v1/figma-discoveries')
-                self.assertEqual(status, 200)
-                async with asyncio.timeout(2):
-                    while not session.calls:
-                        await asyncio.sleep(0.005)
-                job = app.state.figma_discoveries.jobs[payload['id']]
-                job.view['status'] = 'needs-auth'
-                with patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': B['tenantId'] + '/' + B['workspaceId']}):
-                    status, body, _ = await self.request({}, path='/internal/v1/figma-discoveries/' + payload['id'] + '/authorize')
-                    self.assertEqual((status, body), (403, FORBIDDEN))
-                    self.assertEqual(sum(method == 'authorize' for method, _ in session.calls), 0)
-                    await app.state.figma_discoveries.close_job(job)
-                self.assertTrue(session.closed)
-
     async def test_conversion_gateway_rechecks_allocation_and_keeps_local_model_sessions_usable(self):
-        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1', 'SFDC_AGENT_SCREEN_KIRO_MODE': 'acp'}))
+        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1',
+                                                  'KIRO_API_KEY': 'ksk_scope_synthetic_fixture'}))
         call = gateway_fixtures.GatewayTests.request
         async with kiro_lifespan(app):
             for archive in (None, {**B, 'fileKey': 'FrameDocument', 'sha256': 'a'*64}):
@@ -140,18 +112,17 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
                 with execution_prompts(self.bundle):
                     async with execution_progress(payload, runner_token(), 90) as context:
                         headers = ((b'x-sfdc-managed-prompt', runner_token().encode()), (b'x-sfdc-kiro-purpose', b'screen'))
-                        with patch('sfdc_agent.kiro_gateway.KiroSession.start', new=AsyncMock(return_value=session)):
+                        with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_scope_synthetic_fixture'), patch(
+                                'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session):
                             status, result = await call(self, 'POST', '/internal/kiro/sessions', {'fileKey': 'FrameDocument',
-                                'readFigma': archive is None, 'promptReleaseId': 'prompts-v1'}, extra_headers=headers)
+                                'readFigma': False, 'promptReleaseId': 'prompts-v1'}, extra_headers=headers)
                         self.assertEqual(status, 200, result)
-                        context.event({'type': 'figma-auth-required'})
                         path = '/internal/kiro/sessions/' + result['id']
                         with patch.dict(os.environ, {'SFDC_MANAGED_FIGMA_SCOPE': ''}):
-                            status, body = await call(self, 'POST', path + '/authorize', {}, extra_headers=headers)
+                            status, body = await call(self, 'GET', path + '/events', extra_headers=headers)
                             self.assertEqual(status, 200 if archive else 503)
                             if not archive:
                                 self.assertEqual(body, {'code': 'FIGMA_PROVIDER_SCOPE_UNAVAILABLE'})
-                                self.assertEqual(sum(method == 'authorize' for method, _ in session.calls), 0)
                         self.assertEqual((await call(self, 'DELETE', path, extra_headers=headers))[0], 204)
                         self.assertTrue(session.closed)
 
@@ -167,21 +138,23 @@ class ManagedFigmaScopeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((status, body), (403, FORBIDDEN))
         self.assertFalse(list((Path(self.directory) / 'ingress').rglob('manifest.json')))
 
-    async def test_configuration_revoked_while_starting_acp_closes_it_before_opening_figma(self):
-        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1', 'SFDC_AGENT_SCREEN_KIRO_MODE': 'acp'}))
+    async def test_configuration_revoked_while_starting_key_session_closes_it_before_opening(self):
+        self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1',
+                                                  'KIRO_API_KEY': 'ksk_scope_synthetic_fixture'}))
         payload = ExecutionRequest.model_validate({**execution_fixtures.EXECUTION, 'jobId': str(uuid4()), 'engine': 'KIRO',
             'timeoutSeconds': 90, 'deadlineEpochSeconds': int(time())+91, 'promptBundle': self.bundle.model_dump()})
         session = gateway_fixtures.StubSession()
-        async def start():
+        def start(_key, *, purpose):
             os.environ['SFDC_MANAGED_FIGMA_SCOPE'] = B['tenantId'] + '/' + B['workspaceId']
             return session
         async with kiro_lifespan(app):
             with execution_prompts(self.bundle):
                 async with execution_progress(payload, runner_token(), 90):
                     headers = ((b'x-sfdc-managed-prompt', runner_token().encode()), (b'x-sfdc-kiro-purpose', b'screen'))
-                    with patch('sfdc_agent.kiro_gateway.KiroSession.start', side_effect=start):
+                    with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_scope_synthetic_fixture'), patch(
+                            'sfdc_agent.kiro_gateway.HeadlessKiroSession', side_effect=start):
                         status, body = await gateway_fixtures.GatewayTests.request(self, 'POST', '/internal/kiro/sessions',
-                            {'fileKey': 'FrameDocument', 'readFigma': True, 'promptReleaseId': 'prompts-v1'}, extra_headers=headers)
+                            {'fileKey': 'FrameDocument', 'readFigma': False, 'promptReleaseId': 'prompts-v1'}, extra_headers=headers)
                     self.assertEqual((status, body), (403, FORBIDDEN))
                     self.assertEqual(session.calls, [])
                     self.assertTrue(session.closed)

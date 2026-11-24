@@ -4,12 +4,9 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import json
 import logging
-import os
 import sqlite3
 from contextlib import asynccontextmanager, nullcontext
-from pathlib import Path
 from time import monotonic
 from uuid import uuid4
 
@@ -29,7 +26,6 @@ from .managed_prompts import (
     session_prompt_release,
 )
 from .prompt_run_values import PromptRunValues, capture_prompt_run, trace_owner
-from .providers import _kiro_environment
 from .service_mode import managed_only
 from .managed_execution_progress import managed_execution_context
 from .managed_figma_scope import require_figma_scope
@@ -37,14 +33,13 @@ from .managed_figma_scope import require_figma_scope
 router = APIRouter(prefix="/internal/kiro/sessions")
 logger = logging.getLogger("uvicorn.error")
 REQUEST_LIMIT = 18 * 1024 * 1024
-RESPONSE_LIMIT = 48 * 1024 * 1024
 MAX_SESSIONS = 12
 OPERATIONS = {
     "screen.analyze", "screen.analyze.local", "screen.capture", "screen.discovery", "screen.metadata",
     "screen.generate", "screen.repair", "screen.plan", "screen.plan.repair", "screen.review-plan",
     "story.classification", "story.analysis", "story.generate",
 }
-_MODES = {"screen": "SFDC_AGENT_SCREEN_KIRO_MODE", "story": "SFDC_AGENT_STORY_KIRO_MODE"}
+_PURPOSES = {"screen", "story"}
 _HEADLESS_OPERATIONS = {
     "screen": {"screen.analyze.local", "screen.review-plan", "screen.generate", "screen.repair",
                "screen.plan", "screen.plan.repair"},
@@ -53,7 +48,9 @@ _HEADLESS_OPERATIONS = {
 
 
 def kiro_mode(purpose: str) -> str:
-    return os.environ.get(_MODES[purpose], "acp")
+    if purpose not in _PURPOSES:
+        raise ValueError("Unsupported Kiro purpose.")
+    return "headless"
 
 
 def _validate_headless_prompt(prompt):
@@ -80,8 +77,8 @@ class OpenSession(BaseModel):
 
     @model_validator(mode="after")
     def restrict_figma(self):
-        if self.readFigma and not self.fileKey:
-            raise ValueError("Figma MCP requires a file key.")
+        if self.readFigma:
+            raise ValueError("Key-only Kiro sessions use captured Figma evidence.")
         return self
 
 
@@ -119,106 +116,6 @@ class Prompt(BaseModel):
         return text
 
 
-class KiroSession:
-    execution_mode = "acp"
-
-    def __init__(self, process):
-        self.process = process
-        self.pending = {}
-        self.events = []
-        self.updated = asyncio.Event()
-        self.counter = 0
-        self.expiry = 0.0
-        self.touch()
-        self.closed = False
-        self.reader = asyncio.create_task(self.read())
-
-    @classmethod
-    async def start(cls):
-        environment = {key: value for key, value in os.environ.items() if key in _kiro_environment
-                       or key.startswith(("LC_", "XDG_"))}
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "node", str(Path(__file__).with_name("kiro_session.mjs")), env=environment,
-                stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL, limit=RESPONSE_LIMIT,
-            )
-        except OSError:
-            raise SessionError("KIRO_UNAVAILABLE", "Kiro 실행 환경을 시작할 수 없습니다.") from None
-        return cls(process)
-
-    def touch(self):
-        self.expiry = asyncio.get_running_loop().time() + IDLE_SECONDS
-
-    async def read(self):
-        try:
-            while line := await self.process.stdout.readline():
-                message = json.loads(line)
-                if "event" in message:
-                    if callback := getattr(self, 'on_managed_event', None):
-                        callback(message['event'])
-                    self.events.append(message["event"])
-                    self.events = self.events[-128:]
-                    self.updated.set()
-                    continue
-                future = self.pending.get(message.get("id"))
-                if future is None or future.done():
-                    continue
-                if error := message.get("error"):
-                    future.set_exception(SessionError(error["code"], error["message"]))
-                else:
-                    future.set_result(message.get("result"))
-        except (ValueError, KeyError, OSError):
-            logger.warning("Kiro session returned an invalid transport response")
-        finally:
-            for future in self.pending.values():
-                if not future.done():
-                    future.set_exception(SessionError("KIRO_EXITED", "Kiro 연결이 종료됐습니다. 다시 실행해 주세요."))
-            self.updated.set()
-
-    async def call(self, method, params=None, timeout=610):
-        if self.closed or self.reader.done():
-            raise SessionError("KIRO_CLOSED", "Kiro 변환 연결이 종료됐습니다.")
-        self.touch()
-        self.counter += 1
-        request_id = self.counter
-        future = asyncio.get_running_loop().create_future()
-        self.pending[request_id] = future
-        try:
-            request = json.dumps({"id": request_id, "method": method, "params": params}, ensure_ascii=False)
-            self.process.stdin.write(request.encode() + b"\n")
-            await self.process.stdin.drain()
-            return await asyncio.wait_for(future, timeout)
-        except TimeoutError:
-            await self.close()
-            raise SessionError("KIRO_TIMEOUT", "Kiro 응답 시간이 초과됐습니다. 다시 실행해 주세요.") from None
-        except (BrokenPipeError, ConnectionResetError):
-            raise SessionError("KIRO_EXITED", "Kiro 연결이 종료됐습니다. 다시 실행해 주세요.") from None
-        finally:
-            self.pending.pop(request_id, None)
-            self.touch()
-            if future.done() and not future.cancelled():
-                future.exception()
-
-    async def close(self):
-        if self.closed:
-            return
-        self.closed = True
-        try:
-            if self.process.returncode is None:
-                self.process.stdin.close()
-                try:
-                    await asyncio.wait_for(self.process.wait(), 5)
-                except TimeoutError:
-                    if self.process.returncode is None:
-                        self.process.kill()
-                    await self.process.wait()
-        finally:
-            if not self.reader.done():
-                self.reader.cancel()
-            await asyncio.gather(self.reader, return_exceptions=True)
-
-
 @asynccontextmanager
 async def kiro_lifespan(app):
     sessions = app.state.kiro_sessions = {}
@@ -230,7 +127,7 @@ async def kiro_lifespan(app):
             prompt_run_values.purge()
             now = asyncio.get_running_loop().time()
             expired = [key for key, session in sessions.items()
-                       if session.expiry <= now or session.closed or session.reader.done()
+                       if session.expiry <= now or session.closed
                        or managed_only() and not managed_context_alive(getattr(session, "managed_prompt_token", ""))]
             await asyncio.gather(*(sessions.pop(key).close() for key in expired))
 
@@ -283,21 +180,13 @@ def require_session_owner(request, session):
 
 
 def error_response(request, error):
-    # Only the current execution owner can contribute an allowlisted diagnostic.
-    # Never carry the provider's free-form message through the worker boundary.
+    # SessionError messages are bounded application diagnostics; provider
+    # output is never carried through this boundary.
     if managed_only():
-        try:
-            context = managed_execution_context(request)
-            if context is not None:
-                session_id = request.path_params.get('session_id')
-                if session_id:
-                    session = request.app.state.kiro_sessions.get(session_id)
-                    if session is None or getattr(session, 'managed_execution_context', None) is not context:
-                        raise HTTPException(403, 'The session belongs to a different managed job.')
-                    require_session_owner(request, session)
-                context.record_auth_error(error.code)
-        except HTTPException:
-            pass
+        from .kiro_readiness import AUTH_ERROR_CODES
+        context = managed_execution_context(request)
+        if context is not None and error.code in AUTH_ERROR_CODES:
+            context.provider_error = error.code
     return JSONResponse({"error": {"code": error.code, "message": str(error)}}, status_code=502)
 
 
@@ -307,19 +196,14 @@ async def start_session(request: Request):
     options = await read_request(request, ManagedOpenSession if managed_only() else OpenSession)
     purpose = request.headers.get("x-sfdc-kiro-purpose")
     context = managed_execution_context(request) if managed_only() else None
-    if managed_only() and purpose not in _MODES:
-        raise HTTPException(422, "A managed Screen or Story session purpose is required.")
-    approved_remote = bool(context and context.purpose == 'screen' and context.remote and context.mode == 'acp'
-                           and context.file_key == options.fileKey and purpose == 'screen')
-    if purpose is not None and (purpose not in _MODES or options.readFigma and not approved_remote):
+    if purpose not in _PURPOSES:
         raise HTTPException(422, "Invalid Kiro session purpose.")
     if context and context.purpose != purpose:
         raise HTTPException(422, 'The execution purpose does not match.')
     if context and context.remote:
         require_figma_scope(context.execution_scope)
-    mode = context.mode if context else kiro_mode(purpose) if purpose in _MODES else "acp"
-    if mode not in {"acp", "headless"}:
-        raise SessionError("KIRO_MODE_INVALID", "Kiro 실행 모드는 acp 또는 headless로 설정해 주세요.")
+    if context and context.mode != "headless":
+        raise SessionError("KIRO_MODE_INVALID", "Kiro 실행은 API 키 기반 헤드리스 모드만 지원합니다.")
     if len(sessions) >= MAX_SESSIONS:
         raise SessionError("KIRO_BUSY", "다른 Kiro 작업이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.")
     try:
@@ -329,7 +213,7 @@ async def start_session(request: Request):
     except sqlite3.Error:
         raise SessionError("KIRO_PROMPT_RELEASE_UNAVAILABLE", "프롬프트 릴리스를 불러올 수 없습니다.") from None
     session_id = uuid4().hex
-    session = HeadlessKiroSession(read_key(), purpose=purpose) if mode == "headless" else await KiroSession.start()
+    session = HeadlessKiroSession(read_key(), purpose=purpose)
     try:
         if context and context.remote:
             require_figma_scope(context.execution_scope)
@@ -345,22 +229,10 @@ async def start_session(request: Request):
         session.managed_prompt_token = require_managed_context(request)
         session.purpose = purpose
         if context:
-            context.bind(session, options.readFigma)
+            context.bind(session)
     sessions[session_id] = session
 
-    async def disconnected():
-        while (await request.receive())["type"] != "http.disconnect":
-            pass
-
-    opening = asyncio.create_task(session.call("open", {
-        "reference": {"fileKey": options.fileKey}, "readFigma": options.readFigma,
-    }, timeout=65))
-    disconnect = asyncio.create_task(disconnected())
     try:
-        done, _ = await asyncio.wait((opening, disconnect), return_when=asyncio.FIRST_COMPLETED)
-        if disconnect in done:
-            raise SessionError("KIRO_ABORTED", "Kiro 변환 작업이 중단됐습니다.")
-        await opening
         require_session_owner(request, session)
         if context and context.remote:
             require_figma_scope(context.execution_scope)
@@ -368,42 +240,15 @@ async def start_session(request: Request):
         sessions.pop(session_id, None)
         await session.close()
         raise
-    finally:
-        for task in (opening, disconnect):
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(opening, disconnect, return_exceptions=True)
     return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id}
 
 
 @router.get("/{session_id}/events")
 async def session_events(request: Request, session_id: str):
-    session = get_session(request, session_id)
-    if not session.events and not session.reader.done():
-        try:
-            await asyncio.wait_for(session.updated.wait(), 10)
-        except TimeoutError:
-            pass
-    get_session(request, session_id)  # The session can close while waiting for events.
-    session.updated.clear()
-    events, session.events = session.events, []
-    if not events and session.reader.done():
-        raise SessionError("KIRO_EXITED", "Kiro 연결이 종료됐습니다. 다시 실행해 주세요.")
-    return {"events": events}
-
-
-@router.post("/{session_id}/wait")
-async def wait_for_figma(request: Request, session_id: str):
-    result = await get_session(request, session_id).call("wait", timeout=IDLE_SECONDS)
+    # Retain the scoped empty response for older server callers. Key-only
+    # headless execution has no interactive authorization or progress events.
     get_session(request, session_id)
-    return {"result": result}
-
-
-@router.post("/{session_id}/authorize")
-async def authorize_figma(request: Request, session_id: str):
-    result = await get_session(request, session_id).call("authorize", timeout=35)
-    get_session(request, session_id)
-    return {"result": result}
+    return {"events": []}
 
 
 @router.post("/{session_id}/prompt")

@@ -14,7 +14,7 @@ from starlette.requests import Request
 
 from sfdc_agent.api import app
 from sfdc_agent.kiro_gateway import (
-    KiroSession, end_session, kiro_lifespan, prompt_session, start_session,
+    end_session, kiro_lifespan, prompt_session, start_session,
 )
 from sfdc_agent.kiro_headless import HeadlessKiroSession, SessionError, parse_output, read_key
 
@@ -188,9 +188,9 @@ class HeadlessProcessTests(unittest.IsolatedAsyncioTestCase):
 
 
 def request(payload=None, *, story=False):
-    headers = [(b"host", b"127.0.0.1:8765"), (b"x-sfdc-agent", b"1")]
-    if story:
-        headers.append((b"x-sfdc-kiro-purpose", b"story"))
+    purpose = b"story" if story else b"screen"
+    headers = [(b"host", b"127.0.0.1:8765"), (b"x-sfdc-agent", b"1"),
+               (b"x-sfdc-kiro-purpose", purpose)]
     sent = False
 
     async def receive():
@@ -204,12 +204,10 @@ def request(payload=None, *, story=False):
 
 
 class GatewayRouteTests(unittest.IsolatedAsyncioTestCase):
-    async def test_opt_in_is_only_for_story_and_preserves_the_prompt_contract(self):
-        mode = {"SFDC_AGENT_STORY_KIRO_MODE": "headless"}
-        with patch.dict(os.environ, mode, clear=True), \
+    async def test_story_key_session_preserves_the_structured_prompt_contract(self):
+        with patch.dict(os.environ, {}, clear=True), \
                 patch("sfdc_agent.kiro_gateway.read_key", return_value=TEST_KEY) as read, \
-                patch("sfdc_agent.kiro_gateway.HeadlessKiroSession") as launch, \
-                patch.object(KiroSession, "start") as start_acp:
+                patch("sfdc_agent.kiro_gateway.HeadlessKiroSession") as launch:
             async with kiro_lifespan(app):
                 session = launch.return_value
                 session.closed = False
@@ -220,7 +218,6 @@ class GatewayRouteTests(unittest.IsolatedAsyncioTestCase):
                 opened = await start_session(request({"readFigma": False}, story=True))
                 launch.assert_called_once_with(TEST_KEY, purpose="story")
                 read.assert_called_once()
-                start_acp.assert_not_awaited()
 
                 fields = {"evidence": '{"scope":"상담 이력"}', "categories": "{}", "maxFacts": 1}
                 result = await prompt_session(request({"operation": "story.analysis", "fields": fields}), opened["id"])
@@ -239,40 +236,18 @@ class GatewayRouteTests(unittest.IsolatedAsyncioTestCase):
                 await end_session(request(), opened["id"])
                 session.close.assert_awaited_once()
 
-                acp = start_acp.return_value
-                acp.call = AsyncMock()
-                acp.close = AsyncMock()
-                await start_session(request({"fileKey": "FixtureScreen", "readFigma": True}))
-                start_acp.assert_awaited_once()
+                with self.assertRaises(HTTPException) as invalid_mcp:
+                    await start_session(request({"fileKey": "FixtureScreen", "readFigma": True}))
+                self.assertEqual(invalid_mcp.exception.status_code, 422)
                 launch.assert_called_once()
 
-    async def test_default_story_keeps_acp_and_explicit_story_mcp_is_invalid(self):
+    async def test_missing_story_key_does_not_create_a_session(self):
         with patch.dict(os.environ, {}, clear=True), \
-                patch("sfdc_agent.kiro_gateway.read_key") as read, \
-                patch("sfdc_agent.kiro_gateway.HeadlessKiroSession") as launch, \
-                patch.object(KiroSession, "start") as start_acp:
-            acp = start_acp.return_value
-            acp.call = AsyncMock()
-            acp.close = AsyncMock()
-            async with kiro_lifespan(app):
-                await start_session(request({"readFigma": False}, story=True))
-                with self.assertRaises(HTTPException) as error:
-                    await start_session(request({"fileKey": "FixtureScreen", "readFigma": True}, story=True))
-                self.assertEqual(error.exception.status_code, 422)
-                start_acp.assert_awaited_once()
-                launch.assert_not_called()
-                read.assert_not_called()
-
-    async def test_explicit_headless_story_missing_key_does_not_use_acp(self):
-        mode = {"SFDC_AGENT_STORY_KIRO_MODE": "headless"}
-        with patch.dict(os.environ, mode, clear=True), \
                 patch("sfdc_agent.kiro_gateway.read_key", side_effect=SessionError("KIRO_KEY_MISSING", "Missing")), \
-                patch("sfdc_agent.kiro_gateway.HeadlessKiroSession") as launch, \
-                patch.object(KiroSession, "start") as start_acp:
+                patch("sfdc_agent.kiro_gateway.HeadlessKiroSession") as launch:
             async with kiro_lifespan(app):
                 with self.assertRaises(SessionError) as error:
                     await start_session(request({"readFigma": False}, story=True))
                 self.assertEqual(error.exception.code, "KIRO_KEY_MISSING")
                 self.assertEqual(app.state.kiro_sessions, {})
                 launch.assert_not_called()
-                start_acp.assert_not_awaited()

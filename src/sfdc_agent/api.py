@@ -22,7 +22,6 @@ from .managed_prompt_observability import router as managed_prompt_observability
 from .managed_prompt_translation import router as managed_prompt_translation_router
 from .managed_design import router as managed_design_router
 from .managed_views import router as managed_views_router
-from .managed_kiro_discovery import discovery_lifespan, router as managed_discovery_router
 from .managed_execution_progress import execution_lifespan, router as managed_execution_progress_router
 from .prompt_api import router as prompt_router
 from .prompt_registry import RegistryError, runtime_release
@@ -31,7 +30,7 @@ from .service_mode import ManagedModeBoundary, managed_only, trusted_hosts
 
 @asynccontextmanager
 async def lifespan(app):
-    async with kiro_lifespan(app), discovery_lifespan(app), execution_lifespan(app):
+    async with kiro_lifespan(app), execution_lifespan(app):
         yield
 
 
@@ -49,7 +48,6 @@ app.include_router(managed_prompt_observability_router)
 app.include_router(managed_prompt_translation_router)
 app.include_router(managed_design_router)
 app.include_router(managed_views_router)
-app.include_router(managed_discovery_router)
 app.include_router(managed_execution_progress_router)
 app.add_exception_handler(SessionError, error_response)
 app.add_exception_handler(FigmaProviderScopeError, figma_scope_response)

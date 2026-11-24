@@ -40,11 +40,9 @@ curl -fsS http://127.0.0.1:8766/health
 
 비교 파일럿과 API 디버깅에 사용하는 독립 서버는 `SFDC_Agent`에서 `serve` 명령으로 실행한다. 기본 주소는 `127.0.0.1:8765`다. Main의 관리형 Agent는 위 통합 시작 명령으로 실행한다.
 
-Screen과 Story에서 API 키로 Kiro를 실행하려면 `KIRO_API_KEY` 환경 변수를 설정한다. 환경 변수가 없으면 저장소 루트의 Git 제외 파일 `.env.kiro.local`에서 `KIRO_API_KEY=...` 한 줄을 읽는다. 이 파일은 실행 사용자 소유의 일반 파일이어야 하며 권한은 `0600`으로 유지한다. 서버 환경에서는 시크릿 저장소로 환경 변수를 주입한다.
+Screen, Story, 프롬프트 번역과 관리형 모델 작업에서 Kiro를 실행하려면 `KIRO_API_KEY` 환경 변수를 설정한다. 환경 변수가 없으면 저장소 루트의 Git 제외 파일 `.env.kiro.local`에서 `KIRO_API_KEY=...` 한 줄을 읽는다. 이 파일은 실행 사용자 소유의 일반 파일이어야 하며 권한은 `0600`으로 유지한다. 서버 환경에서는 시크릿 저장소로 환경 변수를 주입한다. Kiro의 공개 API Key 자동화 인터페이스는 CLI headless 모드이므로 `kiro-cli` 실행 파일은 필요하지만, 사용자 로그인·ACP·브라우저 승인은 사용하지 않는다.
 
 ```sh
-SFDC_AGENT_SCREEN_KIRO_MODE=headless \
-SFDC_AGENT_STORY_KIRO_MODE=headless \
 .venv/bin/sfdc-agent serve
 ```
 
@@ -54,17 +52,7 @@ SFDC_AGENT_STORY_KIRO_MODE=headless \
 curl -fsS http://127.0.0.1:8765/health
 ```
 
-두 기능을 위 명령으로 기동하면 `status`는 `ready`, `screenKiroMode`와 `storyKiroMode`는 `headless`로 표시된다. 포트가 이미 사용 중이면 먼저 이 명령으로 기존 서버 상태를 확인한다. 실행 모드나 환경 변수를 바꿔야 할 때는 기존 Agent 터미널에서 `Ctrl+C`로 종료하고 다시 기동한다.
-
-### Kiro CLI 로그인 사용
-
-독립 CLI API 서버에서 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 기본값은 각각 `acp`다. 로컬 Kiro CLI 로그인으로 두 기능을 실행하려면 두 값을 `acp`로 지정한다. Screen에서 Figma MCP 연결이 필요하면 브라우저에서 승인한다.
-
-```sh
-SFDC_AGENT_SCREEN_KIRO_MODE=acp \
-SFDC_AGENT_STORY_KIRO_MODE=acp \
-.venv/bin/sfdc-agent serve
-```
+기동하면 `status`는 `ready`, `screenKiroMode`와 `storyKiroMode`는 `headless`로 표시된다. 포트가 이미 사용 중이면 먼저 이 명령으로 기존 서버 상태를 확인한다. Key 환경 변수를 바꿔야 할 때는 기존 Agent 터미널에서 `Ctrl+C`로 종료하고 다시 기동한다.
 
 ### Screen·Story 원본 처리
 
@@ -72,7 +60,7 @@ Screen은 Figma REST에서 선택한 노드의 원본을 읽는다. REST를 사�
 
 Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분석으로 생성한다. 원본을 확보할 수 없으면 변환 화면에 원인을 표시한다. Story의 실행 모드는 생성 영수증 `generationReceipt.executionMode`와 Agent 로그에서 확인한다. 새 Story 분석으로 검증하면 저장된 LWC 결과를 재사용하지 않는다.
 
-`kiro_gateway.py`가 모델 세션·작업 요청을 관리하고, `screen_tasks.py`와 `story_tasks.py`가 분석·생성 프롬프트를 구성한다. `kiro_acp.mjs`는 로컬 Kiro CLI와 통신한다. Agent는 `SFDC_Ui/nextbss` 엔진을 사용해 원본 처리·NOVA 생성·LWC 컴파일을 수행한다. Main의 작업 상태·결과 저장·권한·Salesforce 세션은 Spring이 관리하고, 프론트는 화면과 API 연결을 담당한다.
+`kiro_gateway.py`가 모델 세션·작업 요청을 관리하고, `kiro_headless.py`가 Key를 격리된 Kiro CLI headless 프로세스에 전달한다. `screen_tasks.py`와 `story_tasks.py`가 분석·생성 프롬프트를 구성한다. Agent는 `SFDC_Ui/nextbss` 엔진을 사용해 원본 처리·NOVA 생성·LWC 컴파일을 수행한다. Main의 작업 상태·결과 저장·권한·Salesforce 세션은 Spring이 관리하고, 프론트는 화면과 API 연결을 담당한다.
 
 ## CLI 비교 파일럿 실행
 
@@ -84,7 +72,7 @@ Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분�
 
 비교 파일럿에는 Node, Chrome과 `SFDC_Ui`의 Node 의존성도 필요하다. 기본 입력은 형제 디렉터리 `SFDC_Ui`에 보관된 `AI 테스트용.fig`다. 다른 경로에 있는 UI 프로젝트는 `SFDC_UI_ROOT`로 지정한다. 실행은 `--target screen` 또는 `--target story`로 제한할 수 있다. CLI가 출력하는 작업 ID로 `.venv/bin/sfdc-agent resume <ID>`를 실행하면 완료된 단계를 재사용한다.
 
-Kiro 파일럿은 로컬 CLI 인증과 CLI에서 설정한 모델을 사용한다. OpenAI 연결은 `OPENAI_API_KEY`와 `OPENAI_MODEL`을 설정한 뒤 `--provider openai`로 명시적으로 선택한다. 새 공급자는 `ModelProvider.complete()` 계약으로 연결한다. 공급자 응답은 Python에서 구조를 검사하고, Story의 화면·액션·전이 근거는 기존 Node 검증기로 다시 확인한다.
+Kiro 파일럿은 `KIRO_API_KEY`와 CLI headless 모드를 사용한다. OpenAI 연결은 `OPENAI_API_KEY`와 `OPENAI_MODEL`을 설정한 뒤 `--provider openai`로 명시적으로 선택한다. 새 공급자는 `ModelProvider.complete()` 계약으로 연결한다. 공급자 응답은 Python에서 구조를 검사하고, Story의 화면·액션·전이 근거는 기존 Node 검증기로 다시 확인한다.
 
 로컬 API로 비교 작업을 제출할 때는 Agent 서버를 기동한 뒤 다른 터미널에서 `.venv/bin/sfdc-agent worker`를 실행한다. `POST /runs`로 작업을 등록하고 `GET /runs/{id}`와 `GET /runs/{id}/comparison`으로 진행 상태와 결과를 확인한다.
 
@@ -112,7 +100,7 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 | 위치 | 책임 |
 | --- | --- |
 | `src/sfdc_agent/contracts.py` | 요청과 모델 응답 구조 |
-| `src/sfdc_agent/providers.py` | 공급자 선택, Kiro ACP 및 선택형 OpenAI Responses API 연결 |
+| `src/sfdc_agent/providers.py` | 공급자 선택, Kiro Key headless 및 선택형 OpenAI Responses API 연결 |
 | `src/sfdc_agent/azure_provider.py` | AI Hub 인증·토큰 캐시 및 선택형 Azure Chat Completions 연결 |
 | `src/sfdc_agent/pilot.py` | 분석, 기준 변환, 모델 제안, 생성과 검증의 순서 |
 | `src/sfdc_agent/storage.py` | 작업 상태와 재개 정보 저장 |
@@ -131,7 +119,7 @@ Main의 **프롬프트 관리**는 Spring API와 PostgreSQL을 기준으로 초�
 
 독립 CLI 파일럿은 별도의 SQLite 프롬프트 저장소 `.prompt-management/prompts.sqlite3`를 사용하며 `SFDC_AGENT_PROMPT_DB`로 경로를 지정할 수 있다. 이 저장소는 Main의 활성 프롬프트와 권한을 변경하지 않는다. 최초 릴리스 `prompts-v1`은 `src/sfdc_agent/prompt_templates_v1/`에 보존한다. CLI에서 진행 중인 작업과 저장된 분석은 시작할 때의 릴리스를 사용하며, 릴리스 정보가 없는 이전 분석은 최초 버전을 사용한다. 독립 CLI 이력을 다른 환경으로 옮길 때는 SQLite 백업을 사용한다.
 
-독립 CLI에서 같은 릴리스의 텍스트 프롬프트를 다른 모델로 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 CLI 저장소의 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma MCP 도구를 직접 호출하는 작업은 기존 Kiro 경로에서 실행한다.
+독립 CLI에서 같은 릴리스의 텍스트 프롬프트를 다른 모델로 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 CLI 저장소의 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma 원본은 모델 실행 전에 REST·Plan Access Token 또는 등록된 로컬 원본으로 확보한다.
 
 ```sh
 .venv/bin/sfdc-agent evaluate-prompt story.classification fixture.json --provider azure --release prompts-v1
@@ -145,9 +133,9 @@ Spring에서 작업·권한·프롬프트 릴리스를 관리하는 서버는 `S
 
 `SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS`는 Spring과 Agent의 공통 물리 실행 상한이며 기본값은 540초, 허용 범위는 1–900초다. Spring은 테넌트 정책과 물리 상한을 적용한 절대 마감을 각 시도에 고정한다. 작업별 취소는 자식 프로세스 종료와 슬롯 반환을 확인한 뒤 응답한다.
 
-Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행에 고정된다. 생성, 이벤트 조회, 구조화된 프롬프트 실행, 대기, 승인과 종료에 같은 토큰이 필요하다. 실행이 끝나면 토큰이 폐기되며 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없다. `SFDC_AGENT_EXECUTION_TOKEN` 서비스 Bearer는 Spring과 Agent 사이에서 사용하며 Node 작업 프로세스에 전달하지 않는다.
+Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행에 고정된다. 생성, 이벤트 조회, 구조화된 프롬프트 실행과 종료에 같은 토큰이 필요하다. 실행이 끝나면 토큰이 폐기되며 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없다. `SFDC_AGENT_EXECUTION_TOKEN` 서비스 Bearer는 Spring과 Agent 사이에서 사용하며 Node 작업 프로세스에 전달하지 않는다.
 
-관리형 프롬프트 평가는 `SFDC_AGENT_SCREEN_KIRO_MODE`와 `SFDC_AGENT_STORY_KIRO_MODE`의 실행 방식을 사용한다. `headless`는 기존 `KIRO_API_KEY` 설정으로 격리된 도구 없는 실행을 시작한다. 명령행 `evaluate-prompt`는 로컬 Kiro CLI 실행 방식을 사용한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
+관리형 프롬프트 평가와 명령행 `evaluate-prompt`의 Kiro 공급자는 `KIRO_API_KEY` 설정으로 격리된 도구 없는 headless 실행을 시작한다. 실행 입력값은 Spring의 본인·작업공간 권한으로 조회하며 민감값 가림과 1시간 만료를 적용한다.
 
 활성 프롬프트의 한글 참고 번역은 서비스 인증 전용 `POST /internal/v1/prompts/translations`에서 생성한다. 영문 원문과 릴리스 해시는 변경하지 않으며 `{{변수}}`, `@@section`, JSON·코드·URL·도구 식별자는 모델 호출 전에 보호하고 응답 후 무결성을 다시 검사한다. 기본 공급자는 로컬 Kiro이고 `SFDC_AGENT_TRANSLATION_PROVIDER=kiro|openai|azure`, `SFDC_AGENT_TRANSLATION_MODEL`, `SFDC_AGENT_TRANSLATION_TIMEOUT_SECONDS`로 별도 지정할 수 있다. 번역 캐시를 식별하는 `SFDC_AGENT_TRANSLATION_PROFILE_VERSION`과 `SFDC_AGENT_TRANSLATION_GLOSSARY_VERSION`은 Spring의 `SFDC_PROMPT_TRANSLATION_PROFILE_VERSION`, `SFDC_PROMPT_TRANSLATION_GLOSSARY_VERSION`과 각각 같은 값을 사용하고, 번역 규칙이나 용어집 변경 시 두 서비스를 한 배포에서 함께 올린다. Spring이 번역 상태와 본문을 보관하며 Agent는 원문이나 번역문을 로컬에 저장하지 않는다.
 

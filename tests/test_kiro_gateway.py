@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from sfdc_agent.api import app
-from sfdc_agent.kiro_gateway import KiroSession, SessionError, kiro_lifespan
+from sfdc_agent.kiro_gateway import SessionError, kiro_lifespan
 
 
 BASE_PATH = '/internal/kiro/sessions'
@@ -22,27 +22,22 @@ def candidate_payload():
 
 
 class StubSession:
-    execution_mode = 'acp'
+    execution_mode = 'headless'
 
-    def __init__(self):
+    def __init__(self, purpose='screen'):
+        self.purpose = purpose
         self.closed = False
-        self.events = [{'type': 'figma-auth-required'}]
-        self.updated = asyncio.Event()
-        self.reader = asyncio.get_running_loop().create_future()
         self.expiry = float('inf')
         self.calls = []
 
     async def call(self, method, params=None, timeout=None):
         self.calls.append((method, params))
-        if method == 'authorize':
-            return 'https://www.figma.com/oauth/authorize'
         if method == 'prompt':
             return {'text': '{}', 'stopReason': 'end_turn', 'toolCalls': []}
         return None
 
     async def close(self):
         self.closed = True
-        self.reader.cancel()
 
 
 class GatewayTests(unittest.IsolatedAsyncioTestCase):
@@ -129,46 +124,54 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(reply['error']['code'], 'KIRO_INVALID_PROPOSAL')
                     self.assertTrue(session.closed)
 
-    async def test_session_preserves_oauth_and_builds_structured_screen_and_story_prompts(self):
-        session = StubSession()
+    async def test_key_only_sessions_build_structured_screen_and_story_prompts(self):
+        screen = StubSession()
         async with kiro_lifespan(app):
-            with patch.object(KiroSession, 'start', return_value=session):
-                status, opened = await self.request('POST', BASE_PATH, {'fileKey': 'FileA', 'readFigma': True})
+            with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_test_only'), patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=screen):
+                status, opened = await self.request('POST', BASE_PATH, {'fileKey': 'FileA'},
+                    extra_headers=((b'x-sfdc-kiro-purpose', b'screen'),))
             self.assertEqual(status, 200)
             path = f'{BASE_PATH}/{opened["id"]}'
-            self.assertEqual(session.calls[0], ('open', {'reference': {'fileKey': 'FileA'}, 'readFigma': True}))
-            self.assertEqual(await self.request('GET', f'{path}/events'), (200, {'events': [{'type': 'figma-auth-required'}]}))
-            self.assertEqual(await self.request('POST', f'{path}/authorize'), (200, {'result': 'https://www.figma.com/oauth/authorize'}))
-            self.assertEqual(await self.request('POST', f'{path}/wait'), (200, {'result': None}))
+            self.assertEqual(opened['executionMode'], 'headless')
+            self.assertEqual(screen.calls, [])
+            self.assertEqual((await self.request('POST', f'{path}/authorize'))[0], 404)
+            self.assertEqual((await self.request('POST', f'{path}/wait'))[0], 404)
 
             status, reply = await self.request('POST', f'{path}/prompt', {
-                'operation': 'screen.analyze', 'fields': {'fileKey': 'FileA', 'nodeIds': ['3:4']},
+                'operation': 'screen.plan', 'fields': {
+                    'source': {'fileKey': 'FileA', 'nodeId': '3:4'},
+                    'sourceDigest': 'a' * 64, 'referenceContext': 'Fixture source',
+                },
             })
-            screen_prompt = session.calls[-1][1]['text']
+            screen_prompt = screen.calls[-1][1]['text']
             self.assertEqual(status, 200)
-            self.assertIn('get_design_context', screen_prompt)
-            self.assertIn('"nodeId":"3:4"', screen_prompt)
+            self.assertIn('Fixture source', screen_prompt)
             self.assertEqual(reply['promptDigest'], hashlib.sha256(screen_prompt.encode()).hexdigest())
+            self.assertEqual(await self.request('DELETE', path), (204, None))
+            self.assertTrue(screen.closed)
 
-            status, _ = await self.request('POST', f'{path}/prompt', {
-                'operation': 'screen.capture', 'fields': {'fileKey': 'FileA', 'nodeId': '3:4', 'maxDimension': 640},
-            })
+            story = StubSession('story')
+            with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_test_only'), patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=story):
+                status, opened = await self.request('POST', BASE_PATH, {},
+                    extra_headers=((b'x-sfdc-kiro-purpose', b'story'),))
             self.assertEqual(status, 200)
-            self.assertIn('get_screenshot', session.calls[-1][1]['text'])
+            path = f'{BASE_PATH}/{opened["id"]}'
 
             evidence = '{"scope":"번호이동"}'
             status, _ = await self.request('POST', f'{path}/prompt', {
                 'operation': 'story.analysis', 'fields': {'evidence': evidence, 'categories': '{}', 'maxFacts': 1},
             })
             self.assertEqual(status, 200)
-            self.assertTrue(session.calls[-1][1]['text'].rstrip().endswith(evidence))
+            self.assertTrue(story.calls[-1][1]['text'].rstrip().endswith(evidence))
 
             digest = 'e' * 64
             reviewed = json.dumps({'specDigest': digest, 'bundleName': 'nextBssStoryTest'})
             status, reply = await self.request('POST', f'{path}/prompt', {
                 'operation': 'story.generate', 'fields': {'input': reviewed},
             })
-            story_prompt = session.calls[-1][1]['text']
+            story_prompt = story.calls[-1][1]['text']
             self.assertEqual(status, 200)
             self.assertIn('nextBssStoryTest.html', story_prompt)
             self.assertIn(digest, story_prompt)
@@ -176,26 +179,29 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(reply['promptBytes'], len(story_prompt.encode()))
 
             self.assertEqual(await self.request('DELETE', path), (204, None))
-            self.assertTrue(session.closed)
-            status, error = await self.request('POST', f'{path}/wait')
+            self.assertTrue(story.closed)
+            status, error = await self.request('POST', f'{path}/prompt', {})
             self.assertEqual(status, 502)
             self.assertEqual(error['error']['code'], 'KIRO_CLOSED')
 
     async def test_invalid_requests_do_not_reach_kiro(self):
         session = StubSession()
         async with kiro_lifespan(app):
-            with patch.object(KiroSession, 'start', return_value=session) as launch:
-                status, _ = await self.request('POST', BASE_PATH, {}, trusted=False)
+            with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_test_only') as key, patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session) as launch:
+                purpose = ((b'x-sfdc-kiro-purpose', b'screen'),)
+                status, _ = await self.request('POST', BASE_PATH, {}, trusted=False, extra_headers=purpose)
                 self.assertEqual(status, 403)
-                status, _ = await self.request('POST', BASE_PATH, {}, extra_headers=((b'origin', b'https://localhost:4175'),))
+                status, _ = await self.request('POST', BASE_PATH, {}, extra_headers=(*purpose, (b'origin', b'https://localhost:4175')))
                 self.assertEqual(status, 403)
-                status, _ = await self.request('POST', BASE_PATH, {'readFigma': True})
+                status, _ = await self.request('POST', BASE_PATH, {'readFigma': True}, extra_headers=purpose)
                 self.assertEqual(status, 422)
                 status, _ = await self.request('POST', BASE_PATH, {'fileKey': 'FileA', 'readFigma': True},
                                                extra_headers=((b'x-sfdc-kiro-purpose', b'figma-png'),))
                 self.assertEqual(status, 422)
-                launch.assert_not_awaited()
-                status, opened = await self.request('POST', BASE_PATH, {})
+                launch.assert_not_called()
+                key.assert_not_called()
+                status, opened = await self.request('POST', BASE_PATH, {}, extra_headers=purpose)
             self.assertEqual(status, 200)
             path = f'{BASE_PATH}/{opened["id"]}/prompt'
             for payload in (
@@ -208,18 +214,19 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
                     status, error = await self.request('POST', path, payload)
                     self.assertEqual(status, 502)
                     self.assertEqual(error['error']['code'], 'KIRO_TASK_INVALID')
-            self.assertEqual([method for method, _ in session.calls], ['open'])
+            self.assertEqual(session.calls, [])
         self.assertTrue(session.closed)
 
     async def test_run_values_match_sent_prompt_and_are_scoped_to_the_prompt_request_owner(self):
         story_run = '/internal/prompts/story.analysis/runs'
-        screen_run = '/internal/prompts/screen.capture/runs'
         alice = ((b'x-sfdc-prompt-trace-owner', b'a' * 64),)
         bob = ((b'x-sfdc-prompt-trace-owner', b'b' * 64),)
-        session = StubSession()
+        session = StubSession('story')
         async with kiro_lifespan(app):
-            with patch.object(KiroSession, 'start', return_value=session):
-                _, opened = await self.request('POST', BASE_PATH, {})
+            with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_test_only'), patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session):
+                _, opened = await self.request('POST', BASE_PATH, {},
+                    extra_headers=((b'x-sfdc-kiro-purpose', b'story'),))
             path = f'{BASE_PATH}/{opened["id"]}/prompt'
             original = '{\n  "scope": "번호이동"\n}'
             story = {'operation': 'story.analysis',
@@ -236,7 +243,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(run['values'], [{'section': 'main', 'value': original}])
             self.assertEqual(run['promptReleaseId'], reply['promptReleaseId'])
             self.assertEqual(run['promptVersion'], reply['promptVersion'])
-            self.assertEqual(run['executionMode'], 'acp')
+            self.assertEqual(run['executionMode'], 'headless')
             self.assertEqual(await self.request('GET', story_run, extra_headers=bob, query=b'variable=evidence'),
                              (200, {'run': None}))
             for headers, trusted in (((), True), (alice, False), ((*alice, (b'origin', b'https://localhost:4175')), True)):
@@ -257,34 +264,3 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual((await self.request('POST', path, second, extra_headers=alice))[0], 502)
             _, unchanged = await self.request('GET', story_run, extra_headers=alice, query=b'variable=evidence')
             self.assertEqual(unchanged['run'], run)
-
-            capture = {'operation': 'screen.capture', 'fields': {'fileKey': 'FileA', 'nodeId': '1:2', 'maxDimension': 640}}
-            self.assertEqual((await self.request('POST', path, capture, extra_headers=alice))[0], 200)
-            _, reference = await self.request('GET', screen_run, extra_headers=alice, query=b'variable=reference')
-            _, screenshot = await self.request('GET', screen_run, extra_headers=alice, query=b'variable=screenshot')
-            self.assertEqual(reference['run']['id'], screenshot['run']['id'])
-            self.assertEqual(reference['run']['values'], [])
-            self.assertEqual(json.loads(screenshot['run']['values'][0]['value'])['nodeId'], '1:2')
-
-    async def test_failed_open_releases_the_session(self):
-        session = StubSession()
-        async with kiro_lifespan(app):
-            with patch.object(KiroSession, 'start', return_value=session), patch.object(
-                session, 'call', side_effect=SessionError('KIRO_UNAVAILABLE', 'Unavailable'),
-            ):
-                status, error = await self.request('POST', BASE_PATH, {})
-            self.assertEqual(status, 502)
-            self.assertEqual(error['error']['code'], 'KIRO_UNAVAILABLE')
-            self.assertTrue(session.closed)
-            self.assertEqual(app.state.kiro_sessions, {})
-
-
-    async def test_disconnected_caller_releases_the_opening_session(self):
-        session = StubSession()
-        async with kiro_lifespan(app):
-            with patch.object(KiroSession, 'start', return_value=session):
-                status, error = await self.request('POST', BASE_PATH, {}, disconnect=True)
-            self.assertEqual(status, 502)
-            self.assertEqual(error['error']['code'], 'KIRO_ABORTED')
-            self.assertTrue(session.closed)
-            self.assertEqual(app.state.kiro_sessions, {})

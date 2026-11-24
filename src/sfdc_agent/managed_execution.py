@@ -442,8 +442,8 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     except TimeoutError:
         raise HTTPException(504, "Managed execution timed out.") from None
     except (IncompleteExecution, ValueError, OSError, RecursionError):
-        if context is not None and context.auth_error in AUTH_ERROR_CODES:
-            raise HTTPException(502, context.auth_error) from None
+        if context is not None and context.provider_error in AUTH_ERROR_CODES:
+            raise HTTPException(502, context.provider_error) from None
         raise HTTPException(502, "Managed execution did not return a usable result.") from None
     finally:
         if directory is not None and not keep:

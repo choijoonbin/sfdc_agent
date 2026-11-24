@@ -14,7 +14,6 @@ from pathlib import Path
 from tempfile import mkdtemp
 
 from .config import project_root
-from .providers import _kiro_environment
 from .kiro_processes import OwnedProcesses, ProcessCleanupError
 
 
@@ -25,6 +24,11 @@ _KEY_PATTERN = re.compile(r"ksk_[A-Za-z0-9_-]{1,500}")
 _KEY_ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?KIRO_API_KEY\s*=\s*(.*?)\s*$")
 _API_KEY_STATUS = re.compile(r"[\s#>*`_\-]*Authenticated with API key[\s.*`_]*")
 _AGENT_NAME = "sfdc-conversion-headless"
+_KIRO_ENVIRONMENT = {
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "TMPDIR", "TMP", "TEMP",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
+    "SSL_CERT_FILE", "SSL_CERT_DIR", "NOVA_KIRO_CLI",
+}
 logger = logging.getLogger(__name__)
 _FAILURE_CODES = frozenset({
     "KIRO_UNAVAILABLE", "KIRO_KEY_AUTH_REQUIRED", "KIRO_HEADLESS_FAILED", "KIRO_HEADLESS_INVALID",
@@ -289,9 +293,6 @@ class HeadlessKiroSession:
         self._key = key
         self.purpose = purpose
         self._turn = None
-        self.events = []
-        self.updated = asyncio.Event()
-        self.reader = asyncio.get_running_loop().create_future()
         self.closed = False
         self._touch()
 
@@ -302,8 +303,6 @@ class HeadlessKiroSession:
         if self.closed:
             raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
         self._touch()
-        if method in {"open", "wait", "authorize"}:
-            return None
         if method != "prompt" or not params or not isinstance(params.get("text"), str) or params.get("png"):
             raise SessionError("KIRO_TASK_INVALID", "헤드리스 세션은 텍스트 작업만 지원합니다.")
         if self._turn is not None:
@@ -336,7 +335,7 @@ class HeadlessKiroSession:
         try:
             home = Path(root)
             workspace = prepare_workspace(home)
-            env = {key: value for key, value in os.environ.items() if key in _kiro_environment
+            env = {key: value for key, value in os.environ.items() if key in _KIRO_ENVIRONMENT
                    and key not in {"HOME", "NOVA_KIRO_CLI", "TMPDIR", "TMP", "TEMP"}}
             env.update({"HOME": root, "KIRO_HOME": str(home / ".kiro"), "KIRO_DATA_DIR": str(home / "kiro-data"),
                         "XDG_CONFIG_HOME": str(home / "config"), "XDG_DATA_HOME": str(home / "data"),
@@ -396,8 +395,6 @@ class HeadlessKiroSession:
             return
         self.closed = True
         self._key = ""
-        self.reader.cancel()
-        self.updated.set()
         if self._turn is not None:
             self._turn.cancel()
             await asyncio.gather(self._turn, return_exceptions=True)

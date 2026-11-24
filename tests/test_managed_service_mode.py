@@ -11,7 +11,7 @@ from unittest.mock import patch
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from sfdc_agent.api import app
-from sfdc_agent.kiro_gateway import KiroSession, kiro_lifespan
+from sfdc_agent.kiro_gateway import kiro_lifespan
 from sfdc_agent.managed_prompts import PromptBundle, execution_prompts, runner_token, template_digest
 from sfdc_agent.prompt_templates import load_baseline_templates
 from sfdc_agent.service_mode import trusted_hosts
@@ -25,7 +25,7 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.enterContext(patch.dict(os.environ, {'SFDC_AGENT_MANAGED_ONLY': '1', 'SFDC_AGENT_EXECUTION_TOKEN': 'service-only-test-token',
                                                  'SFDC_MANAGED_FIGMA_SCOPE': 'aa000000-0000-4000-8000-000000000001/ad000000-0000-4000-8000-000000000001',
-                                                 'SFDC_AGENT_SCREEN_KIRO_MODE': 'acp', 'SFDC_AGENT_STORY_KIRO_MODE': 'acp'}))
+                                                 'KIRO_API_KEY': 'ksk_service_synthetic_fixture'}))
         templates = load_baseline_templates()
         self.bundle = PromptBundle(releaseId='prompts-v1', sha256=template_digest(templates), templates=templates)
 
@@ -75,28 +75,29 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.request('POST', BASE, create, bearer='service-only-test-token', extra=purpose))[0], 403)
             with execution_prompts(self.bundle):
                 owner = runner_token()
-                with patch.object(KiroSession, 'start', return_value=session) as start:
+                with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_service_synthetic_fixture'), patch(
+                        'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session) as start:
                     self.assertEqual((await self.request('POST', BASE, create, token=owner))[0], 422)
                     self.assertEqual((await self.request('POST', BASE, {**create, 'promptReleaseId': 'prompts-' + 'a' * 32}, token=owner, extra=purpose))[0], 403)
                     status, opened = await self.request('POST', BASE, create, token=owner, extra=purpose)
                     self.assertEqual(status, 200)
-                    start.assert_awaited_once()
+                    start.assert_called_once_with('ksk_service_synthetic_fixture', purpose='screen')
                 path = BASE + '/' + opened['id']
                 with execution_prompts(self.bundle):
                     other = runner_token()
                     for method, suffix, payload in (
-                        ('GET', '/events', None), ('POST', '/wait', None), ('POST', '/authorize', None),
+                        ('GET', '/events', None),
                         ('POST', '/prompt', {'operation': 'screen.plan', 'fields': fields}), ('DELETE', '', None),
                     ):
                         self.assertEqual((await self.request(method, path + suffix, payload, token=other))[0], 403, suffix)
                     self.assertFalse(session.closed)
-                self.assertEqual(len(session.calls), 1)
+                self.assertEqual(session.calls, [])
                 self.assertEqual((await self.request('GET', path + '/events', token=owner))[0], 200)
                 self.assertEqual((await self.request('POST', path + '/prompt', {'text': 'Unpinned text'}, token=owner))[0], 502)
                 self.assertEqual((await self.request('POST', path + '/prompt', {'operation': 'story.classification', 'fields': {'evidence': '{}'}}, token=owner))[0], 502)
                 self.assertEqual((await self.request('POST', path + '/prompt', {'operation': 'screen.plan', 'fields': fields}, token=owner))[0], 200)
-                self.assertEqual((await self.request('POST', path + '/wait', token=owner))[0], 200)
-                self.assertEqual((await self.request('POST', path + '/authorize', token=owner))[0], 200)
+                self.assertEqual((await self.request('POST', path + '/wait', token=owner))[0], 404)
+                self.assertEqual((await self.request('POST', path + '/authorize', token=owner))[0], 404)
                 self.assertEqual((await self.request('GET', path + '/events', token=owner, extra=((b'x-sfdc-managed-prompt', owner.encode()),)))[0], 403)
             for method, suffix in (('GET', '/events'), ('POST', '/prompt'), ('DELETE', '')):
                 self.assertEqual((await self.request(method, path + suffix, token=owner))[0], 403)
@@ -108,7 +109,8 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
         with execution_prompts(self.bundle):
             async with kiro_lifespan(app):
                 token = runner_token()
-                with patch.object(KiroSession, 'start', return_value=session):
+                with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_service_synthetic_fixture'), patch(
+                        'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session):
                     status, opened = await self.request('POST', BASE, {'promptReleaseId': self.bundle.releaseId}, token=token,
                                                        extra=((b'x-sfdc-kiro-purpose', b'screen'),))
                     self.assertEqual(status, 200)
@@ -139,14 +141,15 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
         async with kiro_lifespan(app):
             with execution_prompts(bundle):
                 token = runner_token()
-                with patch.object(KiroSession, 'start', return_value=session) as start, patch(
+                with patch('sfdc_agent.kiro_gateway.read_key', return_value='ksk_service_synthetic_fixture'), patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session) as start, patch(
                     'sfdc_agent.kiro_gateway.runtime_release', side_effect=AssertionError('Must use the scoped bundle')
                 ):
                     status, opened = await self.request('POST', BASE, {'promptReleaseId': release_id}, token=token,
                                                        extra=((b'x-sfdc-kiro-purpose', b'screen'),))
                     self.assertEqual(status, 200)
                     self.assertEqual(opened['promptReleaseId'], release_id)
-                    start.assert_awaited_once()
+                    start.assert_called_once_with('ksk_service_synthetic_fixture', purpose='screen')
                     status, _ = await self.request('POST', BASE, {'promptReleaseId': 'prompts-nova-' + 'd' * 64}, token=token,
                                                    extra=((b'x-sfdc-kiro-purpose', b'screen'),))
                     self.assertEqual(status, 403)

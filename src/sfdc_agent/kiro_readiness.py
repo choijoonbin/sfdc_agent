@@ -21,7 +21,7 @@ from .managed_prompts import _authorize
 
 router = APIRouter(prefix='/internal/v1/kiro', include_in_schema=False)
 AUTH_ERROR_CODES = frozenset({
-    'KIRO_KEY_MISSING', 'KIRO_KEY_INVALID', 'KIRO_KEY_AUTH_REQUIRED', 'KIRO_LOGIN_REQUIRED',
+    'KIRO_KEY_MISSING', 'KIRO_KEY_INVALID', 'KIRO_KEY_AUTH_REQUIRED',
 })
 _EVIDENCE_TTL_SECONDS = 300
 _BINDING_SECRET = token_bytes(32)
@@ -85,22 +85,16 @@ def readiness_snapshot():
     binary = shutil.which(os.environ.get('NOVA_KIRO_CLI', str(installed) if installed.is_file() else 'kiro-cli'))
     operations = []
     for purpose in ('screen', 'story'):
-        mode = os.environ.get('SFDC_AGENT_' + purpose.upper() + '_KIRO_MODE', 'acp')
-        state = {'purpose': purpose, 'executionMode': mode if mode in {'acp', 'headless'} else None,
+        state = {'purpose': purpose, 'executionMode': 'headless',
                  'configured': False, 'authentication': 'UNKNOWN', 'checkedAt': None,
-                 'reasonCode': 'KIRO_MODE_INVALID', 'ready': False}
-        if mode in {'acp', 'headless'}:
-            state['reasonCode'] = 'KIRO_UNAVAILABLE'
-            if binary:
-                if mode == 'acp':
-                    state.update(configured=True, reasonCode='KIRO_CLI_AUTH_NOT_CHECKED', ready=None)
-                else:
-                    try:
-                        key = read_key()
-                    except SessionError as error:
-                        state['reasonCode'] = error.code if error.code in AUTH_ERROR_CODES else 'KIRO_KEY_INVALID'
-                    else:
-                        state.update(configured=True, **_authentication(key))
+                 'reasonCode': 'KIRO_UNAVAILABLE', 'ready': False}
+        if binary:
+            try:
+                key = read_key()
+            except SessionError as error:
+                state['reasonCode'] = error.code if error.code in AUTH_ERROR_CODES else 'KIRO_KEY_INVALID'
+            else:
+                state.update(configured=True, **_authentication(key))
         operations.append(state)
     return {'provider': 'kiro', 'authenticationEvidenceTtlSeconds': _EVIDENCE_TTL_SECONDS,
             'operations': operations}

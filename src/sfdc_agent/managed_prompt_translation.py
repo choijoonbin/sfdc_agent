@@ -180,6 +180,33 @@ def restore_prompt(text: str, protected: dict[str, str]) -> str:
     return text
 
 
+def _canonicalize_protected_order(text: str, protected: dict[str, str]) -> str:
+    """Repair a pure token permutation without weakening token integrity.
+
+    Korean word order can make a translator move otherwise byte-perfect
+    placeholders.  Their identity is structural rather than linguistic, so
+    map the occupied token slots back to source order before the strict
+    restore check.  Missing, duplicated, edited, or unknown tokens remain
+    untouched and are rejected by ``restore_prompt``.
+    """
+    expected = Counter({token: 1 for token in protected})
+    found = Counter(token for token in protected for _ in range(text.count(token)))
+    if found != expected:
+        return text
+    positions = sorted((text.index(token), token) for token in protected)
+    actual = [token for _, token in positions]
+    required = list(protected)
+    if actual == required:
+        return text
+    parts = []
+    cursor = 0
+    for (start, token), replacement in zip(positions, required, strict=True):
+        parts.extend((text[cursor:start], replacement))
+        cursor = start + len(token)
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
 def _markdown_structure(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     return (
         tuple(match.group().rstrip() for match in _MARKDOWN_HEADING_PREFIX.finditer(text)),
@@ -240,6 +267,10 @@ def translate_prompt(payload: TranslationRequest, provider_override=None) -> Tra
         "targetLocale": payload.targetLocale,
         "body": masked,
         "glossaryVersion": glossary,
+        # Kiro's headless transport only sees JSON evidence. Supplying the
+        # exact sequence separately makes the byte-for-byte ordering contract
+        # explicit even when Korean grammar would otherwise move a token.
+        "protectedTokensInRequiredOrder": list(protected),
     }
     last_structure_error = None
     for attempt in range(_MAX_STRUCTURE_ATTEMPTS):
@@ -264,7 +295,7 @@ def translate_prompt(payload: TranslationRequest, provider_override=None) -> Tra
         except ValidationError:
             raise ProviderError("TRANSLATION_INVALID_RESPONSE", "The translation response is invalid.") from None
         try:
-            restored = restore_prompt(translated.body, protected)
+            restored = restore_prompt(_canonicalize_protected_order(translated.body, protected), protected)
             target = restored.encode("utf-8")
             if (not restored.strip() or b"\x00" in target or b"\r" in target or len(target) > _TARGET_BYTES
                     or _signature(restored) != _signature(source)):
@@ -298,8 +329,7 @@ async def translate(request: Request):
         if error.code in {"TRANSLATION_SOURCE_INVALID", "TRANSLATION_SOURCE_CHANGED"}:
             status = 422
         elif (error.code == "TRANSLATION_CONFIGURATION_INVALID"
-              or error.code.endswith(("_MISSING", "_UNAVAILABLE"))
-              or error.code == "KIRO_LOGIN_REQUIRED"):
+              or error.code.endswith(("_MISSING", "_UNAVAILABLE"))):
             status = 503
         else:
             status = 502

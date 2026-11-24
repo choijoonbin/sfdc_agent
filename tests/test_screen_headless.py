@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from fastapi import HTTPException, Request
 
 from sfdc_agent.api import app, health
-from sfdc_agent.kiro_gateway import KiroSession, end_session, kiro_lifespan, prompt_session, start_session
+from sfdc_agent.kiro_gateway import end_session, kiro_lifespan, prompt_session, start_session
 from sfdc_agent.kiro_headless import SessionError
 
 
@@ -42,37 +42,32 @@ def request(body=None, purpose=None):
 
 class ScreenHeadlessTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.enterContext(patch.dict(os.environ, {
-            "SFDC_AGENT_SCREEN_KIRO_MODE": "headless", "SFDC_AGENT_STORY_KIRO_MODE": "headless",
-        }, clear=True))
+        self.enterContext(patch.dict(os.environ, {}, clear=True))
         self.key = self.enterContext(patch("sfdc_agent.kiro_gateway.read_key", return_value=TEST_KEY))
+        self.sessions = []
         self.headless = self.enterContext(patch("sfdc_agent.kiro_gateway.HeadlessKiroSession", side_effect=self.new_session))
-        self.acp = self.enterContext(patch.object(KiroSession, "start"))
-        self.acp.return_value.execution_mode = "acp"
-        self.acp.return_value.call = AsyncMock()
-        self.acp.return_value.close = AsyncMock()
 
     def new_session(self, key, *, purpose):
         self.assertEqual(key, TEST_KEY)
         self.session = Mock(execution_mode="headless", closed=False, purpose=purpose)
         self.session.call = AsyncMock(return_value={"text": "{}", "stopReason": "end_turn", "toolCalls": []})
         self.session.close = AsyncMock()
+        self.sessions.append(self.session)
         return self.session
 
-    async def test_screen_and_story_modes_are_independent(self):
+    async def test_screen_and_story_use_the_key_only_headless_transport(self):
         async with kiro_lifespan(app):
-            with patch.dict(os.environ, {"SFDC_AGENT_SCREEN_KIRO_MODE": "acp"}):
-                screen = await start_session(request({"readFigma": False}, purpose="screen"))
-                self.assertEqual(screen["executionMode"], "acp")
-                self.assertEqual(health()["screenKiroMode"], "acp")
-                self.assertEqual(health()["storyKiroMode"], "headless")
-                await end_session(request(), screen["id"])
+            screen = await start_session(request({"readFigma": False}, purpose="screen"))
+            self.assertEqual(screen["executionMode"], "headless")
+            self.assertEqual(health()["screenKiroMode"], "headless")
+            self.assertEqual(health()["storyKiroMode"], "headless")
+            await end_session(request(), screen["id"])
             story = await start_session(request({"readFigma": False}, purpose="story"))
             self.assertEqual(story["executionMode"], "headless")
             self.assertEqual(self.session.purpose, "story")
             await end_session(request(), story["id"])
-            self.acp.assert_awaited_once()
-            self.headless.assert_called_once_with(TEST_KEY, purpose="story")
+            self.assertEqual([session.purpose for session in self.sessions], ["screen", "story"])
+            self.assertEqual(self.key.call_count, 2)
 
     async def test_screen_headless_does_not_open_mcp_or_accept_untrusted_operations(self):
         async with kiro_lifespan(app):
@@ -83,7 +78,6 @@ class ScreenHeadlessTests(unittest.IsolatedAsyncioTestCase):
             session = await start_session(request({"fileKey": "FixtureFile", "readFigma": False}, purpose="screen"))
             self.assertEqual(session["executionMode"], "headless")
             self.assertEqual(self.session.purpose, "screen")
-            self.acp.assert_not_awaited()
             for operation, fields in (
                 ("screen.capture", {"fileKey": "FixtureFile", "nodeId": "29876:15045", "maxDimension": 640}),
                 ("story.analysis", {"evidence": "{}", "categories": "{}", "maxFacts": 1}),

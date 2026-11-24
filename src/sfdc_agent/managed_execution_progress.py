@@ -1,4 +1,4 @@
-"""Ephemeral ACP progress bound to one live Spring execution attempt."""
+"""Ephemeral headless execution context bound to one live Spring attempt."""
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .managed_prompts import _authorize, managed_context_alive, require_managed_context
-from .managed_figma_scope import require_figma_scope, FigmaProviderScopeError
+from .managed_figma_scope import require_figma_scope
 
 router = APIRouter(prefix='/internal/v1/executions', include_in_schema=False)
 _CONTEXTS = {}
@@ -22,7 +22,7 @@ _LOCK = RLock()
 _ATTEMPTS = {}
 _RETAINED_ATTEMPTS = 256
 MAX_ATTEMPT = 2147483647
-_PHASES = {'starting', 'connecting', 'figma-connected', 'generating', 'figma-reading', 'analyzing', 'local-analyzing'}
+_PHASES = {'starting', 'connecting', 'generating', 'analyzing', 'local-analyzing'}
 
 
 class ExecutionScope(BaseModel):
@@ -78,23 +78,8 @@ def _attempt_stamp(job_id, attempt, scope, deadline, fingerprint=None, *, cancel
     return value
 
 
-def _figma_url(value):
-    if not isinstance(value, str) or len(value) > 8192 or any(ord(char) < 32 or ord(char) == 127 for char in value):
-        return None
-    try:
-        url = urlsplit(value)
-        if url.scheme == 'https' and url.netloc in {'figma.com', 'www.figma.com'} and url.path.startswith('/oauth/'):
-            return value
-    except ValueError:
-        pass
-    return None
-
-
 def execution_mode(payload):
-    from .kiro_gateway import kiro_mode
-    # Captured archive evidence supports both original CLI ACP and headless
-    # sessions. Its source type restricts tools independently of model transport.
-    return kiro_mode(payload.kind.lower())
+    return 'headless'
 
 
 @dataclass(eq=False)
@@ -110,57 +95,31 @@ class ExecutionContext:
     task: asyncio.Task | None = None
     execution_scope: tuple | None = None
     sessions: set = field(default_factory=set)
-    figma_session: object | None = None
-    authorization: asyncio.Task | None = None
     cleanup: asyncio.Task | None = None
     closed: bool = False
-    auth_error: str | None = None
+    provider_error: str | None = None
     view: dict = field(default_factory=lambda: {'status': 'running', 'phase': 'connecting'})
 
     def alive(self):
         return not self.closed and self.expires > monotonic() and (not self.token or managed_context_alive(self.token))
 
-    def public_view(self):
-        return {'jobId': self.job_id, 'attempt': self.attempt, **self.view}
-
-    def record_auth_error(self, code):
-        from .kiro_readiness import AUTH_ERROR_CODES
-        if self.alive() and code in AUTH_ERROR_CODES:
-            self.auth_error = code
-
-    def bind(self, session, read_figma):
+    def bind(self, session):
         self.sessions.add(session)
-        if read_figma:
-            self.figma_session = session
         session.managed_execution_context = self
-        session.on_managed_event = self.event
 
     def event(self, event):
         if not self.alive() or not isinstance(event, dict):
             return
-        kind = event.get('type')
-        if kind in {'figma-auth', 'figma-auth-required'} and self.remote and self.mode == 'acp':
-            self.view = {'status': 'needs-auth', 'phase': 'figma-auth'}
-            if url := _figma_url(event.get('url')):
-                self.view['authUrl'] = url
-        elif kind == 'figma-tool':
-            self.view = {'status': 'running', 'phase': 'figma-reading'}
-        elif kind == 'status':
+        if event.get('type') == 'status':
             phase = event.get('stage')
-            if phase == 'figma-auth-required' and self.remote and self.mode == 'acp':
-                self.view = {'status': 'needs-auth', 'phase': 'figma-auth'}
-            elif phase in _PHASES and (phase == 'figma-connected' or self.view['status'] == 'running'):
+            if phase in _PHASES and self.view['status'] == 'running':
                 self.view = {'status': 'running', 'phase': phase}
 
     async def close(self):
         self.closed = True
         async def cleanup():
-            if self.authorization:
-                self.authorization.cancel()
-                await asyncio.gather(self.authorization, return_exceptions=True)
             await asyncio.gather(*(session.close() for session in self.sessions), return_exceptions=True)
             self.sessions.clear()
-            self.figma_session = None
         if self.cleanup is None:
             self.cleanup = asyncio.create_task(cleanup())
         cancelled = False
@@ -246,17 +205,6 @@ def managed_execution_context(request):
     return context
 
 
-def _find(job_id, attempt):
-    if not 1 <= attempt <= MAX_ATTEMPT:
-        raise _failure('EXECUTION_ATTEMPT_INVALID', 422)
-    with _LOCK:
-        context = _CONTEXTS.get((str(job_id), attempt))
-    if not context or not context.alive() or not context.remote or context.purpose != 'screen' or context.mode != 'acp':
-        raise HTTPException(404, 'Live ACP execution not found.')
-    require_figma_scope(context.execution_scope)
-    return context
-
-
 @router.post('/{job_id}/attempts/{attempt}/cancel', status_code=204)
 async def cancel(request: Request, job_id: UUID, attempt: int):
     _authorize(request)
@@ -284,35 +232,3 @@ async def cancel(request: Request, job_id: UUID, attempt: int):
             for entry in current:
                 entry.closed = True
     await asyncio.gather(*(_retire(entry, asyncio.current_task()) for entry in current))
-
-
-@router.get('/{job_id}/attempts/{attempt}/progress')
-async def progress(request: Request, job_id: UUID, attempt: int):
-    _authorize(request)
-    return _find(job_id, attempt).public_view()
-
-
-@router.post('/{job_id}/attempts/{attempt}/authorize')
-async def authorize(request: Request, job_id: UUID, attempt: int):
-    _authorize(request)
-    context = _find(job_id, attempt)
-    if context.view['status'] != 'needs-auth' or context.view.get('authUrl') or not context.figma_session:
-        return context.public_view()
-    async def request_authorization():
-        try:
-            require_figma_scope(context.execution_scope)
-            value = await context.figma_session.call('authorize', timeout=35)
-            if context.alive() and context.view['status'] == 'needs-auth' and (url := _figma_url(value)):
-                context.view = {**context.view, 'authUrl': url}
-        except FigmaProviderScopeError:
-            raise
-        except Exception:
-            raise HTTPException(502, 'Figma authorization is unavailable.') from None
-    if not context.authorization or context.authorization.done():
-        context.authorization = asyncio.create_task(request_authorization())
-    try:
-        await asyncio.shield(context.authorization)
-    except asyncio.CancelledError:
-        if asyncio.current_task().cancelling():
-            raise
-    return _find(job_id, attempt).public_view()

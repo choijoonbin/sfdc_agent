@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from fastapi import Request
 
 from sfdc_agent.api import app
-from sfdc_agent.kiro_gateway import KiroSession, kiro_lifespan, prompt_session, start_session
+from sfdc_agent.kiro_gateway import kiro_lifespan, prompt_session, start_session
 from sfdc_agent.prompt_api import save_draft
 from sfdc_agent.prompt_registry import BASELINE_RELEASE, PROMPTS, PromptRegistry, RegistryError
 from sfdc_agent.prompt_templates import load_baseline_templates
@@ -34,7 +34,8 @@ def request(body=None, headers=None):
         return {"type": "http.request", "body": data, "more_body": False}
 
     return Request({"type": "http", "method": "POST", "app": app,
-                    "headers": [(b"x-sfdc-agent", b"1"), *(headers or [])]}, receive=receive)
+                    "headers": [(b"x-sfdc-agent", b"1"), (b"x-sfdc-kiro-purpose", b"story"),
+                                *(headers or [])]}, receive=receive)
 
 
 class PromptRegistryTests(unittest.TestCase):
@@ -162,13 +163,15 @@ class PromptApiTests(unittest.IsolatedAsyncioTestCase):
         call_body = {"operation": OPERATION, "fields": {"evidence": "{}"}}
 
         def fake_session():
-            session = Mock(execution_mode="acp", closed=False)
+            session = Mock(execution_mode="headless", closed=False, purpose="story")
             session.call = AsyncMock(return_value={"text": "{}", "stopReason": "end_turn"})
             session.close = AsyncMock()
             return session
 
         async with kiro_lifespan(app):
-            with patch.object(KiroSession, "start", side_effect=[fake_session() for _ in range(3)]):
+            with patch("sfdc_agent.kiro_gateway.read_key", return_value="ksk_prompt_registry_fixture"), patch(
+                    "sfdc_agent.kiro_gateway.HeadlessKiroSession",
+                    side_effect=[fake_session() for _ in range(3)]):
                 original = await start_session(request())
                 first = await prompt_session(request(call_body), original["id"])
                 registry.save_draft(OPERATION, {OPERATION: old_body + CHANGE}, None, BASELINE_RELEASE, "fixture", ACTOR)
