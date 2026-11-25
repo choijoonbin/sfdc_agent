@@ -105,6 +105,43 @@ class ScreenTasksTests(unittest.TestCase):
         self.assertNotIn("preceding turns", generation)
         self.assertNotIn("call Figma get_screenshot", generation)
 
+    def test_transient_overlay_policy_separates_comparison_visibility_from_runtime_behavior(self):
+        snackbar = {
+            "id": "29876:17596", "type": "INSTANCE", "name": "State=Close", "visible": True,
+            "box": [381, 570, 608, 74],
+        }
+        fields = {
+            **self.evidence, "local": True,
+            "sourceContext": {"nodes": [snackbar]},
+        }
+
+        review = build_screen_task("screen.review-plan", fields)
+        self.assertIn("A visible overlay remains visible in the captured state", review)
+        self.assertIn("`Close` and `Action + Close` describe a close affordance or actions", review)
+        self.assertIn("runtime display condition is unresolved", review)
+        self.assertIn('"name":"State=Close","visible":true', review)
+
+        generation = build_screen_task("screen.generate", fields)
+        self.assertIn("The draft's first render is the Figma comparison state", generation)
+        self.assertIn("Neither string means that the overlay is closed", generation)
+        self.assertIn("운영 표시 조건 확인 필요", generation)
+        self.assertIn("never hide the captured overlay", generation)
+        self.assertIn("persistent `duration=0` contract", generation)
+
+        repair = build_screen_task("screen.repair", {
+            "local": True,
+            "diagnostic": "Snackbar 29876:17596 is visible in Figma but hidden in the draft.",
+        })
+        self.assertIn("Do not interpret `Close` or `Action + Close` as `open=false`", repair)
+        self.assertIn("Never repair a visual mismatch by silently hiding", repair)
+
+        repair_with_evidence = build_screen_task("screen.repair", {
+            "local": True, "evidence": fields,
+            "diagnostic": "Snackbar visibility mismatch", "previousDraft": '{"html":"<template></template>"}',
+        })
+        self.assertIn("The draft's first render is the Figma comparison state", repair_with_evidence)
+        self.assertIn("leave an unresolved runtime trigger explicit in notes", repair_with_evidence)
+
     def test_verified_history_table_evidence_reaches_review_and_generation(self):
         table = {
             "nodeId": "12:40", "headerNodeId": "12:41", "box": [20, 100, 190, 120],

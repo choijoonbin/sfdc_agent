@@ -179,6 +179,17 @@ Render each field label once, in the position shown by Figma. When a form or tab
 
 Preserve a field's actual Figma appearance independently of required input semantics. When a NOVA field has a verified solid Figma fill or stroke, pass its exact color as field-background or field-border-color. Do not derive a field's initial value from text or a property that Figma does not display.
 
+### Toast, Snackbar, and transient overlay states
+
+Keep the selected Figma comparison state separate from the application's runtime trigger state.
+
+- The draft's first render is the Figma comparison state. When the selected frame visibly paints a Toast, Snackbar or other transient overlay, initialize its owner-controlled `open` state to `true`; when the layer is explicitly hidden, initialize it to `false`.
+- Never derive `open` from a component variant or property string. `Close` and `Action + Close` describe a close affordance, so map a visible close control to `dismissible`; map only evidenced action controls to `actions`. Neither string means that the overlay is closed.
+- Bind `open` to owner state. Handle `request_close` by setting that state to `false`, and wire an authored runtime trigger to set it to `true` only when that trigger is present in the source evidence.
+- If a visible captured overlay has no evidenced runtime trigger or initial application rule, keep it visible for the Figma comparison state and add a Korean note naming the exact node and `운영 표시 조건 확인 필요`. Do not invent a trigger or backend result, and never hide the captured overlay to avoid the unresolved behavior.
+- Use an authored duration when supplied. Otherwise keep the persistent `duration=0` contract and report the missing timeout policy when it materially affects behavior. Preserve the source message, summary values including zero, tone, bounds, placement, actions and close affordance.
+- If structured component properties conflict with visible descendants or the supplied image, the visible captured state governs comparison rendering and the conflict remains explicit in notes.
+
 ### Lookup and reset interactions
 
 When a lookup action and editable text fields belong to a verified common source scope, bind the visible inputs to mutable LWC state. Update state from each control's actual change event.detail.value payload as specified below, or from event.target.value for a native input. Use the exact source node IDs as data-figma-node-id on the rendered action button hosts and field hosts. For a search action dispatch a CustomEvent('search', { detail: { values } }), where values maps each scoped field's source node ID to its current string value. Include every listed field, even when its value is empty. A bare event or a static Figma example value does not satisfy this contract. For reset, assign each scoped field its resetValue in the same state and let the state update the rendered inputs. Dispatch a CustomEvent('reset', { detail: { values } }) after changing state, using the same exact source node IDs and reset values. With no specified reset result, NOVA's local lookup convention clears the scoped editable text fields while preserving locked fields and controls outside the listed scope. Preserve initial sample values on first render. A search immediately after reset must read the same reset state visible in the controls. Keep lookup local and leave unresolved behavior in notes.

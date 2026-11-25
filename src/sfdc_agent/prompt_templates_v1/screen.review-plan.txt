@@ -36,6 +36,14 @@ Return only one JSON object with this shape:
 - Report a conflict only if other source evidence contradicts that mapping.
 - Review behavior separately, preserving the source's initial disabled or read-only state when no change is specified.
 
+### Transient feedback and overlay review
+
+- Determine the Figma captured-state visibility of Toast, Snackbar and other transient overlays from the selected frame's visible descendants and supplied visual evidence. A visible overlay remains visible in the captured state.
+- Treat component variant and property names as appearance or affordance evidence, not as visibility commands. In particular, `Close` and `Action + Close` describe a close affordance or actions; they never establish `open=false`.
+- Review captured-state visibility separately from runtime behavior. An evidenced runtime trigger, dismissal path, action and duration govern application behavior; they do not erase a visible captured state.
+- When an overlay is visible but its runtime trigger or initial application state is not evidenced, add a `behavior` issue with `requiresReview:true` that names the node and says the runtime display condition is unresolved. Never silently describe the visible overlay as initially hidden.
+- If a component property name conflicts with the visible layer or supplied image, preserve the visible captured state and report the conflict for review.
+
 ## Reference catalog
 
 NextBSS {{version}} catalog titles and variants:
