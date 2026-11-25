@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .kiro_screen_projection import project_screen_fields
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
+from .provider_capabilities import provider_receipt
 from .prompt_release_id import PromptReleaseId
 from .managed_prompts import (
     managed_context_alive,
@@ -282,13 +283,16 @@ async def prompt_session(request: Request, session_id: str):
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     started = monotonic()
     result = await get_session(request, session_id).call("prompt", {"text": text, "png": prompt.png})
-    get_session(request, session_id)
+    completed_session = get_session(request, session_id)
+    receipt = getattr(completed_session, "provider_receipt", None)
+    if not isinstance(receipt, dict):
+        receipt = provider_receipt("kiro")
     if prompt_run is not None and owner is not None:
         request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
     if prompt_run is not None and managed_capture:
         record_managed_trace(request, prompt_run, release, text, execution_mode)
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
-    return {**result, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
+    return {**result, "providerReceipt": receipt, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
             "executionMode": execution_mode, "promptReleaseId": release.id,
             **({"promptVersion": release.versions[operation]} if prompt.fields is not None else {})}
 

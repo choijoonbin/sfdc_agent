@@ -55,6 +55,7 @@ def private_value(value, depth=0):
 
 
 def configured_providers():
+    from .provider_capabilities import provider_capabilities
     azure = False
     try:
         from .azure_provider import AzureSettings
@@ -73,11 +74,12 @@ def configured_providers():
         except SessionError:
             pass
     kiro_operations = list(EVALUATION_OPERATIONS) if configured else []
-    return [
+    values = [
         {"key": "kiro", "label": "Kiro", "configured": bool(kiro_operations), "configuredOperations": kiro_operations},
         {"key": "openai", "label": "OpenAI", "configured": bool(os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_MODEL"))},
         {"key": "azure", "label": "Azure OpenAI", "configured": azure},
     ]
+    return [{**value, "capabilities": provider_capabilities(value["key"])} for value in values]
 
 
 @router.get("/evaluation-capabilities")

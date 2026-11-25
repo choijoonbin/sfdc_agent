@@ -6,6 +6,7 @@ from typing import Any
 from .prompt_registry import runtime_release
 from .prompt_release_id import is_prompt_release_id
 from .providers import ProviderError, create_provider
+from .provider_capabilities import provider_receipt
 from .screen_tasks import build_screen_task
 from .story_tasks import build_story_task
 
@@ -61,10 +62,14 @@ def evaluate_prompt_provider(
         raise ProviderError("PROMPT_EVALUATION_INVALID", "The task fields or captured evidence do not match this prompt.") from None
     provider = provider_override if provider_override is not None else create_provider(provider_name, model=model, timeout=timeout)
     result = provider.complete_rendered(text)
+    receipt = getattr(provider, "provider_receipt", None)
+    if not isinstance(receipt, dict):
+        receipt = provider_receipt(provider.name, provider.model)
     return {
         "operation": operation,
         "provider": provider.name,
         "model": provider.model,
+        "providerReceipt": receipt,
         "promptReleaseId": release.id,
         "promptVersion": release.versions[operation],
         "promptDigest": hashlib.sha256(payload).hexdigest(),

@@ -10,6 +10,7 @@ import re
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
+from .provider_capabilities import provider_receipt
 
 
 class ProviderError(RuntimeError):
@@ -87,6 +88,7 @@ class KiroProvider:
 
     def __init__(self, timeout: float):
         self.timeout = timeout
+        self.provider_receipt = provider_receipt(self.name)
 
     def complete(
         self, task: str, evidence: dict[str, Any] | str, schema: dict[str, Any]
@@ -103,6 +105,7 @@ class KiroProvider:
             session = HeadlessKiroSession(read_key(), purpose="provider")
             try:
                 response = await session.call("prompt", {"text": text}, timeout=self.timeout)
+                self.provider_receipt = session.provider_receipt
                 return response["text"]
             finally:
                 await session.close()
@@ -145,6 +148,7 @@ class OpenAIProvider:
     def __init__(self, model: str, timeout: float):
         self.model = model
         self.timeout = timeout
+        self.provider_receipt = provider_receipt(self.name, model)
 
     def complete(
         self, task: str, evidence: dict[str, Any] | str, schema: dict[str, Any]
@@ -191,6 +195,7 @@ class OpenAIProvider:
             raise ProviderError("MODEL_INVALID_RESPONSE", "The OpenAI response was not valid UTF-8.") from None
         if result.get("status") != "completed":
             raise ProviderError("OPENAI_INCOMPLETE", "The OpenAI response did not complete.")
+        self.provider_receipt = provider_receipt(self.name, self.model, result.get("model"))
         content = [
             part for item in result.get("output", []) if item.get("type") == "message"
             for part in item.get("content", [])

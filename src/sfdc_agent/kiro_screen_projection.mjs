@@ -29,7 +29,9 @@ if (!context?.nodes?.length || context.nodes[0].id !== fields.nodeId) {
     const forms = projectKiroFormEvidence(snapshot, design, context.inputControls);
     const components = new Map((context.verifiedComponents ?? []).map((component) => [component.nodeId, component]));
     for (const button of buttons) components.set(button.nodeId, button);
-    const projection = { verifiedComponents: [...components.values()], ...forms };
+    // Include the saved derived guidance as well as current mappings so the
+    // pinned projector can retire obsolete API instructions from checkpoints.
+    const projection = { ...context, verifiedComponents: [...components.values()], ...forms };
     process.stdout.write(JSON.stringify(design.componentLibrary.tuple.family === 'NOVA_PUBLIC'
       ? projectKiroNovaContext(projection, design.componentLibrary.contract) : projection));
   }

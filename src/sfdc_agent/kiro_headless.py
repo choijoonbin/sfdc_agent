@@ -15,6 +15,7 @@ from tempfile import mkdtemp
 
 from .config import project_root
 from .kiro_processes import OwnedProcesses, ProcessCleanupError
+from .provider_capabilities import cli_identity, provider_receipt, reported_stream_model
 
 
 IDLE_SECONDS = 16 * 60
@@ -294,6 +295,7 @@ class HeadlessKiroSession:
         self.purpose = purpose
         self._turn = None
         self.closed = False
+        self.provider_receipt = provider_receipt("kiro")
         self._touch()
 
     def _touch(self):
@@ -325,6 +327,7 @@ class HeadlessKiroSession:
         if not binary:
             raise SessionError("KIRO_UNAVAILABLE", "Kiro CLI 실행 파일을 찾지 못했습니다.")
         binary = str(Path(binary).resolve())
+        self.provider_receipt = provider_receipt("kiro", cli=await asyncio.to_thread(cli_identity, binary))
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
         root = mkdtemp(prefix="sfdc-kiro-headless-")
@@ -360,6 +363,7 @@ class HeadlessKiroSession:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
             stage = "parse"
             result = parse_output(output, diagnostics=diagnostics)
+            self.provider_receipt["reportedModel"] = reported_stream_model(output)
             from .kiro_readiness import record_model_success
             record_model_success(self._key)
             return result

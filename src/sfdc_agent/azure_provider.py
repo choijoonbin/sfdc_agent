@@ -200,6 +200,8 @@ class AzureOpenAIProvider:
         self.settings = settings
         self.timeout = min(timeout, settings.request_timeout_seconds)
         self._token = _EntraToken(settings)
+        from .provider_capabilities import provider_receipt
+        self.provider_receipt = provider_receipt(self.name, self.model)
 
     def complete(self, task: str, evidence: dict | str, schema: dict) -> dict:
         return self._complete([
@@ -227,6 +229,8 @@ class AzureOpenAIProvider:
         started = monotonic()
         try:
             response = _post(request, self.timeout, "CHAT")
+            from .provider_capabilities import provider_receipt
+            self.provider_receipt = provider_receipt(self.name, self.model, response.get("model"))
             choices = response.get("choices")
             choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else {}
             reason = choice.get("finish_reason")

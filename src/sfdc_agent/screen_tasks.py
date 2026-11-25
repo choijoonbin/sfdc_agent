@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 
 from .prompt_templates import PromptTemplate
 from .component_library import ComponentLibrary
+from .nova_prompt_evidence import prompt_source_context
 
 
 class TaskFields(BaseModel):
@@ -140,11 +141,12 @@ def _repair(args: RepairFields, template: PromptTemplate) -> str:
 
 
 def _generation(args: GenerationFields, template: PromptTemplate) -> str:
+    source_context = prompt_source_context(args.sourceContext, args.novaContract)
     dimensions = args.layoutDimensions
     width, height = (dimensions.width, dimensions.height) if dimensions else (1234, 700)
     has_review = args.reviewedAnalysis is not None
     if args.local:
-        if not dimensions or args.sourceContext is None:
+        if not dimensions or source_context is None:
             raise ValueError("Local generation requires measured source evidence.")
         mode = "rest" if args.sourceKind == "figma-rest" else "local"
         source_instruction = template.render(f"{mode}_source_instruction")
@@ -153,7 +155,7 @@ def _generation(args: GenerationFields, template: PromptTemplate) -> str:
         reading = template.render(f"{mode}_reading")
         payload = template.render(
             "local_payload", source_label=template.render(f"{mode}_source_label"),
-            source_context=_json(args.sourceContext),
+            source_context=_json(source_context),
         )
         action_evidence = template.render("local_action_evidence") if args.actions else ""
         accordion_evidence = template.render("local_accordion_evidence")
@@ -218,7 +220,7 @@ def _review_plan(args: GenerationFields, template: PromptTemplate) -> str:
         "splitLayout": args.splitLayout, "actions": args.actions, "novaContract": args.novaContract,
     }
     if args.local:
-        source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = args.sourceContext
+        source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = prompt_source_context(args.sourceContext, args.novaContract)
     else:
         source["figmaContext"] = [section.model_dump() for section in (args.capturedContext or args.sourceSections)]
     if args.historyTables and (not args.local or (args.sourceContext or {}).get("historyTables") != args.historyTables):
@@ -234,7 +236,7 @@ def _metadata(args: ContextFields, template: PromptTemplate) -> str:
 def _local_analysis(args: GenerationFields, template: PromptTemplate) -> str:
     if not args.local or not args.layoutDimensions or args.sourceContext is None:
         raise ValueError("Local analysis requires measured source evidence.")
-    return template.render(node_id=args.nodeId, source_context=_json(args.sourceContext))
+    return template.render(node_id=args.nodeId, source_context=_json(prompt_source_context(args.sourceContext, args.novaContract)))
 
 
 def _plan(args: PlanFields, template: PromptTemplate) -> str:

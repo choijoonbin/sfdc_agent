@@ -2,8 +2,7 @@ import hashlib
 import json
 import os
 import unittest
-from subprocess import CompletedProcess
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from sfdc_agent.prompt_provider_eval import evaluate_prompt_provider
 from sfdc_agent.prompt_registry import BASELINE_RELEASE, PromptRelease, runtime_release
@@ -44,26 +43,29 @@ class PromptProviderEvaluationTests(unittest.TestCase):
             patch("sfdc_agent.azure_provider._read_local_settings", return_value={}),
             patch("sfdc_agent.azure_provider._EntraToken.get", return_value="synthetic-auth"),
             patch("sfdc_agent.azure_provider._post") as azure_post,
-            patch("sfdc_agent.providers.subprocess.run") as kiro_run,
+            patch("sfdc_agent.kiro_headless.read_key", return_value="ksk_synthetic_fixture"),
+            patch("sfdc_agent.kiro_headless.HeadlessKiroSession") as kiro_session,
         ):
             transport = opener.return_value.open
             transport.return_value.__enter__.return_value.read.return_value = json.dumps(openai_response).encode()
             azure_post.return_value = {
                 "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(self.result)}}],
             }
-            kiro_run.return_value = CompletedProcess([], 0, stdout=json.dumps({"text": json.dumps(self.result)}))
+            kiro_session.return_value.call = AsyncMock(return_value={"text": json.dumps(self.result)})
+            kiro_session.return_value.close = AsyncMock()
+            kiro_session.return_value.provider_receipt = {"schemaVersion": 1, "provider": "kiro"}
             results = [
                 evaluate_prompt_provider(self.operation, self.fields, name, model=model, release_id=BASELINE_RELEASE)
                 for name, model in (("openai", "test-model"), ("azure", None), ("kiro", None))
             ]
             openai_body = json.loads(transport.call_args.args[0].data)
             azure_body = json.loads(azure_post.call_args.args[0].data)
-            kiro_body = json.loads(kiro_run.call_args.kwargs["input"])
+            kiro_body = kiro_session.return_value.call.await_args.args[1]
 
         self.assertEqual(openai_body["input"], expected)
         self.assertEqual(openai_body["text"]["format"], {"type": "json_object"})
         self.assertEqual(azure_body["messages"], [{"role": "user", "content": expected}])
-        self.assertEqual(kiro_body["prompt"], expected)
+        self.assertEqual(kiro_body["text"], expected)
         for result, name in zip(results, ("openai", "azure", "kiro")):
             with self.subTest(provider=name):
                 self.assertEqual(result["provider"], name)
@@ -72,6 +74,7 @@ class PromptProviderEvaluationTests(unittest.TestCase):
                 self.assertEqual(result["promptDigest"], hashlib.sha256(expected.encode()).hexdigest())
                 self.assertEqual(result["promptBytes"], len(expected.encode()))
                 self.assertEqual(result["result"], self.result)
+                self.assertEqual(result["providerReceipt"]["provider"], name)
 
     def test_explicit_release_and_edited_text_are_forwarded(self):
         baseline = runtime_release(BASELINE_RELEASE)

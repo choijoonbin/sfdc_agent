@@ -29,13 +29,20 @@ class PromptReleaseIdTests(unittest.TestCase):
                 request = ExecutionRequest.model_validate(case['request'])
                 self.assertEqual(checked_bundle(request.promptBundle).id, request.promptReleaseId)
                 self.assertEqual(request.componentLibrary.family, 'NOVA_PUBLIC')
-                opened = ManagedOpenSession(fileKey='ContractOnly', readFigma=True,
+                opened = ManagedOpenSession(fileKey='ContractOnly', readFigma=False,
                                             promptReleaseId=request.promptReleaseId)
                 self.assertEqual(opened.promptReleaseId, request.promptReleaseId)
+                self.assertFalse(opened.readFigma)
         mismatch = deepcopy(cases[-1]['request'])
         mismatch['promptReleaseId'] = 'prompts-v1'
         with self.assertRaises(ValidationError):
             ExecutionRequest.model_validate(mismatch)
+
+    def test_pinned_release_does_not_enable_live_figma_reads(self):
+        for contract in (OpenSession, ManagedOpenSession):
+            with self.subTest(contract=contract.__name__), self.assertRaisesRegex(
+                    ValidationError, 'captured Figma evidence'):
+                contract(fileKey='ContractOnly', readFigma=True, promptReleaseId='prompts-v1')
 
     def consumers(self, release_id):
         templates = load_baseline_templates()
