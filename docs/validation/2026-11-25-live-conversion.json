@@ -1,0 +1,1001 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-25",
+  "timezone": "Asia/Seoul",
+  "scope": {
+    "surface": "SFDC_UI",
+    "kind": "SCREEN",
+    "nodeId": "29876:14784",
+    "sampleSize": 1,
+    "actualKiroCalls": [
+      "analysis",
+      "generation",
+      "repair"
+    ],
+    "storyLiveExecution": "NOT_PERFORMED",
+    "representativeThreeCaseFormalComparison": "INCOMPLETE",
+    "noExistingResultsDeleted": true,
+    "noSalesforceMetadataChanged": true
+  },
+  "runtime": {
+    "uiCommitAtRun": "f41b3b2ddf2b4fc3e7975a7120cb8eff943f794a",
+    "agentCommitAtRun": "e0a460c8ceb791cf59c52741e961455bb25472fd",
+    "runtimeSha256": "466ac67f36654d2c0921a97763a543035cebf090ef262d39939ba959d5513a26",
+    "chrome": "158.0.8127.38",
+    "standard": {
+      "version": "1.9",
+      "releaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+      "tokensSha256": "d091905fa4bae0a826cd70af1740b356403b5343c1369de833a5b38eb3748a70",
+      "registrySha256": "d1507f73b8ab3c3b92f20be45ae09d7b1199d6768691da777509ac9573b8d9d8",
+      "guideInventorySha256": "66bb473f2aba4881864f1dd68d91dc7c299b260e0ee6298c7080a2c0328632cb",
+      "generatorSourceSha256": "3846d72bbcfd19b0cd1ee1b4a1dd072adbaf2db6ad622ed92c48e863cd295ee7",
+      "libraryManifestSha256": "7355b3fa904dcc09e9d4cfef5aec80e0920fb84feece75df139b0b40775cf1a1",
+      "libraryDefinitionsSha256": "aba033e51615202a52a54a86ceda812bdb887f9fccd21ce3c60bd1d5f862a00d"
+    }
+  },
+  "officialReference": {
+    "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+    "version": "2425341738833382367",
+    "nodeId": "29876:14784",
+    "width": 1370,
+    "height": 517,
+    "scale": 1,
+    "sha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+    "method": "Official Figma images API with exact version and scale=1; no credentials forwarded to image asset host.",
+    "batchExportAndDownloadMs": 12754,
+    "historicalImageSameBytes": true,
+    "historicalRevision": "2419717504908383775"
+  },
+  "runs": [
+    {
+      "id": "remote-nova",
+      "analysisJobId": "77f0e119-623f-4260-afbe-86d3a2f45930",
+      "resultId": "73dc83fc-f065-4b16-8282-da9b58a56c9d",
+      "source": {
+        "nodeId": "29876:14784",
+        "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+        "version": "2425341738833382367"
+      },
+      "artifactSha256": "670472e70b02587f1a9242c25d90bc0fed7cf0314a32f244cd42bbbf7acc7de0",
+      "sourceEvidence": {
+        "schemaVersion": 1,
+        "identity": {
+          "nodeId": "29876:14784",
+          "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+          "actualRevision": "2425341738833382367",
+          "requestedRevision": "2425341738833382367"
+        },
+        "sceneSha256": "100180109d904b655362cd7c50bc16f0845a04b572b6ec240253c937cfc6af24",
+        "provenance": {
+          "kind": "figma-rest",
+          "freshnessVerified": false,
+          "remoteRevisionLinked": true,
+          "archiveIntegrityVerified": false
+        },
+        "provenanceSha256": "f4fbea204ba2ca735aeebf0b3336a4808d2b01cbb02ffdce12712fab37e9f1f6"
+      },
+      "comparison": {
+        "classification": "PINNED_REVISION",
+        "width": 1370,
+        "height": 517,
+        "whiteCanvas": [
+          255,
+          255,
+          255
+        ],
+        "canvasProcedure": "Set only the preview document html background to #FFFFFF in the isolated capture context for all three runs. No LWC CSS, authored source or persisted artifact was changed. Composite the transparent official PNG on the same white canvas.",
+        "tolerance": 12,
+        "changedPixels": 7050,
+        "changedRatio": 0.009953550099535502,
+        "strictChangedRatio": 0.01671631676290785,
+        "renderSha256": "f65c36721a5a1b0e8717e98714ed7e99b3288e7832776b1affff5ed5ca7ccf36",
+        "renderArtifact": "remote-nova-white-canvas-preview.png",
+        "regions": [
+          {
+            "x": 1,
+            "y": 32,
+            "width": 126,
+            "height": 24,
+            "changedPixels": 1494,
+            "kind": "changed"
+          },
+          {
+            "x": 739,
+            "y": 309,
+            "width": 78,
+            "height": 13,
+            "changedPixels": 368,
+            "kind": "changed"
+          },
+          {
+            "x": 634,
+            "y": 391,
+            "width": 99,
+            "height": 12,
+            "changedPixels": 339,
+            "kind": "changed"
+          },
+          {
+            "x": 121,
+            "y": 491,
+            "width": 97,
+            "height": 13,
+            "changedPixels": 330,
+            "kind": "changed"
+          },
+          {
+            "x": 517,
+            "y": 308,
+            "width": 73,
+            "height": 14,
+            "changedPixels": 324,
+            "kind": "changed"
+          },
+          {
+            "x": 1120,
+            "y": 309,
+            "width": 59,
+            "height": 13,
+            "changedPixels": 300,
+            "kind": "changed"
+          },
+          {
+            "x": 203,
+            "y": 4,
+            "width": 73,
+            "height": 13,
+            "changedPixels": 296,
+            "kind": "changed"
+          },
+          {
+            "x": 123,
+            "y": 147,
+            "width": 84,
+            "height": 11,
+            "changedPixels": 284,
+            "kind": "changed"
+          }
+        ]
+      },
+      "quality": {
+        "source": {
+          "status": "passed",
+          "reasonCodes": [],
+          "findingCount": 0
+        },
+        "visual": {
+          "status": "review-required",
+          "reasonCodes": [
+            "SCREEN_VISUAL_SOURCE_MISMATCH"
+          ],
+          "findingCount": 13
+        },
+        "business": {
+          "status": "not-applicable",
+          "reasonCodes": [],
+          "findingCount": 0
+        },
+        "technical": {
+          "status": "blocked",
+          "reasonCodes": [
+            "UNMAPPED_LIBRARY_VARIANT"
+          ],
+          "findingCount": 3
+        },
+        "publishing": {
+          "status": "review-required",
+          "reasonCodes": [
+            "KIRO_HISTORY_TABLE_CONTRACT_MISMATCH",
+            "KIRO_BUTTON_GEOMETRY_UNVERIFIED",
+            "COMPONENT_APPEARANCE_OVERRIDE",
+            "UNMAPPED_COMPONENT_OVERRIDE",
+            "UNSUPPORTED_NODE",
+            "DRAFT_ASSET_UNVERIFIED"
+          ],
+          "findingCount": 17
+        },
+        "interaction": {
+          "status": "review-required",
+          "reasonCodes": [
+            "DRAFT_INTERACTION_UNVERIFIED"
+          ],
+          "findingCount": 2
+        },
+        "policyVersion": "conversion-quality-v1",
+        "schemaVersion": 1
+      },
+      "canApply": false,
+      "applyBlockerCodes": [
+        "COMPONENT_APPEARANCE_OVERRIDE",
+        "DRAFT_ASSET_UNVERIFIED",
+        "DRAFT_INTERACTION_UNVERIFIED",
+        "KIRO_BUTTON_GEOMETRY_UNVERIFIED",
+        "KIRO_HISTORY_TABLE_CONTRACT_MISMATCH",
+        "UNMAPPED_COMPONENT_OVERRIDE",
+        "UNMAPPED_LIBRARY_VARIANT"
+      ],
+      "behavior": {
+        "nativeInputPresent": false,
+        "nativeResetPresent": false,
+        "nativeSearchPresent": true,
+        "emptyTableMessagePresent": true
+      },
+      "timing": {
+        "stages": [
+          {
+            "id": "source-preparation",
+            "durationMs": 6334
+          },
+          {
+            "id": "analysis",
+            "durationMs": 27
+          },
+          {
+            "id": "user-review",
+            "durationMs": 131724
+          },
+          {
+            "id": "generation",
+            "durationMs": 11
+          },
+          {
+            "id": "compile-validation",
+            "durationMs": 2510
+          },
+          {
+            "id": "reference-image",
+            "durationMs": 1
+          }
+        ],
+        "stageSumExcludingUserReviewMs": 8883,
+        "llmRequestPathMs": null,
+        "llmRequestPathShare": null,
+        "analysisAcceptedToReviewMs": 7845,
+        "generationAcceptedToSucceededMs": 5124,
+        "acceptedToTerminalSumExcludingBetweenJobReviewMs": 12969
+      },
+      "nativePreviewDiagnostic": {
+        "comparison": {
+          "classification": "PINNED_REVISION",
+          "width": 1370,
+          "height": 517,
+          "whiteCanvas": [
+            255,
+            255,
+            255
+          ],
+          "tolerance": 12,
+          "changedRatio": 0.010563469765209166,
+          "changedPixels": 7482,
+          "strictChangedRatio": 0.7323229185785484,
+          "sensitivity": {
+            "label": "remote-nova",
+            "meanAbsoluteRgbDelta": 9.14523719790212,
+            "byTolerance": {
+              "0": {
+                "changedPixels": 518697,
+                "changedRatio": 0.7323229185785484
+              },
+              "2": {
+                "changedPixels": 517862,
+                "changedRatio": 0.7311440229284615
+              },
+              "4": {
+                "changedPixels": 516991,
+                "changedRatio": 0.7299143006395685
+              },
+              "8": {
+                "changedPixels": 515660,
+                "changedRatio": 0.7280351268548193
+              },
+              "12": {
+                "changedPixels": 7482,
+                "changedRatio": 0.010563469765209166
+              }
+            },
+            "backgroundSample": {
+              "position": [
+                1000,
+                250
+              ],
+              "reference": "#FFFFFF",
+              "rendered": "#F3F3F3"
+            }
+          },
+          "renderSha256": "c2418b5e10a64b3f4783cef2d00e5182057a37fbbc13366e26b67e6a384fba7e",
+          "managedCapture": {
+            "comparisonId": "78c23153-a5a4-474f-848e-c5c650078484",
+            "status": "SUCCEEDED",
+            "changedPixels": 7483,
+            "changedRatio": 0.010564881616287113
+          }
+        },
+        "canvas": "#F3F3F3",
+        "note": "The renderer deliberately uses the Lightning gray canvas for a transparent/unverified screen surface. The white-composited reference against this gray canvas is not the fixed-context acceptance comparison."
+      }
+    },
+    {
+      "id": "archive-nova",
+      "analysisJobId": "680a7b14-ff76-4269-85a9-e34570672893",
+      "resultId": "de60a25c-c8b8-4711-afdf-051cf38a3fea",
+      "source": {
+        "name": "AI 테스트용",
+        "local": true,
+        "nodeId": "29876:14784",
+        "pageId": "29876:13869",
+        "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+        "version": "local-a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76"
+      },
+      "artifactSha256": "f54adf33ed9496c0348d6fc9e6faffd4a6104d12298f7cf97d5c34245f88a002",
+      "sourceEvidence": {
+        "schemaVersion": 1,
+        "identity": {
+          "nodeId": "29876:14784",
+          "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+          "actualRevision": "local-a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76"
+        },
+        "sceneSha256": "dbcc9b3c49a37fb52c72e2bcd1ea367411a73f9521734e13b2a65c9487f6f4de",
+        "provenance": {
+          "kind": "local-fig",
+          "ancestrySha256": "979da85200b1a405b9c3abff73755dc785bfb1578a53a7ae7b58a89fac1ed3e5",
+          "freshnessVerified": false,
+          "remoteRevisionLinked": false,
+          "archiveIntegrityVerified": true
+        },
+        "provenanceSha256": "4046f9678924412cee7cee854219a20d769ea6b50ad246bad45de16a0ab3ea22"
+      },
+      "comparison": {
+        "classification": "REFERENCE_ONLY_ARCHIVE_NOT_LINKED_TO_REMOTE_REVISION",
+        "width": 1370,
+        "height": 517,
+        "whiteCanvas": [
+          255,
+          255,
+          255
+        ],
+        "canvasProcedure": "Set only the preview document html background to #FFFFFF in the isolated capture context for all three runs. No LWC CSS, authored source or persisted artifact was changed. Composite the transparent official PNG on the same white canvas.",
+        "tolerance": 12,
+        "changedPixels": 6035,
+        "changedRatio": 0.008520521255417978,
+        "strictChangedRatio": 0.016116280054779823,
+        "renderSha256": "e3b5abeed90f5800d4f33e1707989a61f7e81f32861d4d8756c66a7d51597157",
+        "renderArtifact": "archive-nova-white-canvas-preview.png",
+        "regions": [
+          {
+            "x": 4,
+            "y": 33,
+            "width": 123,
+            "height": 23,
+            "changedPixels": 886,
+            "kind": "changed"
+          },
+          {
+            "x": 739,
+            "y": 309,
+            "width": 78,
+            "height": 13,
+            "changedPixels": 368,
+            "kind": "changed"
+          },
+          {
+            "x": 634,
+            "y": 391,
+            "width": 99,
+            "height": 12,
+            "changedPixels": 339,
+            "kind": "changed"
+          },
+          {
+            "x": 517,
+            "y": 308,
+            "width": 73,
+            "height": 14,
+            "changedPixels": 324,
+            "kind": "changed"
+          },
+          {
+            "x": 1120,
+            "y": 309,
+            "width": 59,
+            "height": 13,
+            "changedPixels": 300,
+            "kind": "changed"
+          },
+          {
+            "x": 203,
+            "y": 4,
+            "width": 73,
+            "height": 13,
+            "changedPixels": 296,
+            "kind": "changed"
+          },
+          {
+            "x": 123,
+            "y": 147,
+            "width": 84,
+            "height": 11,
+            "changedPixels": 284,
+            "kind": "changed"
+          },
+          {
+            "x": 1,
+            "y": 4,
+            "width": 74,
+            "height": 12,
+            "changedPixels": 239,
+            "kind": "changed"
+          }
+        ]
+      },
+      "quality": {
+        "source": {
+          "status": "review-required",
+          "reasonCodes": [
+            "SOURCE_VARIABLE_UNRESOLVED",
+            "SOURCE_PAINT_UNRESOLVED"
+          ],
+          "findingCount": 36
+        },
+        "visual": {
+          "status": "review-required",
+          "reasonCodes": [
+            "SCREEN_VISUAL_SOURCE_MISMATCH"
+          ],
+          "findingCount": 15
+        },
+        "business": {
+          "status": "incomplete",
+          "reasonCodes": [],
+          "findingCount": 0
+        },
+        "technical": {
+          "status": "blocked",
+          "reasonCodes": [
+            "UNMAPPED_LIBRARY_VARIANT"
+          ],
+          "findingCount": 1
+        },
+        "publishing": {
+          "status": "review-required",
+          "reasonCodes": [
+            "KIRO_FIELD_RENDER_UNVERIFIED",
+            "KIRO_HISTORY_TABLE_CONTRACT_MISMATCH",
+            "COMPONENT_APPEARANCE_OVERRIDE",
+            "UNMAPPED_COMPONENT_OVERRIDE",
+            "UNSUPPORTED_NODE"
+          ],
+          "findingCount": 19
+        },
+        "interaction": {
+          "status": "review-required",
+          "reasonCodes": [
+            "KIRO_FORM_ACTION_UNVERIFIED",
+            "SCREEN_CONTROL_STATE_UNVERIFIED"
+          ],
+          "findingCount": 5
+        },
+        "policyVersion": "conversion-quality-v1",
+        "schemaVersion": 1
+      },
+      "canApply": false,
+      "applyBlockerCodes": [
+        "COMPONENT_APPEARANCE_OVERRIDE",
+        "KIRO_FIELD_RENDER_UNVERIFIED",
+        "KIRO_FORM_ACTION_UNVERIFIED",
+        "KIRO_HISTORY_TABLE_CONTRACT_MISMATCH",
+        "SCREEN_CONTROL_STATE_UNVERIFIED",
+        "UNMAPPED_COMPONENT_OVERRIDE",
+        "UNMAPPED_LIBRARY_VARIANT"
+      ],
+      "behavior": {
+        "nativeInputPresent": true,
+        "nativeResetPresent": true,
+        "nativeSearchPresent": false,
+        "inputEditable": true,
+        "resetClearsField": true,
+        "emptyTableMessagePresent": true
+      },
+      "timing": {
+        "stages": [
+          {
+            "id": "source-preparation",
+            "durationMs": 8834
+          },
+          {
+            "id": "analysis",
+            "durationMs": 338
+          },
+          {
+            "id": "user-review",
+            "durationMs": 292446
+          },
+          {
+            "id": "generation",
+            "durationMs": 4
+          },
+          {
+            "id": "compile-validation",
+            "durationMs": 2943
+          },
+          {
+            "id": "reference-image",
+            "durationMs": 5744
+          }
+        ],
+        "stageSumExcludingUserReviewMs": 17863,
+        "llmRequestPathMs": null,
+        "llmRequestPathShare": null,
+        "analysisAcceptedToReviewMs": 10679,
+        "generationAcceptedToSucceededMs": 10861,
+        "acceptedToTerminalSumExcludingBetweenJobReviewMs": 21540
+      },
+      "nativePreviewDiagnostic": {
+        "comparison": {
+          "classification": "REFERENCE_ONLY_ARCHIVE_NOT_LINKED_TO_REMOTE_REVISION",
+          "width": 1370,
+          "height": 517,
+          "whiteCanvas": [
+            255,
+            255,
+            255
+          ],
+          "tolerance": 12,
+          "changedRatio": 0.008520521255417978,
+          "changedPixels": 6035,
+          "strictChangedRatio": 0.016116280054779823,
+          "sensitivity": {
+            "label": "archive-nova",
+            "meanAbsoluteRgbDelta": 0.408080564467286,
+            "byTolerance": {
+              "0": {
+                "changedPixels": 11415,
+                "changedRatio": 0.016116280054779823
+              },
+              "2": {
+                "changedPixels": 10163,
+                "changedRatio": 0.014348642505188552
+              },
+              "4": {
+                "changedPixels": 8984,
+                "changedRatio": 0.01268407008428751
+              },
+              "8": {
+                "changedPixels": 7382,
+                "changedRatio": 0.010422284657414335
+              },
+              "12": {
+                "changedPixels": 6035,
+                "changedRatio": 0.008520521255417978
+              }
+            },
+            "backgroundSample": {
+              "position": [
+                1000,
+                250
+              ],
+              "reference": "#FFFFFF",
+              "rendered": "#FFFFFF"
+            }
+          },
+          "renderSha256": "e3b5abeed90f5800d4f33e1707989a61f7e81f32861d4d8756c66a7d51597157"
+        },
+        "canvas": "#FFFFFF",
+        "note": "The renderer deliberately uses the Lightning gray canvas for a transparent/unverified screen surface. The white-composited reference against this gray canvas is not the fixed-context acceptance comparison."
+      }
+    },
+    {
+      "id": "archive-kiro",
+      "analysisJobId": "c6c252a0-d484-4d2b-baa8-83dd69ea092b",
+      "resultId": "bc2e7f83-6fcc-4632-8b71-b8cb2cd98b7d",
+      "source": {
+        "name": "AI 테스트용",
+        "local": true,
+        "nodeId": "29876:14784",
+        "pageId": "29876:13869",
+        "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+        "version": "local-a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76"
+      },
+      "artifactSha256": "64d7ba2c52ef8925e96af6bec667f35e97538c08fb07c254a64785d11fcd6531",
+      "sourceEvidence": {
+        "schemaVersion": 1,
+        "identity": {
+          "nodeId": "29876:14784",
+          "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+          "actualRevision": "local-a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76"
+        },
+        "sceneSha256": "b6c0fd344cdedb38388624eb6c54042aafaabe58354c8ea47d68877c964d9311",
+        "provenance": {
+          "kind": "local-fig",
+          "ancestrySha256": "979da85200b1a405b9c3abff73755dc785bfb1578a53a7ae7b58a89fac1ed3e5",
+          "freshnessVerified": false,
+          "remoteRevisionLinked": false,
+          "archiveIntegrityVerified": true
+        },
+        "provenanceSha256": "4046f9678924412cee7cee854219a20d769ea6b50ad246bad45de16a0ab3ea22"
+      },
+      "comparison": {
+        "classification": "REFERENCE_ONLY_ARCHIVE_NOT_LINKED_TO_REMOTE_REVISION",
+        "width": 1370,
+        "height": 517,
+        "whiteCanvas": [
+          255,
+          255,
+          255
+        ],
+        "canvasProcedure": "Set only the preview document html background to #FFFFFF in the isolated capture context for all three runs. No LWC CSS, authored source or persisted artifact was changed. Composite the transparent official PNG on the same white canvas.",
+        "tolerance": 12,
+        "changedPixels": 17923,
+        "changedRatio": 0.025304606870067345,
+        "strictChangedRatio": 0.030857417159638002,
+        "renderSha256": "a0b646d8e36ccf7acba305598b082fee92ac27f987379fc579283a045454504d",
+        "renderArtifact": "archive-kiro-white-canvas-preview.png",
+        "regions": [
+          {
+            "x": 0,
+            "y": 338,
+            "width": 1370,
+            "height": 2,
+            "changedPixels": 2740,
+            "kind": "changed",
+            "colorDifferences": [
+              {
+                "kind": "other",
+                "source": "#DCE0E5",
+                "rendered": "#F1F3F5"
+              },
+              {
+                "kind": "other",
+                "source": "#FFFFFF",
+                "rendered": "#DCE0E5"
+              }
+            ]
+          },
+          {
+            "x": 0,
+            "y": 454,
+            "width": 1370,
+            "height": 2,
+            "changedPixels": 2740,
+            "kind": "changed",
+            "colorDifferences": [
+              {
+                "kind": "other",
+                "source": "#DCE0E5",
+                "rendered": "#FFFFFF"
+              },
+              {
+                "kind": "other",
+                "source": "#FFFFFF",
+                "rendered": "#DCE0E5"
+              }
+            ]
+          },
+          {
+            "x": 1,
+            "y": 32,
+            "width": 126,
+            "height": 24,
+            "changedPixels": 1494,
+            "kind": "changed"
+          },
+          {
+            "x": 0,
+            "y": 291,
+            "width": 1370,
+            "height": 1,
+            "changedPixels": 1370,
+            "kind": "changed",
+            "colorDifferences": [
+              {
+                "kind": "other",
+                "source": "#DCE0E5",
+                "rendered": "#F1F3F5"
+              }
+            ]
+          },
+          {
+            "x": 493,
+            "y": 308,
+            "width": 97,
+            "height": 14,
+            "changedPixels": 864,
+            "kind": "changed"
+          },
+          {
+            "x": 1088,
+            "y": 308,
+            "width": 91,
+            "height": 14,
+            "changedPixels": 811,
+            "kind": "changed"
+          },
+          {
+            "x": 940,
+            "y": 308,
+            "width": 88,
+            "height": 14,
+            "changedPixels": 702,
+            "kind": "changed",
+            "colorDifferences": [
+              {
+                "kind": "other",
+                "source": "#1C1F23",
+                "rendered": "#F1F3F5"
+              }
+            ]
+          },
+          {
+            "x": 739,
+            "y": 308,
+            "width": 78,
+            "height": 14,
+            "changedPixels": 602,
+            "kind": "changed",
+            "colorDifferences": [
+              {
+                "kind": "other",
+                "source": "#1C1F23",
+                "rendered": "#F1F3F5"
+              }
+            ]
+          }
+        ]
+      },
+      "quality": {
+        "source": {
+          "status": "review-required",
+          "reasonCodes": [
+            "SOURCE_VARIABLE_UNRESOLVED",
+            "SOURCE_PAINT_UNRESOLVED"
+          ],
+          "findingCount": 36
+        },
+        "visual": {
+          "status": "review-required",
+          "reasonCodes": [
+            "SCREEN_VISUAL_SOURCE_MISMATCH",
+            "KIRO_VISUAL_VERIFICATION_UNAVAILABLE"
+          ],
+          "findingCount": 36
+        },
+        "business": {
+          "status": "incomplete",
+          "reasonCodes": [
+            "KIRO_DRAFT_REVIEW",
+            "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED"
+          ],
+          "findingCount": 10
+        },
+        "technical": {
+          "status": "passed",
+          "reasonCodes": [],
+          "findingCount": 0
+        },
+        "publishing": {
+          "status": "review-required",
+          "reasonCodes": [
+            "KIRO_VISUAL_VERIFICATION_UNAVAILABLE",
+            "KIRO_DRAFT_REVIEW",
+            "KIRO_SCREEN_LAYOUT_UNCONFIRMED",
+            "KIRO_SCREEN_SOURCE_UNCONFIRMED"
+          ],
+          "findingCount": 6
+        },
+        "interaction": {
+          "status": "not-verified",
+          "reasonCodes": [],
+          "findingCount": 0
+        },
+        "policyVersion": "conversion-quality-v1",
+        "schemaVersion": 1
+      },
+      "canApply": false,
+      "applyBlockerCodes": [
+        "KIRO_DRAFT_REVIEW",
+        "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+        "KIRO_SCREEN_LAYOUT_UNCONFIRMED",
+        "KIRO_SCREEN_SOURCE_UNCONFIRMED",
+        "KIRO_VISUAL_VERIFICATION_UNAVAILABLE"
+      ],
+      "behavior": {
+        "nativeInputPresent": true,
+        "nativeResetPresent": true,
+        "nativeSearchPresent": true,
+        "inputEditable": true,
+        "resetClearsField": true,
+        "requiredFlag": true,
+        "emptyInputInvalid": true,
+        "validationMessagePresent": true,
+        "emptyTableMessagePresent": true
+      },
+      "timing": {
+        "stages": [
+          {
+            "id": "source-preparation",
+            "durationMs": 13334
+          },
+          {
+            "id": "analysis",
+            "durationMs": 269816
+          },
+          {
+            "id": "user-review",
+            "durationMs": 66786
+          },
+          {
+            "id": "generation",
+            "durationMs": 89730
+          },
+          {
+            "id": "compile-validation",
+            "durationMs": 5519
+          },
+          {
+            "id": "repair",
+            "durationMs": 74771
+          }
+        ],
+        "stageSumExcludingUserReviewMs": 453170,
+        "llmRequestPathMs": 434317,
+        "llmRequestPathShare": 0.9583975108678863,
+        "analysisAcceptedToReviewMs": 285852,
+        "generationAcceptedToSucceededMs": 178119,
+        "acceptedToTerminalSumExcludingBetweenJobReviewMs": 463971
+      },
+      "nativePreviewDiagnostic": {
+        "comparison": {
+          "classification": "REFERENCE_ONLY_ARCHIVE_NOT_LINKED_TO_REMOTE_REVISION",
+          "width": 1370,
+          "height": 517,
+          "whiteCanvas": [
+            255,
+            255,
+            255
+          ],
+          "tolerance": 12,
+          "changedRatio": 0.025304606870067345,
+          "changedPixels": 17923,
+          "strictChangedRatio": 0.030857417159638002,
+          "sensitivity": {
+            "label": "archive-kiro",
+            "meanAbsoluteRgbDelta": 1.7120379442820721,
+            "byTolerance": {
+              "0": {
+                "changedPixels": 21856,
+                "changedRatio": 0.030857417159638002
+              },
+              "2": {
+                "changedPixels": 20954,
+                "changedRatio": 0.029583927487328635
+              },
+              "4": {
+                "changedPixels": 20104,
+                "changedRatio": 0.028383854071072582
+              },
+              "8": {
+                "changedPixels": 18929,
+                "changedRatio": 0.026724929054483332
+              },
+              "12": {
+                "changedPixels": 17923,
+                "changedRatio": 0.025304606870067345
+              }
+            },
+            "backgroundSample": {
+              "position": [
+                1000,
+                250
+              ],
+              "reference": "#FFFFFF",
+              "rendered": "#FFFFFF"
+            }
+          },
+          "renderSha256": "a0b646d8e36ccf7acba305598b082fee92ac27f987379fc579283a045454504d"
+        },
+        "canvas": "#FFFFFF",
+        "note": "The renderer deliberately uses the Lightning gray canvas for a transparent/unverified screen surface. The white-composited reference against this gray canvas is not the fixed-context acceptance comparison."
+      }
+    }
+  ],
+  "timingDefinition": "Stage intervals are recorded application timings. Manual user-review is excluded from compute; LLM request intervals include bridge, CLI, authentication and cleanup. Job wall intervals include queue, transport and persistence. These are single trials, not a latency distribution.",
+  "org": {
+    "targetLabel": "SKTDev1 Main 관리 연결",
+    "authenticatedPageCatalogRead": "SUCCEEDED",
+    "actualMetadataDeploy": "NOT_PERFORMED",
+    "firstApplyHttpStatus": 500,
+    "firstApplyError": "LifecycleJson class-loading error during live development reload; class appeared and the existing watcher restarted before retry. No source/configuration change performed for recovery.",
+    "recheckHttpStatus": 409,
+    "recheckErrorCode": "ORG_REVIEW_REQUIRED",
+    "applicationsAfterAttempt": 0,
+    "orgApplyReview": null,
+    "reason": "Current source/layout/visual/draft findings are not covered by permitted review proof. Compile pass does not authorize deployment; no eligibility override or fabricated approval."
+  },
+  "remoteLimit": {
+    "observedNodesApi": {
+      "status": 429,
+      "retryAfter": "282454",
+      "rateLimitType": "low",
+      "planTier": "enterprise",
+      "elapsedMs": 635
+    },
+    "failedJobIds": [
+      "76d157d0-b678-4f47-a6ab-8f4aa3a19325",
+      "ad885081-b193-4434-9ab5-910209ca2d52",
+      "357eee49-5d3d-47b0-973e-350f82a26b41",
+      "42985e0d-284c-4da6-a5bd-ea4646845a52"
+    ],
+    "causationLimit": "Failed managed jobs exposed only AGENT_EXECUTION_FAILED. A subsequent nodes request confirmed 429; that does not prove every earlier failure had the same cause. No new model-start trace was found for the failed remote Kiro analysis. Further node retries stopped."
+  },
+  "baseline": {
+    "earlierReportedRatios": {
+      "nova": 0.0113,
+      "kiro": 0.013
+    },
+    "matchingFrozenReportAndGeneratedPng": "NOT_FOUND",
+    "improvementRate": "NOT_ESTABLISHED",
+    "availableHistoricalRatio": 0.02258820539609482,
+    "historicalScope": "Different historical Story/nextBss component release. Not the requested 1.13%/1.30% baseline. No direct improvement claim."
+  },
+  "observations": [
+    {
+      "code": "PREVIEW_CANVAS_MUST_BE_FIXED",
+      "detail": "The transparent source must be composited on the same canvas as the preview. The ordinary renderer deliberately uses Lightning #F3F3F3 for transparent/unverified screen surfaces. Comparing that native capture against a white-composited PNG yields 1.06% at tolerance=12 but 73.23% at zero tolerance; this is primarily a context mismatch, not proof of an authored-color conversion error. The acceptance benchmark explicitly fixes both canvases to white; remote NOVA then measures 0.9954%. Authored LWC styles were preserved."
+    },
+    {
+      "code": "LOW_PIXEL_RATIO_DOES_NOT_PROVE_BEHAVIOR",
+      "detail": "Remote NOVA lacks a native service-number input/reset button. Archive NOVA has editable input/reset but no native search button. Kiro input/reset/required validation and disabled footer controls exist. Real business API behavior is unverified."
+    },
+    {
+      "code": "SOURCE_SCENE_HASH_INCLUDES_DERIVED_FIELDS",
+      "detail": "Same-archive NOVA/Kiro snapshots differ only by draftSize on 78 nodes and draftAsset on three vectors. Removing those fields yields byte-identical JSON and Kiro scene SHA. Existing v1 receipts were preserved. REST/archive raw-scene equivalence is unproven."
+    },
+    {
+      "code": "PROMPT_PAYLOAD_AND_LATENCY",
+      "promptBytes": {
+        "analysis": 255911,
+        "generation": 289902,
+        "repair": 318175
+      },
+      "evidenceBytes": {
+        "entireNovaModuleContract": 141876,
+        "sourceContext": 109064,
+        "appearance": 57796,
+        "strokeGeometry": 33710,
+        "coverageDuplicated": 8496
+      },
+      "detail": "Large payload is an optimization candidate, not a proven causal speedup. Actual model ID/version, tokens, first-response and auth timings are unavailable.",
+      "evidenceBytesMeasurementMethod": "PostgreSQL octet_length(value::text) of persisted checkpoint JSONB values, including its serialization whitespace; these are not exact final-prompt segment byte sizes. promptBytes are the observed complete prompt payload sizes."
+    }
+  ],
+  "nextPriorities": [
+    {
+      "priority": 1,
+      "action": "Repair common NOVA mapping and native-control semantics. Measure background, geometry, typography and actual controls separately; preserve unknown business API boundaries."
+    },
+    {
+      "priority": 2,
+      "action": "Version authored scene digests separately from derived SVG/draft-size assets. Keep immutable v1 receipts and full raw source. Prove REST/archive equivalence."
+    },
+    {
+      "priority": 3,
+      "action": "Project stage-specific role/layout evidence and only required public APIs into prompts. Cache verified immutable release contracts by content hash. Preserve authored text, overrides, variables, state and unresolved evidence."
+    },
+    {
+      "priority": 4,
+      "action": "Measure bridge, CLI authentication, first response, completion, tokens, actual model ID, compile/Chrome and persistence separately. Propagate bounded safe error codes without prompt/credential logs."
+    },
+    {
+      "priority": 5,
+      "action": "After nodes quota recovers, run pinned Kiro plus search/table/popup and repeated trials. Perform actual Org deployment only after quality gates pass through normal permissions."
+    }
+  ],
+  "limitations": [
+    "One actual Kiro sample; no guaranteed speedup or statistically established accuracy improvement.",
+    "This run retained no reported model ID/CLI version; first-response/token timings were not recorded by the adapter.",
+    "Business API behavior and actual Salesforce rendering are unverified because Org admission was blocked.",
+    "The additional popup export includes outside effects (364x204); it is not treated as a 320x156 formal baseline.",
+    "Main doctor passed after the runs. Expired 300-second Kiro readiness evidence is UNKNOWN, not a new authentication failure.",
+    "The ordinary Main visual comparison used its current native Lightning canvas; its 1.06% result is retained as a diagnostic, not mixed with the explicitly white-canvas comparison."
+  ],
+  "localArtifacts": ".pilot/measurements/2026-11-25-live-conversion (ignored; reference/generated PNGs and sanitized measurements only)"
+}
