@@ -997,5 +997,39 @@
     "Main doctor passed after the runs. Expired 300-second Kiro readiness evidence is UNKNOWN, not a new authentication failure.",
     "The ordinary Main visual comparison used its current native Lightning canvas; its 1.06% result is retained as a diagnostic, not mixed with the explicitly white-canvas comparison."
   ],
-  "localArtifacts": ".pilot/measurements/2026-11-25-live-conversion (ignored; reference/generated PNGs and sanitized measurements only)"
+  "localArtifacts": "REMOVED_AFTER_TEST: temporary captures, private browser session and local benchmark measurements were deleted at the user's request. Sanitized historical metrics remain in this committed validation record.",
+  "cleanup": {
+    "status": "COMPLETED",
+    "verifiedAt": "2026-11-25T10:22:20.333Z",
+    "deletedJobs": 10,
+    "deletedAnalysisViews": 3,
+    "deletedResults": 3,
+    "deletedPromptInputTraces": 3,
+    "deletedAttemptRecords": 11,
+    "deletedPreviewAssetRecords": 73,
+    "deletedVisualComparisons": 3,
+    "deletedVisualReferences": 3,
+    "deletedVisualCaptureRecords": 9,
+    "deletedTestExclusiveObjects": 38,
+    "deletedTestExclusiveObjectBytes": 456631,
+    "sharedOrPreexistingObjectsPreserved": 59,
+    "removedLocalDirectories": [
+      {
+        "name": "private-live-pilot",
+        "files": 95,
+        "bytes": 20882373
+      },
+      {
+        "name": "local-benchmark-captures",
+        "files": 15,
+        "bytes": 298131
+      }
+    ],
+    "testSessionLogoutHttp": 204,
+    "testJobsAndResultsReturn404": true,
+    "figmaSourcesUnchanged": true,
+    "orgCatalogUnchanged": true,
+    "orgMetadataCreatedOrRemoved": 0,
+    "preserved": "Original Figma archives, shared artifacts, active releases, existing Org configuration, service credentials, append-only audit history and sanitized benchmark documentation."
+  }
 }
