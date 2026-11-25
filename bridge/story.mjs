@@ -18,7 +18,7 @@ const modulePaths = [
   'server/story-benchmark-fixtures.mjs',
 ];
 
-async function withStorySource({ uiRoot, sourcePath, sourceSha256, releaseId }, use) {
+async function withStorySource({ uiRoot, sourcePath, sourceSha256, releaseId, releaseRoot }, use) {
   const imports = await Promise.all(modulePaths.map((name) =>
     import(pathToFileURL(join(uiRoot, 'nextbss', name)).href)));
   const nova = Object.assign({}, ...imports);
@@ -28,7 +28,7 @@ async function withStorySource({ uiRoot, sourcePath, sourceSha256, releaseId }, 
   if (fixtures.source.sha256 !== sourceSha256) {
     throw new Error('The Story fixture belongs to a different Figma archive.');
   }
-  const design = await nova.readNextBssStandard({ releaseId });
+  const design = await nova.readNextBssStandard({ releaseId, releaseRoot });
   if (design.standard.version !== '1.9' || design.standard.releaseId !== releaseId) {
     throw new Error('The requested NextBSS v1.9 release could not be pinned.');
   }

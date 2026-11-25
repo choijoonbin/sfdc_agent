@@ -72,7 +72,7 @@ Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분�
 .venv/bin/sfdc-agent pilot --provider kiro
 ```
 
-비교 파일럿에는 Node, Chrome과 `SFDC_Ui`의 Node 의존성도 필요하다. 기본 입력은 형제 디렉터리 `SFDC_Ui`에 보관된 `AI 테스트용.fig`다. 다른 경로에 있는 UI 프로젝트는 `SFDC_UI_ROOT`로 지정한다. 실행은 `--target screen` 또는 `--target story`로 제한할 수 있다. CLI가 출력하는 작업 ID로 `.venv/bin/sfdc-agent resume <ID>`를 실행하면 완료된 단계를 재사용한다.
+비교 파일럿에는 Node, Chrome과 `SFDC_Ui`의 Node 의존성도 필요하다. 원본·Guide·Library 파일과 불변 릴리스 경로를 [파일럿 입력 안내](docs/local-pilot-inputs.md)에 따라 먼저 지정한다. UI의 과거 숨김 저장소를 기본 입력으로 사용하지 않는다. 다른 경로에 있는 UI 프로젝트는 `SFDC_UI_ROOT`로 지정한다. 실행은 `--target screen` 또는 `--target story`로 제한할 수 있다. CLI가 출력하는 작업 ID로 `.venv/bin/sfdc-agent resume <ID>`를 실행하면 완료된 단계를 재사용한다.
 
 Kiro 파일럿은 `KIRO_API_KEY`와 CLI headless 모드를 사용한다. OpenAI 연결은 `OPENAI_API_KEY`와 `OPENAI_MODEL`을 설정한 뒤 `--provider openai`로 명시적으로 선택한다. 새 공급자는 `ModelProvider.complete()` 계약으로 연결한다. 공급자 응답은 Python에서 구조를 검사하고, Story의 화면·액션·전이 근거는 기존 Node 검증기로 다시 확인한다.
 

@@ -8,12 +8,13 @@ const imported = (root, path) => import(pathToFileURL(join(root, path)).href);
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function pin(context) {
-  const { uiRoot, sourcePath } = context;
+  const { uiRoot, sourcePath, releaseRoot, sourcePaths } = context;
   const { readActiveRelease, verifyReleaseSources } = await imported(uiRoot, 'nextbss/engine/release-archive.mjs');
-  const release = await readActiveRelease();
+  const release = await readActiveRelease({ releaseRoot });
+  if (!release) throw new Error('The explicit pilot release archive has no active release.');
   const { releaseId, designVersion } = release.manifest;
   if (designVersion !== '1.9') throw new Error('The pilot requires an active NextBSS v1.9 release.');
-  await verifyReleaseSources(releaseId);
+  await verifyReleaseSources(releaseId, { releaseRoot, sourcePaths });
   const sourceSha256 = sha256(await readFile(sourcePath));
   const fixturePath = join(uiRoot, 'nextbss/server/story-benchmark-cases.json');
   const fixtureBytes = await readFile(fixturePath);

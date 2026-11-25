@@ -23,10 +23,10 @@ const modules = [
   'server/visual-mask-png.mjs',
 ];
 
-async function withScreen({ uiRoot, sourcePath, sourceSha256, releaseId }, use) {
+async function withScreen({ uiRoot, sourcePath, sourceSha256, releaseId, releaseRoot }, use) {
   const nova = Object.assign({}, ...await Promise.all(modules.map((file) =>
     import(pathToFileURL(join(uiRoot, 'nextbss', file)).href))));
-  const design = await nova.readNextBssStandard({ releaseId });
+  const design = await nova.readNextBssStandard({ releaseId, releaseRoot });
   if (design.standard.releaseId !== releaseId || design.standard.version !== '1.9') {
     throw new Error('The requested NextBSS v1.9 release could not be pinned.');
   }
