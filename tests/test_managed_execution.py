@@ -172,7 +172,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_kiro_requires_explicit_key_and_this_agents_local_origin(self):
         payload = {**EXECUTION, "engine": "KIRO"}
-        for environment in ({}, {"KIRO_API_KEY": "present", "SFDC_MANAGED_AGENT_ORIGIN": "http://127.0.0.1:8765"}):
+        for environment in ({}, {"KIRO_API_KEY": "present", "SFDC_MANAGED_AGENT_ORIGIN": "http://127.0.0.1:8766"}):
             with patch.dict(os.environ, environment):
                 status, reply, _ = await self.request(payload)
             self.assertEqual(status, 503)

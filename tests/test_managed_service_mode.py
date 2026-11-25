@@ -30,7 +30,7 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
         self.bundle = PromptBundle(releaseId='prompts-v1', sha256=template_digest(templates), templates=templates)
 
     async def request(self, method, path, payload=None, *, token=None, bearer=None, extra=()):
-        headers = [(b'host', b'127.0.0.1:8765'), (b'x-sfdc-agent', b'1')]
+        headers = [(b'host', b'127.0.0.1:8766'), (b'x-sfdc-agent', b'1')]
         if token:
             headers.append((b'x-sfdc-managed-prompt', token.encode()))
         if bearer:
@@ -48,7 +48,7 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
             messages.append(message)
         await app({'type': 'http', 'asgi': {'version': '3.0'}, 'http_version': '1.1', 'scheme': 'http',
                    'method': method, 'path': path, 'root_path': '', 'query_string': b'', 'headers': headers,
-                   'server': ('127.0.0.1', 8765), 'client': ('127.0.0.1', 40000)}, receive, send)
+                   'server': ('127.0.0.1', 8766), 'client': ('127.0.0.1', 40000)}, receive, send)
         body = b''.join(message.get('body', b'') for message in messages)
         return messages[0]['status'], json.loads(body) if body else None
 
@@ -163,12 +163,12 @@ class ManagedServiceBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 await send({'type': 'http.response.start', 'status': 204, 'headers': []})
                 await send({'type': 'http.response.body', 'body': b''})
             middleware = TrustedHostMiddleware(target, allowed_hosts=trusted_hosts())
-            for host, expected in ((b'agent.internal:8765', 204), (b'attacker.internal', 400)):
+            for host, expected in ((b'agent.internal:8766', 204), (b'attacker.internal', 400)):
                 output = []
                 async def send(message): output.append(message)
                 await middleware({'type': 'http', 'headers': [(b'host', host)]}, None, send)
                 self.assertEqual(output[0]['status'], expected)
-        for invalid in ('*', '*.internal', 'https://agent.internal', 'agent.internal:8765'):
+        for invalid in ('*', '*.internal', 'https://agent.internal', 'agent.internal:8766'):
             with patch.dict(os.environ, {'SFDC_AGENT_TRUSTED_HOSTS': invalid}), self.assertRaises(ValueError):
                 trusted_hosts()
 

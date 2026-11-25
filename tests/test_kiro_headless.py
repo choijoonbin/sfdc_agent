@@ -189,7 +189,7 @@ class HeadlessProcessTests(unittest.IsolatedAsyncioTestCase):
 
 def request(payload=None, *, story=False):
     purpose = b"story" if story else b"screen"
-    headers = [(b"host", b"127.0.0.1:8765"), (b"x-sfdc-agent", b"1"),
+    headers = [(b"host", b"127.0.0.1:8766"), (b"x-sfdc-agent", b"1"),
                (b"x-sfdc-kiro-purpose", purpose)]
     sent = False
 

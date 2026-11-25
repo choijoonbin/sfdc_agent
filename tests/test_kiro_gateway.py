@@ -42,7 +42,7 @@ class StubSession:
 
 class GatewayTests(unittest.IsolatedAsyncioTestCase):
     async def request(self, method, path, payload=None, *, trusted=True, extra_headers=(), disconnect=False, query=b''):
-        headers = [(b'host', b'127.0.0.1:8765')]
+        headers = [(b'host', b'127.0.0.1:8766')]
         if trusted:
             headers.append((b'x-sfdc-agent', b'1'))
         headers.extend(extra_headers)
@@ -66,7 +66,7 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         await app({
             'type': 'http', 'asgi': {'version': '3.0'}, 'http_version': '1.1',
             'scheme': 'http', 'method': method, 'path': path, 'root_path': '',
-            'query_string': query, 'headers': headers, 'server': ('127.0.0.1', 8765),
+            'query_string': query, 'headers': headers, 'server': ('127.0.0.1', 8766),
             'client': ('127.0.0.1', 41000),
         }, receive, send)
         body = b''.join(message.get('body', b'') for message in messages)

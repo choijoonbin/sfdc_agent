@@ -36,11 +36,11 @@ Agent 상태는 다음 주소에서 확인한다.
 curl -fsS http://127.0.0.1:8766/health
 ```
 
-### 독립 CLI API 서버
+### Agent만 단독 기동
 
-비교 파일럿과 API 디버깅에 사용하는 독립 서버는 `SFDC_Agent`에서 `serve` 명령으로 실행한다. 기본 주소는 `127.0.0.1:8765`다. Main의 관리형 Agent는 위 통합 시작 명령으로 실행한다.
+프론트는 `npm run dev`, Spring은 IntelliJ에서 실행하고, Agent는 이 저장소에서 아래 명령으로 실행한다. Agent 서버는 `127.0.0.1:8766` 하나를 사용한다.
 
-Screen, Story, 프롬프트 번역과 관리형 모델 작업에서 Kiro를 실행하려면 `KIRO_API_KEY` 환경 변수를 설정한다. 환경 변수가 없으면 저장소 루트의 Git 제외 파일 `.env.kiro.local`에서 `KIRO_API_KEY=...` 한 줄을 읽는다. 이 파일은 실행 사용자 소유의 일반 파일이어야 하며 권한은 `0600`으로 유지한다. 서버 환경에서는 시크릿 저장소로 환경 변수를 주입한다. Kiro의 공개 API Key 자동화 인터페이스는 CLI headless 모드이므로 `kiro-cli` 실행 파일은 필요하지만, 사용자 로그인·ACP·브라우저 승인은 사용하지 않는다.
+`serve`는 형제 `SFDC_BACK`의 기존 로컬 설정 로더를 통해 관리형 인증, 서비스 토큰, Figma 작업공간 범위, 원본·릴리스·Node 엔진 경로와 자격 증명 파일 참조를 통합 실행과 동일하게 읽는다. 설정을 Agent 쪽에 복제하지 않는다. Docker·Spring·UI를 시작하거나 DB를 초기화하지 않으며, Python 소스 변경은 자동 재로딩한다. 최초 통합 환경 준비가 완료된 로컬 설치에서 사용한다.
 
 ```sh
 .venv/bin/sfdc-agent serve
@@ -49,10 +49,12 @@ Screen, Story, 프롬프트 번역과 관리형 모델 작업에서 Kiro를 실�
 다른 터미널에서 서버 상태를 확인한다.
 
 ```sh
-curl -fsS http://127.0.0.1:8765/health
+curl -fsS http://127.0.0.1:8766/health
 ```
 
-기동하면 `status`는 `ready`, `screenKiroMode`와 `storyKiroMode`는 `headless`로 표시된다. 포트가 이미 사용 중이면 먼저 이 명령으로 기존 서버 상태를 확인한다. Key 환경 변수를 바꿔야 할 때는 기존 Agent 터미널에서 `Ctrl+C`로 종료하고 다시 기동한다.
+기동하면 `status: ready`, `mode: managed`, `screenKiroMode: headless`, `storyKiroMode: headless`가 표시된다. 서버를 시작하지 않고 설정만 확인하려면 `.venv/bin/sfdc-agent serve --check`를 실행한다. 통합 실행기로 시작한 Agent가 이미 있다면 `python3 ../SFDC_BACK/scripts/live-development.py stop-agent`로 그 Agent만 종료한 뒤 단독 실행한다. 직접 실행한 Agent는 해당 터미널의 `Ctrl+C`로 종료한다. 포트 사용 중에는 다른 포트로 우회하지 않고 기동을 거부한다.
+
+서버 배포는 기존 서비스 환경 변수와 `uvicorn sfdc_agent.api:app --host 127.0.0.1 --port 8766`을 사용한다. 서비스 토큰과 관리형 모드 등 필수 설정은 배포 환경에서 주입한다. 로컬 `serve` 명령은 기존 로컬 설치 전용이다.
 
 ### Screen·Story 원본 처리
 
@@ -74,7 +76,7 @@ Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분�
 
 Kiro 파일럿은 `KIRO_API_KEY`와 CLI headless 모드를 사용한다. OpenAI 연결은 `OPENAI_API_KEY`와 `OPENAI_MODEL`을 설정한 뒤 `--provider openai`로 명시적으로 선택한다. 새 공급자는 `ModelProvider.complete()` 계약으로 연결한다. 공급자 응답은 Python에서 구조를 검사하고, Story의 화면·액션·전이 근거는 기존 Node 검증기로 다시 확인한다.
 
-로컬 API로 비교 작업을 제출할 때는 Agent 서버를 기동한 뒤 다른 터미널에서 `.venv/bin/sfdc-agent worker`를 실행한다. `POST /runs`로 작업을 등록하고 `GET /runs/{id}`와 `GET /runs/{id}/comparison`으로 진행 상태와 결과를 확인한다.
+비교 파일럿은 `pilot`과 `resume` CLI로 실행한다. 현재 관리형 서버는 파일럿 `/runs` API를 제공하지 않으며, 제품 변환 작업은 Spring에서 제출하고 조회한다.
 
 ## Azure OpenAI 준비
 
@@ -139,7 +141,7 @@ Kiro 세션은 현재 실행의 `X-SFDC-Managed-Prompt` 토큰과 같은 실행�
 
 활성 프롬프트의 한글 참고 번역은 서비스 인증 전용 `POST /internal/v1/prompts/translations`에서 생성한다. 영문 원문과 릴리스 해시는 변경하지 않으며 `{{변수}}`, `@@section`, JSON·코드·URL·도구 식별자는 모델 호출 전에 보호하고 응답 후 무결성을 다시 검사한다. 기본 공급자는 로컬 Kiro이고 `SFDC_AGENT_TRANSLATION_PROVIDER=kiro|openai|azure`, `SFDC_AGENT_TRANSLATION_MODEL`, `SFDC_AGENT_TRANSLATION_TIMEOUT_SECONDS`로 별도 지정할 수 있다. 번역 캐시를 식별하는 `SFDC_AGENT_TRANSLATION_PROFILE_VERSION`과 `SFDC_AGENT_TRANSLATION_GLOSSARY_VERSION`은 Spring의 `SFDC_PROMPT_TRANSLATION_PROFILE_VERSION`, `SFDC_PROMPT_TRANSLATION_GLOSSARY_VERSION`과 각각 같은 값을 사용하고, 번역 규칙이나 용어집 변경 시 두 서비스를 한 배포에서 함께 올린다. Spring이 번역 상태와 본문을 보관하며 Agent는 원문이나 번역문을 로컬에 저장하지 않는다.
 
-기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. Main 통합 환경은 `SFDC_AGENT_MANAGED_ONLY=1`을 사용하며, 독립 CLI 파일럿 API는 기본 비관리형 모드를 사용한다.
+기본 허용 Host는 `localhost`, `127.0.0.1`이다. 사설 네트워크의 이름이 필요하면 시작 전에 `SFDC_AGENT_TRUSTED_HOSTS=agent.internal,agent.service.local`처럼 정확한 호스트 이름을 추가한다. 각 설정값은 정확한 DNS 호스트 이름 또는 IPv4 주소를 사용한다. Main 통합 환경과 로컬 `serve`는 모두 `SFDC_AGENT_MANAGED_ONLY=1`을 사용한다. 파일럿 CLI는 서버 없이 실행한다.
 
 ## 관리형 로컬/S3 저장소
 

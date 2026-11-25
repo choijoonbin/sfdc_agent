@@ -30,7 +30,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch.dict(os.environ, {
             'SFDC_AGENT_MANAGED_ONLY': '1',
             'SFDC_AGENT_EXECUTION_TOKEN': 'progress-service-fixture',
-            'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:8765',
+            'SFDC_MANAGED_AGENT_ORIGIN': 'http://127.0.0.1:8766',
             'KIRO_API_KEY': KEY,
         }, clear=True))
         templates = load_baseline_templates()
@@ -121,7 +121,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
                                 self.assertEqual(stale.exception.status_code, 409)
 
     async def test_all_kiro_execution_requires_the_key_only_configuration(self):
-        request = Request({'type': 'http', 'headers': [], 'server': ('127.0.0.1', 8765)})
+        request = Request({'type': 'http', 'headers': [], 'server': ('127.0.0.1', 8766)})
         self.assertEqual(execution_mode(self.payload), 'headless')
         with patch('sfdc_agent.kiro_headless.read_key', return_value=KEY):
             _check_kiro_configuration(request, self.payload)

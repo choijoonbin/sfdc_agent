@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import json
 import logging
+import os
 import re
 import sqlite3
 import sys
@@ -86,7 +87,8 @@ def main() -> int:
     work.add_argument("--once", action="store_true")
     resume = sub.add_parser("resume")
     resume.add_argument("id", type=valid_id)
-    sub.add_parser("serve")
+    serve = sub.add_parser("serve", help="Run the Spring-managed local Agent on port 8766.")
+    serve.add_argument("--check", action="store_true", help="Check existing local settings without starting a server.")
     sub.add_parser("check-azure", help="Validate local Azure configuration without contacting the gateway.")
     prompt = sub.add_parser("evaluate-prompt", help="Run a versioned text prompt with a selected model provider.")
     prompt.add_argument("operation")
@@ -126,9 +128,14 @@ def main() -> int:
         print("Azure configuration is ready. No network request was made.")
         return 0
     if args.command == "serve":
-        import uvicorn
-        uvicorn.run("sfdc_agent.api:app", host="127.0.0.1", port=8765, timeout_graceful_shutdown=8)
-        return 0
+        launcher = Path(__file__).resolve().parents[3] / "SFDC_BACK/scripts/live-development.py"
+        if not launcher.is_file():
+            print("Local serve requires the sibling SFDC_BACK checkout and its existing local configuration.", file=sys.stderr)
+            return 1
+        command = [sys.executable, str(launcher), "run-agent"]
+        if args.check:
+            command.append("--check")
+        os.execv(sys.executable, command)
     store = store_for_project()
     if args.command == "worker":
         return worker(store, once=args.once)

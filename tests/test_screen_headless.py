@@ -25,7 +25,7 @@ TEST_KEY = "ksk_screen_synthetic_fixture"
 
 
 def request(body=None, purpose=None):
-    headers = [(b"host", b"127.0.0.1:8765"), (b"x-sfdc-agent", b"1")]
+    headers = [(b"host", b"127.0.0.1:8766"), (b"x-sfdc-agent", b"1")]
     if purpose is not None:
         headers.append((b"x-sfdc-kiro-purpose", purpose.encode()))
     sent = False
