@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import re
 from threading import RLock
 from time import monotonic, time
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
@@ -29,6 +29,7 @@ class ExecutionScope(BaseModel):
     model_config = ConfigDict(extra='forbid')
     tenantId: UUID
     workspaceId: UUID
+    actorUserId: UUID | None = None
 
 
 class Cancellation(BaseModel):
@@ -99,6 +100,8 @@ class ExecutionContext:
     closed: bool = False
     provider_error: str | None = None
     view: dict = field(default_factory=lambda: {'status': 'running', 'phase': 'connecting'})
+    actor_user_id: str | None = None
+    node_id: str | None = None
 
     def alive(self):
         return not self.closed and self.expires > monotonic() and (not self.token or managed_context_alive(self.token))
@@ -139,14 +142,19 @@ async def execution_progress(payload, token, timeout):
     import json
     source = urlsplit(payload.sourceReference)
     match = re.match(r'^/(?:design|file)/([A-Za-z0-9]{1,160})(?:/|$)', source.path)
-    remote = bool(source.scheme == 'https' and source.netloc in {'figma.com', 'www.figma.com'}
-                  and match and payload.archive is None)
+    remote = bool(source.scheme == 'https' and source.hostname in {'figma.com', 'www.figma.com'} and source.port in {None, 443}
+                  and match and (payload.archive is None or getattr(payload, 'sourceAcquisition', None) == 'REST_FIRST'))
     file_key = match[1] if remote else None
-    if remote:
+    if remote and getattr(payload, 'sourceAcquisition', None) != 'MCP_ONLY':
         require_figma_scope(payload.executionScope)
     context = ExecutionContext(str(payload.jobId), payload.attempt, token, payload.kind.lower(),
                                execution_mode(payload) if payload.engine == 'KIRO' else 'nova',
                                file_key, remote, monotonic() + timeout, asyncio.current_task(), _scope(payload))
+    actor = getattr(payload.executionScope, 'actorUserId', None)
+    context.actor_user_id = str(actor) if actor else None
+    node = parse_qs(source.query).get('node-id', [None])[0]
+    if isinstance(node, str):
+        context.node_id = node.replace('-', ':')
     fingerprint = sha256(json.dumps(payload.model_dump(mode='json', exclude_none=True), sort_keys=True,
                                     ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
     key = (context.job_id, context.attempt)

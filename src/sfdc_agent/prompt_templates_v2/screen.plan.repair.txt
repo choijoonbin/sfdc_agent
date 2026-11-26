@@ -1,0 +1,11 @@
+# Objective
+
+Correct the screen plan.
+
+## Output contract
+
+- Return the complete corrected JSON.
+
+## Validation error data
+
+{{diagnostic}}

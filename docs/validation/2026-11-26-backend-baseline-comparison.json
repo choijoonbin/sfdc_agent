@@ -1,0 +1,403 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-26",
+  "timezone": "Asia/Seoul",
+  "baselineCommit": "365614e5f986565e5047083bff839c8d45a0daed",
+  "currentHeadAtValidation": "06cf5775886c629515125f8afbc280ba336ce0a7",
+  "execution": "Clean git archive; no .env or private credentials copied; isolated Testcontainers PostgreSQL; targeted classes only",
+  "classes": {
+    "io.github.choijoonbin.sfdc.back.home.HomeApiIntegrationTest": {
+      "baseline": {
+        "tests": 17,
+        "failures": 2,
+        "errors": 0,
+        "cases": [
+          {
+            "test": "actualImageStagePublishResetAndRestoreKeepHistoricalReferencesAndCheckCurrentPublishedAccess",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: 1L\n but was: 2L"
+          },
+          {
+            "test": "realReadBootstrapSaveReplayAndConflictAreAtomicAndUseCurrentScopedMetadata",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: 2L\n but was: 3L"
+          }
+        ],
+        "signatureSha256": "f1b1fd176548783aaf546ad4883736c93fa1ca762cd8bda80efdabcd87496c09"
+      },
+      "current": {
+        "tests": 17,
+        "failures": 2,
+        "errors": 0,
+        "cases": [
+          {
+            "test": "actualImageStagePublishResetAndRestoreKeepHistoricalReferencesAndCheckCurrentPublishedAccess",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: 1L\n but was: 2L"
+          },
+          {
+            "test": "realReadBootstrapSaveReplayAndConflictAreAtomicAndUseCurrentScopedMetadata",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: 2L\n but was: 3L"
+          }
+        ],
+        "signatureSha256": "f1b1fd176548783aaf546ad4883736c93fa1ca762cd8bda80efdabcd87496c09"
+      },
+      "sameFailureSignature": true
+    },
+    "io.github.choijoonbin.sfdc.back.home.personal.HomePersonalIntegrationTest": {
+      "baseline": {
+        "tests": 10,
+        "failures": 1,
+        "errors": 1,
+        "cases": [
+          {
+            "test": "resetDeletesAllChildrenAndHistoryRestoreRebuildsThemWithFreshVersions",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting empty but was: {\"active-jobs\"=WidgetConfiguration[schemaVersion=1, values={}], \"org-operations\"=WidgetConfiguration[schemaVersion=1, values={}], \"recent-results\"=WidgetConfiguration[schemaVersion=1, values={}], \"support-links\"=WidgetConfiguration[schemaVersion=1, values={}]}"
+          },
+          {
+            "test": "sourcePatchDissolvesFoldersAndRechecksEntitledPinsAndMoveIndexes",
+            "kind": "error",
+            "type": "java.lang.NullPointerException",
+            "message": "Cannot invoke \"java.util.Collection.toArray()\" because \"c\" is null"
+          }
+        ],
+        "signatureSha256": "57bf671f307831423d6dc4e362bf37bb10641f4a9bc20a6cb74489f1ed2faa40"
+      },
+      "current": {
+        "tests": 10,
+        "failures": 1,
+        "errors": 1,
+        "cases": [
+          {
+            "test": "resetDeletesAllChildrenAndHistoryRestoreRebuildsThemWithFreshVersions",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting empty but was: {\"active-jobs\"=WidgetConfiguration[schemaVersion=1, values={}], \"org-operations\"=WidgetConfiguration[schemaVersion=1, values={}], \"recent-results\"=WidgetConfiguration[schemaVersion=1, values={}], \"support-links\"=WidgetConfiguration[schemaVersion=1, values={}]}"
+          },
+          {
+            "test": "sourcePatchDissolvesFoldersAndRechecksEntitledPinsAndMoveIndexes",
+            "kind": "error",
+            "type": "java.lang.NullPointerException",
+            "message": "Cannot invoke \"java.util.Collection.toArray()\" because \"c\" is null"
+          }
+        ],
+        "signatureSha256": "57bf671f307831423d6dc4e362bf37bb10641f4a9bc20a6cb74489f1ed2faa40"
+      },
+      "sameFailureSignature": true
+    },
+    "io.github.choijoonbin.sfdc.back.salesforce.lifecycle.OrgLifecycleIntegrationTest": {
+      "baseline": {
+        "tests": 26,
+        "failures": 14,
+        "errors": 0,
+        "cases": [
+          {
+            "test": "appOnlyUnpublishPreservesLwcAndFalseHasLegacyIdempotency",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "automaticApprovalRechecksAuthorityAtThePrivateBeforeSubmitHandshake",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "combinedUnpublishRestoresThePinnedParentWithoutApproval",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "failedChainCannotRollbackAfterAnotherPublicationWasCreated",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "failedPageSelectionCanBeRefreshedWhileUncertainWritesKeepTheirReservation",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "homeSummaryCountsAllThreeCanonicalSourcesBeyondTheCardLimitAndExcludesIneligibleOrgRows",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "homeWorkScreensMergeAllThreeOwnersWithoutDuplicateResultsAndPendingSummaryExcludesTerminalHistory",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "observesAnAcceptedResponseLostReceiptWithoutResubmissionAndRejectsRevocationBeforeActualWrite",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "optionalApprovalAutomaticallyRunsApplyAndPublishWithPinnedPolicyVersions",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "pageTabConnectionsPersistTheirPlacementAndDetachWithoutOwningThePage",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "qualityAcknowledgementIsTargetBoundPlanBoundSeparatelyApprovedAndFreshAtExecution",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "reconcileCommitsAcceptedFactsAfterAppVersionAndRequesterPermissionChangedWithoutSubmittingAgain",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "separatelyApprovesAppliesPublishesAndDetachesPreviewBeforeOwnedRemovalWithoutBrowser",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "unknownWriteKeepsThePhysicalOrgLaneAcrossWorkspaceAliasesWithoutNewSubmission",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          }
+        ],
+        "signatureSha256": "c5f5afe06d05c8d0ddeabbd86fb470ebf5082edc2cf7b88098c48592561718be"
+      },
+      "current": {
+        "tests": 26,
+        "failures": 14,
+        "errors": 0,
+        "cases": [
+          {
+            "test": "appOnlyUnpublishPreservesLwcAndFalseHasLegacyIdempotency",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "automaticApprovalRechecksAuthorityAtThePrivateBeforeSubmitHandshake",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "combinedUnpublishRestoresThePinnedParentWithoutApproval",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "failedChainCannotRollbackAfterAnotherPublicationWasCreated",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "failedPageSelectionCanBeRefreshedWhileUncertainWritesKeepTheirReservation",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "homeSummaryCountsAllThreeCanonicalSourcesBeyondTheCardLimitAndExcludesIneligibleOrgRows",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "homeWorkScreensMergeAllThreeOwnersWithoutDuplicateResultsAndPendingSummaryExcludesTerminalHistory",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "observesAnAcceptedResponseLostReceiptWithoutResubmissionAndRejectsRevocationBeforeActualWrite",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "optionalApprovalAutomaticallyRunsApplyAndPublishWithPinnedPolicyVersions",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "pageTabConnectionsPersistTheirPlacementAndDetachWithoutOwningThePage",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "qualityAcknowledgementIsTargetBoundPlanBoundSeparatelyApprovedAndFreshAtExecution",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "reconcileCommitsAcceptedFactsAfterAppVersionAndRequesterPermissionChangedWithoutSubmittingAgain",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "separatelyApprovesAppliesPublishesAndDetachesPreviewBeforeOwnedRemovalWithoutBrowser",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          },
+          {
+            "test": "unknownWriteKeepsThePhysicalOrgLaneAcrossWorkspaceAliasesWithoutNewSubmission",
+            "kind": "failure",
+            "type": "org.opentest4j.AssertionFailedError",
+            "message": "\nexpected: <UUID>\n but was: <UUID>"
+          }
+        ],
+        "signatureSha256": "c5f5afe06d05c8d0ddeabbd86fb470ebf5082edc2cf7b88098c48592561718be"
+      },
+      "sameFailureSignature": true
+    },
+    "io.github.choijoonbin.sfdc.back.conversion.HomeWidgetEvidenceReadFacadeTest": {
+      "baseline": {
+        "tests": 3,
+        "failures": 2,
+        "errors": 1,
+        "cases": [
+          {
+            "test": "rejectsCorruptBytesEvenWhenTheRegistryDigestAndSubmittedHashAgree",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting actual throwable to be an instance of:\n  java.lang.IllegalStateException\nbut was:\n  org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]\n at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:134)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:111)\n ...(97 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)"
+          },
+          {
+            "test": "rejectsCrossScopeRevokedAndArchivedResourcesWithoutTrustingTheReference",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting actual throwable to be an instance of:\n  org.springframework.web.server.ResponseStatusException\nbut was:\n  org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]\n at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:134)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:111)\n ...(97 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)"
+          },
+          {
+            "test": "verifiesAuthoritativeMetadataAndRealBytesIncludingDigestlessRecovery",
+            "kind": "error",
+            "type": "org.springframework.jdbc.BadSqlGrammarException",
+            "message": "PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]"
+          }
+        ],
+        "signatureSha256": "832c4236cd147d564aa4a0cd99a2beb751530db30db9fa734a6e9a081cf9bda8"
+      },
+      "current": {
+        "tests": 3,
+        "failures": 2,
+        "errors": 1,
+        "cases": [
+          {
+            "test": "rejectsCorruptBytesEvenWhenTheRegistryDigestAndSubmittedHashAgree",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting actual throwable to be an instance of:\n  java.lang.IllegalStateException\nbut was:\n  org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]\n at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:134)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:111)\n ...(97 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)"
+          },
+          {
+            "test": "rejectsCrossScopeRevokedAndArchivedResourcesWithoutTrustingTheReference",
+            "kind": "failure",
+            "type": "java.lang.AssertionError",
+            "message": "\nExpecting actual throwable to be an instance of:\n  org.springframework.web.server.ResponseStatusException\nbut was:\n  org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]\n at org.springframework.jdbc.support.SQLStateSQLExceptionTranslator.doTranslate(SQLStateSQLExceptionTranslator.java:134)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)\n at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:111)\n ...(97 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)"
+          },
+          {
+            "test": "verifiesAuthoritativeMetadataAndRealBytesIncludingDigestlessRecovery",
+            "kind": "error",
+            "type": "org.springframework.jdbc.BadSqlGrammarException",
+            "message": "PreparedStatementCallback; bad SQL grammar [SELECT result.id, result.legacy_id, result.kind, result.title, result.created_at, result.version,\nCASE WHEN derived.id IS NOT NULL THEN 'DERIVED' WHEN generation.engine IS NULL THEN 'LEGACY' ELSE 'GENERATED' END AS origin,\nCASE WHEN derived.id IS NOT NULL THEN 'NOVA' ELSE COALESCE(generation.engine, 'UNKNOWN') END AS engine,\nEXISTS (\n    SELECT 1 FROM salesforce.deployment AS deployment\n    WHERE (deployment.tenant_id, deployment.workspace_id, deployment.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND (deployment.status NOT IN ('FAILED', 'ROLLED_BACK', 'WITHDRAWN', 'REJECTED')\n    OR (deployment.status = 'FAILED' AND deployment.receipt IS NOT NULL))\n\n)\n AS deployment_record_protected,\nEXISTS (\n    SELECT 1 FROM local_apply.application AS application\n    WHERE (application.tenant_id, application.workspace_id, application.result_id)\n        = (result.tenant_id, result.workspace_id, result.id)\n      AND application.status <> 'ROLLED_BACK'\n)\n AS local_application_protected,\nsalesforce.org_result_archive_protected(result.tenant_id,result.workspace_id,result.id) AS org_application_protected\n FROM conversion.result AS result\nLEFT JOIN LATERAL (\n    SELECT job.engine\n    FROM execution.job AS job\n    WHERE (job.tenant_id, job.workspace_id, job.result_id) = (result.tenant_id, result.workspace_id, result.id)\n      AND job.operation = 'GENERATE' AND job.status = 'SUCCEEDED'\n    ORDER BY job.created_at DESC, job.id DESC LIMIT 1\n) AS generation ON true\nLEFT JOIN conversion.source_revision derived ON (derived.tenant_id,derived.workspace_id,derived.candidate_result_id)=\n    (result.tenant_id,result.workspace_id,result.id) AND derived.operation='SAME_SOURCE_RUNTIME_ADJUSTMENT' AND derived.status='READY'\n\nWHERE result.tenant_id = ? AND result.workspace_id = ? AND result.id = ?\n  AND result.archived_at IS NULL\n]"
+          }
+        ],
+        "signatureSha256": "832c4236cd147d564aa4a0cd99a2beb751530db30db9fa734a6e9a081cf9bda8"
+      },
+      "sameFailureSignature": true,
+      "baselineCommit": "365614e5f986565e5047083bff839c8d45a0daed",
+      "currentHeadAtValidation": "06cf5775886c629515125f8afbc280ba336ce0a7"
+    }
+  },
+  "sourceFiles": {
+    "pom.xml": {
+      "baselineSha256": "ab9e4f8902755e695a5346040e9f0b7b9814d5d12cbc5f81f468ac5f03289cf4",
+      "currentSha256": "ab9e4f8902755e695a5346040e9f0b7b9814d5d12cbc5f81f468ac5f03289cf4",
+      "equal": true
+    },
+    "src/test/java/io/github/choijoonbin/sfdc/back/home/HomeApiIntegrationTest.java": {
+      "baselineSha256": "994e5560e4019084dd48a1f409ced7cbaaa9b3ad63b93a077d81c7f2ee624246",
+      "currentSha256": "994e5560e4019084dd48a1f409ced7cbaaa9b3ad63b93a077d81c7f2ee624246",
+      "equal": true
+    },
+    "src/test/java/io/github/choijoonbin/sfdc/back/home/personal/HomePersonalIntegrationTest.java": {
+      "baselineSha256": "b7e4ef6c191d7662e0c18b58dccd87a9548cf557724a4220d38b01d765dc576a",
+      "currentSha256": "b7e4ef6c191d7662e0c18b58dccd87a9548cf557724a4220d38b01d765dc576a",
+      "equal": true
+    },
+    "src/test/java/io/github/choijoonbin/sfdc/back/salesforce/lifecycle/OrgLifecycleIntegrationTest.java": {
+      "baselineSha256": "578275e813f91607305000938574a0744c29f1b78a5c76c1d5182d7b282d96b4",
+      "currentSha256": "578275e813f91607305000938574a0744c29f1b78a5c76c1d5182d7b282d96b4",
+      "equal": true
+    },
+    "src/test/java/io/github/choijoonbin/sfdc/back/conversion/HomeWidgetEvidenceReadFacadeTest.java": {
+      "baselineSha256": "791bd785d5abd2f7ad3a99ff774e45b3ef92cb107d1aa5eecd3cbd2179e6cd4e",
+      "currentSha256": "791bd785d5abd2f7ad3a99ff774e45b3ef92cb107d1aa5eecd3cbd2179e6cd4e",
+      "equal": true
+    },
+    "src/main/java/io/github/choijoonbin/sfdc/back/conversion/HomeWidgetEvidenceReadFacade.java": {
+      "baselineSha256": "6134f7762b5ed5fb8f3db68c087f809bd7bb90b1836f71d6302e2b82547dd7f4",
+      "currentSha256": "6134f7762b5ed5fb8f3db68c087f809bd7bb90b1836f71d6302e2b82547dd7f4",
+      "equal": true
+    },
+    "src/main/java/io/github/choijoonbin/sfdc/back/conversion/ImportedResultService.java": {
+      "baselineSha256": "9e7e08a32bb498175c7068cc8b73025abc608c1ff3b3d3a3d1a17326151d2106",
+      "currentSha256": "9e7e08a32bb498175c7068cc8b73025abc608c1ff3b3d3a3d1a17326151d2106",
+      "equal": true
+    }
+  },
+  "productionTreeDigests": {
+    "home": {
+      "baselineSha256": "bcb3ca3af321f29e347b8cac291ff0791ef0cdec8a0f8c8a5aba3cc8a88aec3c",
+      "currentSha256": "bcb3ca3af321f29e347b8cac291ff0791ef0cdec8a0f8c8a5aba3cc8a88aec3c",
+      "equal": true
+    },
+    "salesforce/lifecycle": {
+      "baselineSha256": "57dd7de750f35e25208e6b87f9e097f6e2b2a1899c1e64a5a8dd6d3921fbc10f",
+      "currentSha256": "57dd7de750f35e25208e6b87f9e097f6e2b2a1899c1e64a5a8dd6d3921fbc10f",
+      "equal": true
+    }
+  },
+  "conclusion": "All 4 targeted classes reproduce identical pre-existing failures at baseline365614e; no full-baseline expansion needed.",
+  "runtime": {
+    "java.version": "23.0.2",
+    "java.runtime.version": "23.0.2+7-FR",
+    "os.name": "Mac OS X",
+    "os.arch": "aarch64"
+  },
+  "cleanup": {
+    "privateGitArchiveAndLogsRemoved": true,
+    "ownLifecycleFixtureRemoved": true,
+    "testcontainersRunningAfterCompletion": 0,
+    "mainApplicationDataChanged": false,
+    "additionalWidgetBaselineArchiveAndLogsRemoved": true
+  }
+}

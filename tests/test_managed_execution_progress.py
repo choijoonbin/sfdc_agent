@@ -133,7 +133,7 @@ class ManagedExecutionProgressTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(missing.exception.status_code, 502)
         self.assertEqual(missing.exception.detail, 'KIRO_KEY_INVALID')
 
-        archive = {**self.payload.executionScope.model_dump(mode='json'),
+        archive = {**self.payload.executionScope.model_dump(mode='json', exclude_none=True),
                    'fileKey': 'ApprovedFile', 'sha256': 'b' * 64}
         local = ExecutionRequest.model_validate({**self.payload.model_dump(mode='json'), 'archive': archive})
         self.assertEqual(execution_mode(local), 'headless')

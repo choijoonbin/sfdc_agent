@@ -90,6 +90,8 @@ def main() -> int:
     serve = sub.add_parser("serve", help="Run the Spring-managed local Agent on port 8766.")
     serve.add_argument("--check", action="store_true", help="Check existing local settings without starting a server.")
     sub.add_parser("check-azure", help="Validate local Azure configuration without contacting the gateway.")
+    from .figma_mcp_cli import add_parser as add_figma_mcp_parser
+    add_figma_mcp_parser(sub)
     prompt = sub.add_parser("evaluate-prompt", help="Run a versioned text prompt with a selected model provider.")
     prompt.add_argument("operation")
     prompt.add_argument("fields", type=Path, help="Path to JSON operation fields from a test fixture.")
@@ -98,6 +100,9 @@ def main() -> int:
     prompt.add_argument("--model-timeout", type=int, default=120)
     prompt.add_argument("--release")
     args = parser.parse_args()
+    if args.command == "figma-mcp":
+        from .figma_mcp_cli import main as figma_mcp_main
+        return figma_mcp_main(args)
     if args.command == "evaluate-prompt":
         from .prompt_provider_eval import evaluate_prompt_provider
 

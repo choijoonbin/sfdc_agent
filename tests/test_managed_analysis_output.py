@@ -53,7 +53,8 @@ class ManagedAnalysisOutputTests(unittest.TestCase):
         self.result = SimpleNamespace(checkpoint={'id': self.analysis_id, 'digest': digest(self.raw), 'bytes': base64.b64encode(self.raw).decode()},
                                       analysisView=SimpleNamespace(manifestSha256=''))
         self.manifest = {'protocolVersion': 1, 'serializerVersion': 1, 'jobId': str(self.payload.jobId), 'attempt': self.payload.attempt,
-            **self.payload.executionScope.model_dump(mode='json'), 'kind': 'STORY', 'engine': 'NOVA',
+            'tenantId': str(self.payload.executionScope.tenantId), 'workspaceId': str(self.payload.executionScope.workspaceId),
+            'kind': 'STORY', 'engine': 'NOVA',
             'producerRuntimeSha256': 'b' * 64, 'analysisId': self.analysis_id, 'checkpointSha256': digest(self.raw),
             'source': {'fileKey': 'ApprovedFile', 'version': 'v123'},
             'view': {}, 'assets': [], 'unavailable': [{'nodeId': '1:2', 'code': 'SOURCE_PREVIEW_TOO_LARGE'},

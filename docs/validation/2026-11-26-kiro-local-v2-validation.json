@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "validatedOn": "2026-11-26",
+  "classification": "ACTUAL_MAIN_AGENT_LLM_RUN_PLUS_REPROCESSED_RETAINED_LWC",
+  "scope": {
+    "surface": "Screen",
+    "sourceAcquisition": "EXPLICIT_LOCAL_FILE",
+    "backRowsCreated": 0,
+    "orgMutations": false,
+    "figmaWrites": false,
+    "newMcpCalls": 0
+  },
+  "pins": {
+    "archiveSha256": "a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76",
+    "activePointerSha256": "187740b5c2227b4b6c8c6cfbf9a6962502c4cfd8808c83bc7d0dcc7f4d66ddac",
+    "releaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "releaseManifestSha256": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09",
+    "authoredSceneSha256": "b6c0fd344cdedb38388624eb6c54042aafaabe58354c8ea47d68877c964d9311",
+    "sourcePngSha256": "9c7e39d459dcae1dc69da6aaf18913767ee38f325d9708208fbdcb54c4f1dba0",
+    "componentLibrary": {
+      "schemaVersion": 1,
+      "family": "NOVA_PUBLIC",
+      "libraryVersion": "1.0.0",
+      "descriptorSha256": "167a03a03d486dce8cf6fac731ab06308a3113d679b3ce1127fe17cbd172c28d",
+      "contractSha256": "f8cd2ffff377f94c18a57d1ddebc36f2b2a7080fa977d6df02302e883c1038b2",
+      "moduleManifestSha256": "f7c61c9011aa0e4d48b77dcdb66993304ced1709f3736af8ca64d28892078916",
+      "tokenCssSha256": "01211736287d3c2717e01f7640c49df02037365faab80dd129c0dc533a40d956"
+    },
+    "prompt": {
+      "releaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "sha256": "805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "version": "v2",
+      "templateCount": 13
+    },
+    "mainRuntimeSourceSha256": "d2aaf21019cde61d8c9dfdd4e353dc25df45eb29e314417dfbaf1b89476dfc90",
+    "mainRuntimeProductionFilesCompared": 226,
+    "postprocessingProductionFilesSha256": {
+      "nextbss/engine/library-components.mjs": "313a84269aa44abbcd2be8157a05b48c2a95ccbc8d2155ae7811dd9caec1cf50",
+      "nextbss/engine/kiro-source-snapshot.mjs": "883366656b958356d74a8335b4637c02116f99c2c8430a36017bad155fe72d77",
+      "nextbss/server/kiro-screen-context.mjs": "c576c08f8cf08426602464439ab3d06afbe5520ec50315ce29a96c4889ee48aa",
+      "nextbss/server/kiro-button-geometry.mjs": "959b16700fc14160224bb461c98d2437fe345c0bc54b7c9a1a86e0b89d9bc2c3"
+    },
+    "promptSource": "Candidate packaged-v2, explicitly pinned for isolated validation; not represented as an active BACK prompt release.",
+    "mainRuntimeAfterSourceSha256": "d2aaf21019cde61d8c9dfdd4e353dc25df45eb29e314417dfbaf1b89476dfc90",
+    "mainRuntimeBeforeAfterSame": true
+  },
+  "actualMainRun": {
+    "provider": "kiro",
+    "transport": "installed kiro-cli headless",
+    "reportedModelVersion": "not-reported-by-transport",
+    "operations": [
+      "screen.review-plan",
+      "screen.generate",
+      "screen.repair"
+    ],
+    "analyzeStatus": "REVIEW_REQUIRED",
+    "generateTransportStatus": "COMPLETED",
+    "resultStatus": "review-required",
+    "canApply": false,
+    "checkpointId": "8e5997db-ddc9-4369-b1df-35bf10591aa1",
+    "serializedCheckpointSha256": "5d2b46e9532d47ba6f16092ec47fe1db24f8ca0697ea596c4bb773f01e9d9db1",
+    "checkpointIdentity": {
+      "analysisDigest": "67697674caceb8ba5109e9cfc7dd87736d3df0f72d8e8be027ec894e0fdeab0e",
+      "generationAnalysisDigest": "67697674caceb8ba5109e9cfc7dd87736d3df0f72d8e8be027ec894e0fdeab0e",
+      "sameReviewedCheckpointUsed": true
+    },
+    "analysisReviewIssueCount": 9,
+    "repairHistory": [
+      {
+        "attempt": 1,
+        "outcome": "regression-or-no-improvement",
+        "reason": "allBlockers-regressed",
+        "draftSha256": "6305b74934aab21021637e59011cfa2583dfb39facceab303f740c34092c0259"
+      }
+    ],
+    "compileAndNativeControls": "passed",
+    "nativeControls": {
+      "status": "passed",
+      "scope": "source-declared-native-controls-and-local-events",
+      "coverage": {
+        "expected": 7,
+        "matched": 7,
+        "failed": 0,
+        "unavailable": 0,
+        "unsupported": 0,
+        "truncated": false
+      },
+      "checkCount": 20,
+      "checksSha256": "870f3f66e37c0d6a694b2119f8614a4ca8753d327023bc905bdf66d71ce481b0"
+    },
+    "timingsMs": {
+      "analyze": 45054.58,
+      "generate": 162271.55,
+      "total": 217738.0
+    },
+    "providerTimingsMs": {
+      "review-plan": {
+        "workspace": 156,
+        "authentication": 4010,
+        "firstStream": 2274,
+        "firstContent": 12314,
+        "process": 22497,
+        "parse": 1,
+        "cleanup": 383,
+        "total": 27048
+      },
+      "generate": {
+        "workspace": 1,
+        "authentication": 3151,
+        "firstStream": 2357,
+        "firstContent": 43477,
+        "process": 76057,
+        "parse": 4,
+        "cleanup": 167,
+        "total": 79380
+      },
+      "repair": {
+        "workspace": 1,
+        "authentication": 3534,
+        "firstStream": 2301,
+        "firstContent": 21931,
+        "process": 59332,
+        "parse": 3,
+        "cleanup": 153,
+        "total": 63024
+      }
+    },
+    "timingInterpretation": "Process time includes CLI/network/model wait; no inference-only or p95 claim. The automatic saved-checkpoint roundtrip is not human review time.",
+    "providerShareOfHttpWallTime": 0.7782380659324509,
+    "promptBytesByOperation": {
+      "screen.review-plan": 254663,
+      "screen.generate": 291306,
+      "screen.repair": 314528
+    },
+    "performanceConclusion": "Provider processing and long source context dominate; keep source checkpoint reuse and avoid another generation merely to refresh source. Context reduction must retain exact evidence and its missing-fact flags."
+  },
+  "controlledReprocessing": {
+    "classification": "REPROCESSED_RETAINED_INITIAL_ACCEPTED_LWC",
+    "freshLlmCalls": 0,
+    "originalRawProviderEnvelopeRetained": false,
+    "inputProvenance": "Same retained initial accepted generated HTML/CSS/JavaScript bytes reconstructed into a JSON response envelope for the common parser and native compiler. Provider CLI envelope text was not retained.",
+    "frozenInitialAcceptedLwcSha256": "135e870ea5464299eb97171c8741d458d2b031754346f1088772e8e7999b6ace",
+    "reconstructedEnvelopeSha256": "ed390a0e4c9455cf007c6c2b85a34eef7cc60413dfdad0ef1e0e68f7aad91c5b",
+    "sameSourceAndPinnedRelease": true,
+    "originalCandidateCheckpointMutated": false,
+    "recordedOriginalChangedRatio": 0.035724067825325785,
+    "replayBeforeChangedRatio": 0.035724067825325785,
+    "replayAfterChangedRatio": 0.02097869516723376,
+    "baselineReproducedExactly": true,
+    "changedPixelReductionRatio": 0.4127573805477611,
+    "novaOriginalChangedRatio": 0.010682065255756823,
+    "sameReferenceOnly": true,
+    "comparisonMode": "REFERENCE_ONLY",
+    "officialSameRevisionPngAvailable": false,
+    "verifiedButtonRecords": 5,
+    "mappingProof": "Exact pinned published component/set keys, library file/version/master ID, actual geometry/paint/typography, public API and authored disabled state. Unverified, icon/count and unsupported overrides remain excluded.",
+    "beforeNativeControls": {
+      "status": "passed",
+      "scope": "source-declared-native-controls-and-local-events",
+      "coverage": {
+        "expected": 7,
+        "matched": 7,
+        "failed": 0,
+        "unavailable": 0,
+        "unsupported": 0,
+        "truncated": false
+      },
+      "checkCount": 20,
+      "checksSha256": "870f3f66e37c0d6a694b2119f8614a4ca8753d327023bc905bdf66d71ce481b0"
+    },
+    "afterNativeControls": {
+      "status": "passed",
+      "scope": "source-declared-native-controls-and-local-events",
+      "coverage": {
+        "expected": 7,
+        "matched": 7,
+        "failed": 0,
+        "unavailable": 0,
+        "unsupported": 0,
+        "truncated": false
+      },
+      "checkCount": 20,
+      "checksSha256": "870f3f66e37c0d6a694b2119f8614a4ca8753d327023bc905bdf66d71ce481b0"
+    },
+    "currentValidatorBeforeGeometry": {
+      "status": "failed",
+      "coverage": {
+        "expected": 27,
+        "matched": 27,
+        "unavailable": 0,
+        "mismatched": 2,
+        "unsupported": 0,
+        "truncated": false,
+        "sourceStatus": "partial",
+        "scope": "available-source-targets"
+      },
+      "findingCount": 2,
+      "findingsSha256": "c2e3c5819b598525900f01a1b429645fb0a5ede4816e4c2ddbe4feed4a4a2601",
+      "reason": "SOURCE_EVIDENCE_PARTIAL"
+    },
+    "currentValidatorAfterGeometry": {
+      "status": "failed",
+      "coverage": {
+        "expected": 27,
+        "matched": 27,
+        "unavailable": 0,
+        "mismatched": 2,
+        "unsupported": 0,
+        "truncated": false,
+        "sourceStatus": "partial",
+        "scope": "available-source-targets"
+      },
+      "findingCount": 2,
+      "findingsSha256": "c2e3c5819b598525900f01a1b429645fb0a5ede4816e4c2ddbe4feed4a4a2601",
+      "reason": "SOURCE_EVIDENCE_PARTIAL"
+    },
+    "metricInterpretation": "Both replays use the same current validator. Verified public hosts consume their source descendants internally, so those descendants are not separately counted as missing. Two section-header text-width mismatches and the global pixel mismatch remain.",
+    "remainingVisualDifferences": [
+      "table border positions",
+      "text placement and typography",
+      "section-header inline text widths"
+    ],
+    "remainingDecision": "review-required; no 0.X accuracy or Org-apply completion claim",
+    "elapsedMs": 7959
+  },
+  "regressions": {
+    "command": "node --test nextbss/server/kiro-button-geometry.test.mjs nextbss/engine/library-components.test.mjs nextbss/server/screen-runtime-review.test.mjs nextbss/engine/kiro-button-evidence.test.mjs",
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      "exact CTA/Primary/Secondary disabled text variants",
+      "changed baked paint rejected with or without diagnostic metadata",
+      "nonuniform stroke edge rejected",
+      "wrong publication/set/geometry rejected",
+      "icon/count and dynamic/duplicate bindings not rewritten",
+      "full authored local scene with variable-provenance warnings remains reconstructible",
+      "explicit metadata completeAuthoredScene:false cannot fabricate controls",
+      "native click and disabled/readonly/reset/search/empty-table contracts"
+    ]
+  },
+  "limitations": [
+    "Local SVG rasterization from the same archive is a reference; same-revision official Figma 1x PNG provenance is unavailable.",
+    "This actual Main validation uses an explicit local source and does not prove live MCP source acquisition end-to-end.",
+    "Business API integration and Org deployment were not executed.",
+    "Postprocessing is measured on retained real model output, not a fresh run of the final runtime.",
+    "The pinned common Dialog last-Tab focus escape remains a separate NOVA release candidate; active immutable release was not edited."
+  ],
+  "preflightGuards": [
+    {
+      "code": "RUNTIME_NOT_INTEGRATED",
+      "providerCalls": 0,
+      "outcome": "stopped before execution; resolved after Main capture/start"
+    },
+    {
+      "code": "LIMIT_MISMATCH",
+      "providerCalls": 0,
+      "outcome": "stopped before execution; request aligned to installed Main timeout budget"
+    }
+  ],
+  "cleanup": {
+    "status": "cleaned",
+    "jobs": [
+      {
+        "jobId": "f2547fd4-122a-4b86-8334-7c914fbfd2ce",
+        "objectsRemoved": 0,
+        "localIngressRemoved": true,
+        "remainingObjects": 0,
+        "remainingLocalIngress": false
+      },
+      {
+        "jobId": "d34133fc-e370-46f2-99f2-bcef05bcb45b",
+        "objectsRemoved": 0,
+        "localIngressRemoved": false,
+        "remainingObjects": 0,
+        "remainingLocalIngress": false
+      }
+    ],
+    "privateRunDataRemoved": true,
+    "originalsUnchanged": true,
+    "backRowsCreated": 0,
+    "orgMutations": false,
+    "privateHarnessDirectoryRemoved": true,
+    "preflightAndBudgetReceiptsRemoved": true,
+    "originalArchiveReleaseAndOauthPreserved": true
+  },
+  "originalsUnchanged": true
+}

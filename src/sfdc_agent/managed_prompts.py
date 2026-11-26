@@ -108,6 +108,13 @@ def session_prompt_release(request, release_id):
     return entry[1]
 
 
+def current_managed_release(request):
+    """Read the exact job pin for tool collection, without selecting another release."""
+    token = require_managed_context(request)
+    with _LOCK:
+        return _CONTEXTS[token][1]
+
+
 def managed_trace_enabled(request):
     values = request.headers.getlist("x-sfdc-managed-prompt")
     with _LOCK:

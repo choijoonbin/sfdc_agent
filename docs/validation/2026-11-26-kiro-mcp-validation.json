@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "validatedOn": "2026-11-26",
+  "authenticationEvidence": "2026-11-26-mcp-acquisition.json",
+  "liveProtocol": {
+    "cli": "kiro-cli 3.6.2 / ACP v3",
+    "firstConsent": "passed native Kiro registration and user-approved Figma mcp:connect OAuth",
+    "grantScope": "Figma consent includes read and write; execution is separately limited to five readers",
+    "crossProcessAuthReuse": {
+      "passed": 2,
+      "connectionMs": [
+        9352,
+        6900
+      ],
+      "newConsent": false
+    },
+    "actualReaders": [
+      "get_metadata",
+      "get_design_context",
+      "get_screenshot"
+    ],
+    "sourceAcquisition": "actual raw search and popup source obtained before provider limit",
+    "providerLimit": "Enterprise plan View seat Figma MCP tool call limit reached",
+    "afterLimit": "No further live MCP source calls or implicit REST/local fallback",
+    "fullRestEquivalentExport": "UNVERIFIED: one audited read-only JSON_REST_V1 export attempt was blocked by quota before source export"
+  },
+  "replay": {
+    "classification": "RECORDED_MCP_REPLAY / REFERENCE_ONLY",
+    "liveManagedEndToEnd": false,
+    "originalFigmaRevision": "UNVERIFIED",
+    "sameRevisionOneXPng": "UNVERIFIED; raw PNG dimensions equal original dimensions",
+    "sourceNode": "29876:14784",
+    "frozenSourceSha256": "055b423b86884ddcec300446a8ec6bf354f7aebb8edd82deb3d9d06bd401ce85",
+    "sourcePngSha256": "6b750577c14e2adc9f24857fcccc45407bfd910b961e7323548d4b20c0b2fb7a",
+    "sourceDimensions": [
+      1370,
+      517
+    ],
+    "designReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "designManifestSha256": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09",
+    "promptPin": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+    "promptSource": "immutable packaged-v2; not represented as active BACK release",
+    "analysisDigest": "742bced720e6c74faebff5bd3390e4e2269151b201b54cc53b105d7df6c4d330",
+    "generationReviewedAnalysisDigest": "742bced720e6c74faebff5bd3390e4e2269151b201b54cc53b105d7df6c4d330",
+    "savedAnalysisReusedExactly": true,
+    "recordedSourceReads": 1,
+    "generationRecollection": 0,
+    "actualModelCalls": [
+      {
+        "operation": "screen.review-plan",
+        "elapsedMs": 28024,
+        "promptBytes": 208318
+      },
+      {
+        "operation": "screen.generate",
+        "elapsedMs": 70952,
+        "promptBytes": 237367
+      },
+      {
+        "operation": "screen.repair",
+        "elapsedMs": 69604,
+        "promptBytes": 260119
+      }
+    ],
+    "compile": {
+      "status": "passed native LWC compilation",
+      "bundles": 13
+    },
+    "jobStatus": "complete",
+    "resultStatus": "review-required",
+    "canApply": false,
+    "applyReason": "MCP source properties/publication keys and business behavior are not fully verified",
+    "pixels": {
+      "finalBestChangedRatio": 0.04921571672619972,
+      "finalBestChangedPercent": 4.921571672619971,
+      "changedPixels": 34859,
+      "totalPixels": 708290,
+      "tolerance": 12,
+      "improvementClaim": false,
+      "note": "Best compiled initial candidate retained; the repair candidate regressed and was rejected. Historical 1.x percent runs use another source baseline and are not a valid comparison."
+    },
+    "geometry": {
+      "expected": 43,
+      "matched": 27,
+      "unavailable": 16,
+      "mismatched": 9,
+      "interpretation": "diagnostic only; hidden-attribute and metadata coordinate-space assumptions were identified for common follow-up correction after this measurement"
+    },
+    "nativeControls": {
+      "status": "not-applicable",
+      "expected": 0,
+      "interpretation": "Partial MCP metadata is not a complete authored scene; zero expected is not a passing behavior test"
+    },
+    "repair": {
+      "attempts": 1,
+      "outcome": "regression-or-no-improvement",
+      "reason": "pixel-ratio-regressed",
+      "bestRetained": true
+    },
+    "timing": {
+      "activeProcessingMs": 172238,
+      "modelBridgeCallsMs": 168580,
+      "modelProcessMs": 154796,
+      "modelProcessInterpretation": "CLI provider process time includes service/network/streaming; not pure inference",
+      "sourcePreparationMs": 172,
+      "compileValidationMs": 3481,
+      "checkpointOperatorPauseMs": 181043,
+      "pauseInterpretation": "Isolation harness paused to diagnose and fix a common partial-source runtime guard; excluded from active processing"
+    },
+    "sourceAndRuntimeLessons": [
+      "rebuildKiroSourceSnapshot must not turn partial metadata into authored control-state facts; fixed before resumed generation",
+      "Explicit metadata hidden attributes require source visibility handling",
+      "Metadata coordinate space must be proven before hard geometry gates; names are not visible text",
+      "Full source attributes remain necessary for production applicability; quota blocked the REST-equivalent MCP export feasibility check"
+    ],
+    "orgWrites": 0,
+    "backRowsCreated": 0,
+    "phase": "Initial replay before metadata visibility and coordinate-space correction; diagnostic history only",
+    "modelVisionInput": false
+  },
+  "cleanup": {
+    "status": "completed",
+    "completedOn": "2026-11-26",
+    "artifacts": [
+      {
+        "kind": "private raw MCP source probe fixtures",
+        "files": 4,
+        "bytes": 937371,
+        "sha256Receipts": [
+          {
+            "name": "transport-probe-search-failed.json",
+            "bytes": 201207,
+            "sha256": "0b5927048db97e2c6cef7537d37269b21fa4271c9944d5159675d49830bd0721"
+          },
+          {
+            "name": "transport-probe-search.json",
+            "bytes": 312559,
+            "sha256": "055b423b86884ddcec300446a8ec6bf354f7aebb8edd82deb3d9d06bd401ce85"
+          },
+          {
+            "name": "transport-probe-popup.json",
+            "bytes": 367462,
+            "sha256": "072a12c90ff1696570c1cbd32a79102d8daeb91b294596d2e8a984640aaae136"
+          },
+          {
+            "name": "transport-probe-rest-export.json",
+            "bytes": 56143,
+            "sha256": "a24060693e6945fcdd449e807789f361560adbf5bd1f0c101875afaa63a430d5"
+          }
+        ]
+      },
+      {
+        "kind": "isolated replay source, analysis, generated LWC, previews, reports and runner files",
+        "files": 115,
+        "bytes": 3050907
+      },
+      {
+        "kind": "owned OAuth/source probe transient logs: .kiro/logs",
+        "files": 30,
+        "bytes": 430563
+      },
+      {
+        "kind": "owned OAuth/source probe transient logs: kiro-log",
+        "files": 4,
+        "bytes": 19704
+      },
+      {
+        "kind": "empty CLI shortcut for already deleted own ACP session",
+        "files": 1,
+        "bytes": 5
+      }
+    ],
+    "filesRemoved": 154,
+    "bytesRemoved": 4438550,
+    "providerSessionCleanup": {
+      "advertisedMethod": "_kiro/session/delete",
+      "ownSessionsDeleted": 11,
+      "skippedForeignSessions": 0
+    },
+    "rawProbeFixturesRemaining": 0,
+    "privateReplayDirectoryRemaining": false,
+    "realOauthConnection": "retained authorized principal-scoped configuration, four 0600 secret callback entries and runtime caches",
+    "figmaCanvasWrites": 0,
+    "salesforceOrgWrites": 0,
+    "backRowsCreated": 0,
+    "remoteProviderTelemetry": "Figma create_session records have no advertised delete; no Figma canvas nodes were created"
+  },
+  "verification": {
+    "focusedTestsPassed": 29
+  },
+  "revisedContractReplay": {
+    "classification": "ISOLATED_RECORDED_MCP_REPLAY / REFERENCE_ONLY",
+    "liveManagedEndToEnd": false,
+    "originalFigmaRevision": "UNVERIFIED",
+    "sameRevisionOneXPng": "UNVERIFIED; screenshot dimensions match source dimensions without revision/export-metadata proof",
+    "sourceNode": "29876:14784",
+    "frozenSourceSha256": "055b423b86884ddcec300446a8ec6bf354f7aebb8edd82deb3d9d06bd401ce85",
+    "sourcePngSha256": "6b750577c14e2adc9f24857fcccc45407bfd910b961e7323548d4b20c0b2fb7a",
+    "sourceDimensions": [
+      1370,
+      517
+    ],
+    "designReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "designManifestSha256": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09",
+    "prompt": {
+      "actualModelBundle": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "allThreeCallsUseSameFrozenBundle": true,
+      "workbenchDeclaredPin": "prompts-nova-85c1f74be98cda6b545ec60a06de85bf5421bf07ddeb1279679d42e9417c384c",
+      "declaredPinMatchesActualModelBundle": false,
+      "note": "Isolated harness used the old source-probe release label for workbench metadata while its model bridge used a separately frozen packaged-v2 bundle. Actual task hashes and bundle are recorded below; this is not a managed prompt-pin validation or active BACK release claim."
+    },
+    "analysisDigest": "cc7d905f6304c14d6a2063d14e7109dab313935e4f1b2abd9e0b0e64493221ac",
+    "generationReviewedAnalysisDigest": "cc7d905f6304c14d6a2063d14e7109dab313935e4f1b2abd9e0b0e64493221ac",
+    "savedAnalysisReusedExactly": true,
+    "recordedSourceReads": 1,
+    "generationRecollection": 0,
+    "modelVisionInput": false,
+    "modelInputNote": "Collection MCP can return inline PNG to its ACP model. This isolated analysis/generation bridge is text-only; screenshot is used by external validation, not passed as a model vision input.",
+    "actualModelCalls": [
+      {
+        "operation": "screen.review-plan",
+        "elapsedMs": 38117,
+        "promptBytes": 203539,
+        "promptSha256": "35be9a1e3a97d1909e7d2ca83c32954639164f61e506f2a76a4db4cdb994546a",
+        "modelProcessMs": 33656
+      },
+      {
+        "operation": "screen.generate",
+        "elapsedMs": 68127,
+        "promptBytes": 233204,
+        "promptSha256": "1146b8d665e901c96dacc002cba911f12522f4ccba5b3fb9cfc2446e40b5f067",
+        "modelProcessMs": 63857
+      },
+      {
+        "operation": "screen.repair",
+        "elapsedMs": 60793,
+        "promptBytes": 249008,
+        "promptSha256": "c4e95a4e4a270bd7c749bf64a0ed0b08b9e985cb6e95116433d63f012c35f865",
+        "modelProcessMs": 56661
+      }
+    ],
+    "compile": {
+      "status": "passed native LWC compilation",
+      "bundles": 13
+    },
+    "jobStatus": "complete",
+    "resultStatus": "review-required",
+    "canApply": false,
+    "sourceCoverage": "PARTIAL; authored styles/properties/publication keys and descendant coordinate space unverified",
+    "pixels": {
+      "finalBestChangedRatio": 0.05894619435541939,
+      "finalBestChangedPercent": 5.894619435541939,
+      "changedPixels": 41751,
+      "totalPixels": 708290,
+      "tolerance": 12,
+      "improvementClaim": false,
+      "note": "One bounded repair candidate was rejected; best initial candidate retained. Neither old metadata assumptions nor historical screenshots establish a comparable accuracy improvement."
+    },
+    "geometry": {
+      "coverage": {
+        "expected": 1,
+        "matched": 1,
+        "unavailable": 0,
+        "mismatched": 0,
+        "unsupported": 0,
+        "truncated": false
+      },
+      "interpretation": "Only root host geometry is established. Descendant coordinates are deliberately unverified, not newly passing. A lack of child findings does not establish scene completeness or full visual accuracy."
+    },
+    "nativeControls": {
+      "status": "not-applicable",
+      "coverage": {
+        "expected": 0,
+        "matched": 0,
+        "failed": 0,
+        "unavailable": 0,
+        "unsupported": 0,
+        "truncated": false
+      },
+      "interpretation": "No authored control contract is available from partial metadata; zero expected is not a passing behavior test."
+    },
+    "repair": [
+      {
+        "attempt": 1,
+        "outcome": "regression-or-no-improvement",
+        "reason": "allBlockers-regressed",
+        "draftSha256": "2df6f70c2a3bba80aeacd76e6eafba216fdf47f3c90908565dbc571fb6f93bff"
+      }
+    ],
+    "timing": {
+      "wallMs": 171704,
+      "recordedWorkflowMs": 170922,
+      "userReviewPauseMs": 305,
+      "activeProcessingMs": 170617,
+      "stages": [
+        {
+          "id": "source-preparation",
+          "durationMs": 186
+        },
+        {
+          "id": "analysis",
+          "durationMs": 38118
+        },
+        {
+          "id": "user-review",
+          "durationMs": 305
+        },
+        {
+          "id": "generation",
+          "durationMs": 68129
+        },
+        {
+          "id": "compile-validation",
+          "durationMs": 3390
+        },
+        {
+          "id": "repair",
+          "durationMs": 60794
+        }
+      ],
+      "modelBridgeCallsMs": 167037,
+      "modelProcessMs": 154174,
+      "modelProcessInterpretation": "Provider process time includes network/service/streaming, not pure inference."
+    },
+    "remainingGeneralWork": [
+      "Acquire proven full authored node properties and publication keys through an available read-only MCP capability; JSON_REST_V1 feasibility remains quota-blocked.",
+      "Provide actual image-capable, tool-free analysis/generation input or record that these stages remain text-only.",
+      "Resolve generic component variant/default-state mappings against frozen public APIs and tokens; no per-screen overrides.",
+      "Verify a pinned Figma revision and export metadata before any formal same-revision visual-improvement claim."
+    ],
+    "artifactSha256": {
+      "reviewed.json": "e0344fad08898b552a13a20d53cab5a21d38eb2e2715d052bdbc49c1cf34dcbc",
+      "generated.json": "4fff6a6395190023667b878df3dcfe67f2b6760b816ec31c046664a14475f149",
+      "report.json": "476c8c11c76dc3d64e773097fb6614e0bd5ac86c0b88e2ece1b9c2247fa6f60e"
+    },
+    "orgWrites": 0,
+    "backRowsCreated": 0,
+    "knownSubsequentFix": "Reviewer identified partial-metadata visual-success labeling and recognized provider truncation-envelope handling after this capture. Follow-up regression tests are required; this replay does not claim those later fixes were executed live."
+  }
+}

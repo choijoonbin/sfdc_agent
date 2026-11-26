@@ -1,5 +1,7 @@
 # SFDC Agent
 
+Kiro의 Figma MCP 수집 연결·최초 승인·인증 재사용 방법은 [Figma MCP 설정](docs/figma-mcp-setup.md)을 참고하세요. Kiro API 키와 Figma OAuth 승인은 별개입니다.
+
 `SFDC_Agent`는 NOVA의 Screen·Story Kiro 분석과 LWC 코드 생성을 처리한다. CLI 파일럿은 `SFDC_Ui/nextbss`의 원본 파서, NextBSS 표준, LWC 생성기와 브라우저 검사기를 사용해 변환 결과를 비교한다. 파일럿 작업 상태는 SQLite에 기록하고, 모델 제안·LWC 번들·PNG·비교 보고서는 실행별 폴더에 저장한다.
 
 ## Spring 통합 실시간 개발 (`dev`)
@@ -126,6 +128,8 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 
 Main의 **프롬프트 관리**는 Spring API와 PostgreSQL을 기준으로 초안·릴리스·활성 버전·변경 이력과 편집 권한을 관리한다. Agent는 Spring이 실행별로 고정해 전달한 프롬프트 릴리스와 해시를 사용한다. 템플릿 검증은 변수와 입력 구조를 검사하고, 실제 Figma 변환 품질은 모델 시험과 Screen·Story 회귀 검사에서 확인한다.
 
+공통 시각 계약·팝업 규칙을 보완한 다음 패키지는 `src/sfdc_agent/prompt_templates_v2/`의 **NOVA Prompt v1.0.1**이다. 기존 v1.0.0 파일과 해시는 변경하지 않는다. 디렉터리 이름만 바꾸거나 소스를 배포하는 것으로 Main의 활성 프롬프트가 바뀌지 않는다. BACK의 `scripts/publish_agent_prompt_bundle.py`에서 전체 13개 템플릿·변수 계약·해시를 검증한 후 새 불변 릴리스로 게시·활성화한다. 기존 분석과 진행 중 작업은 이전 프롬프트 핀을 유지한다.
+
 독립 CLI 파일럿은 별도의 SQLite 프롬프트 저장소 `.prompt-management/prompts.sqlite3`를 사용하며 `SFDC_AGENT_PROMPT_DB`로 경로를 지정할 수 있다. 이 저장소는 Main의 활성 프롬프트와 권한을 변경하지 않는다. 최초 릴리스 `prompts-v1`은 `src/sfdc_agent/prompt_templates_v1/`에 보존한다. CLI에서 진행 중인 작업과 저장된 분석은 시작할 때의 릴리스를 사용하며, 릴리스 정보가 없는 이전 분석은 최초 버전을 사용한다. 독립 CLI 이력을 다른 환경으로 옮길 때는 SQLite 백업을 사용한다.
 
 독립 CLI에서 같은 릴리스의 텍스트 프롬프트를 다른 모델로 시험하려면 테스트 근거를 담은 JSON으로 아래 명령을 실행한다. `--release`를 생략하면 CLI 저장소의 활성 릴리스를 사용한다. 결과는 사용한 프롬프트 버전·해시와 모델 응답 JSON을 포함한다. Figma 원본은 모델 실행 전에 REST·Plan Access Token 또는 등록된 로컬 원본으로 확보한다.
@@ -138,7 +142,19 @@ Main의 **프롬프트 관리**는 Spring API와 PostgreSQL을 기준으로 초�
 
 Spring에서 작업·권한·프롬프트 릴리스를 관리하는 서버는 `SFDC_AGENT_MANAGED_ONLY=1`로 실행한다. 이 모드의 HTTP 경로는 `/health`, 서비스 Bearer 인증을 사용하는 `/internal/v1/`, 실행별 인증을 사용하는 `/internal/kiro/sessions`다. 로컬 파일럿 `/runs`, SQLite 프롬프트 관리 `/internal/prompts`, 로컬 디자인 후보 경로는 404를 반환한다. `/health`는 전역 SQLite 활성 프롬프트를 조회하지 않는다.
 
-원격 Figma REST·Plan·MCP 자격 증명을 사용하는 프로세스는 운영자가 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정한다. Spring과 Agent에 동일한 정규 UUID 쌍을 설정한다. 원격 호출은 요청 범위와 현재 배정을 확인하며 배정 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`으로 반환한다. 관리자 원본 등록은 해당 작업공간의 데이터 사용 권한을 관리한다. 소유 관계가 확인된 명시적 아카이브와 LOCAL 입력은 배정과 독립적으로 사용할 수 있다.
+공유 REST·Plan 자격 증명은 운영자가 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정한다. Spring과 Agent에 동일한 정규 UUID 쌍을 설정한다. 배정 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`으로 반환한다. 등록된 사본이 있어도 NOVA의 REST 우선 요청은 해당 원격 권한을 먼저 확인한다. 명시적인 LOCAL 입력은 원본 소유 범위를 확인해 별도로 처리한다. Kiro의 MCP 연결은 공유 REST 토큰을 사용하지 않으며 BACK이 서명한 사용자·테넌트·작업공간의 전용 OAuth 저장소를 사용한다. 최초 승인은 [Kiro–Figma MCP 연결](docs/figma-mcp-setup.md)을 따른다.
+
+관리형 Screen 실행의 원본 정책은 다음과 같다. 파일 목록 탐색은 기존 공통 선택 기능이며, 실제 Kiro 분석의 원본 수집은 별도로 MCP에서 수행한다.
+
+| 요청 | 원본 수집 | 실패 시 처리 |
+| --- | --- | --- |
+| 원격 NOVA | REST 우선 → 허용된 오류에서 같은 파일의 등록 사본 | 접근 거부·노드 없음·리비전 불일치는 사본으로 우회하지 않음 |
+| 원격 Kiro | Kiro ACP의 Figma 읽기 전용 MCP 수집 → Kiro 분석 → 저장된 근거로 생성 | 인증·호출 한도·잘림은 명시적 실패; REST/NOVA 자동 전환 없음 |
+| 명시적 로컬 입력 | 지정한 `.fig`와 해시·페이지·노드 확인 | 원본을 조용히 다른 파일로 교체하지 않음 |
+
+MCP 원문과 PNG는 사용자·작업 ID에 묶어 원자적으로 보존한다. 완성된 수집은 같은 작업의 재시도에서 재사용하며 생성은 저장된 분석의 원본·프롬프트·NOVA 릴리스를 그대로 사용한다. 부분 메타데이터는 전체 authored scene으로 승격하지 않는다. 미확인 컴포넌트 게시 키·속성은 검토 대상으로 남기며, 동일 리비전의 1× PNG가 증명되지 않은 측정은 `REFERENCE_ONLY`다. 설치된 CLI의 실제 인증 재사용 검증과 MCP 플랜 한도 등 외부 제약은 검증 보고서에 구분해 기록한다.
+
+2026-11-26 구현의 실제 모델 호출·공통 매핑 개선·성능·테스트 정리와 외부 제약은 [변환 검증 기록](docs/validation/2026-11-26-conversion-validation.json)에 정리했다. 같은 LWC를 재처리한 참고 비교와 새로운 MCP 수집에 의한 정식 비교를 구분하며, 0.x 정확도 달성이나 Org 배포 완료로 보고하지 않는다.
 
 `SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS`는 Spring과 Agent의 공통 물리 실행 상한이며 기본값은 540초, 허용 범위는 1–900초다. Spring은 테넌트 정책과 물리 상한을 적용한 절대 마감을 각 시도에 고정한다. 작업별 취소는 자식 프로세스 종료와 슬롯 반환을 확인한 뒤 응답한다.
 

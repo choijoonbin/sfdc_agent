@@ -81,14 +81,14 @@ class ContextCoverage(BaseModel):
 class SourceSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    nodeId: str = Field(pattern=r"^\d+:\d+$", max_length=40)
+    nodeId: str = Field(pattern=r"^(?:I)?\d+:\d+(?:;\d+:\d+)*$", max_length=200)
     text: str = Field(max_length=250_000)
 
 
 class GenerationFields(NodeFields):
     name: str = Field(pattern=r"^nextBss[A-Z][a-zA-Z0-9]{0,72}$")
     local: StrictBool = False
-    sourceKind: Literal["figma-rest"] | None = None
+    sourceKind: Literal["figma-rest", "figma-mcp"] | None = None
     layoutDimensions: Dimensions | None = None
     actions: list[dict] = Field(default_factory=list)
     coverage: ContextCoverage | None = None

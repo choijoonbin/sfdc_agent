@@ -14,6 +14,7 @@ from time import time
 from threading import BoundedSemaphore
 from typing import Annotated, Literal
 from uuid import UUID
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -103,6 +104,7 @@ class ExecutionRequest(BaseModel):
     workflowId: RegistryLabel | None = None
     archive: ArchiveSelection | None = None
     inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
+    sourceAcquisition: Literal['REST_FIRST', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
     sourceVersion: RegistryLabel | None = None
 
     @model_validator(mode="after")
@@ -112,6 +114,17 @@ class ExecutionRequest(BaseModel):
         if self.archive and (self.archive.tenantId != self.executionScope.tenantId
                              or self.archive.workspaceId != self.executionScope.workspaceId):
             raise ValueError("The selected archive belongs to a different execution scope.")
+        remote = urlsplit(self.sourceReference).scheme.lower() == 'https'
+        if self.sourceAcquisition == 'REST_FIRST' and (self.kind != 'SCREEN' or self.engine != 'NOVA'
+                or self.inputMode != 'SOURCE' or not remote):
+            raise ValueError('REST-first acquisition requires a NOVA Screen URL.')
+        if self.sourceAcquisition == 'MCP_ONLY' and (self.kind != 'SCREEN' or self.engine != 'KIRO'
+                or self.inputMode != 'SOURCE' or not remote or self.archive
+                or not self.executionScope.actorUserId):
+            raise ValueError('MCP acquisition requires an actor-scoped Kiro Screen URL without an archive.')
+        if self.sourceAcquisition == 'LOCAL_FILE' and (not self.archive
+                or (remote and self.inputMode != 'MEASURED')):
+            raise ValueError('Local acquisition requires an explicitly selected archive.')
         if self.inputMode == 'MEASURED':
             if self.kind != 'SCREEN' or self.engine != 'NOVA' or not self.archive or self.sourceVersion != 'local-' + self.archive.sha256:
                 raise ValueError('Measured input requires the exact registered Screen archive.')
@@ -253,7 +266,7 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
     # Null is only the established pre-integration transport representation.
     # Spring classifies new commands explicitly; the Node selected-release guard
     # also fences any unversioned request before model work.
-    if payload.componentLibrary is None:
+    if payload.componentLibrary is None and payload.sourceAcquisition is None:
         return
     try:
         path = engine_root() / 'nextbss/engine/managed-runtime-capabilities.json'
@@ -262,9 +275,12 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
         capabilities = _decode_json(path.read_bytes())
         if capabilities.get('schemaVersion') != 1 or not isinstance(capabilities.get('generationFamilies'), list):
             raise ValueError
-        supported = any(item == {'family': payload.componentLibrary.family,
+        supported = payload.componentLibrary is None or any(item == {'family': payload.componentLibrary.family,
                                  'libraryVersion': payload.componentLibrary.libraryVersion}
                         for item in capabilities['generationFamilies'])
+        if payload.sourceAcquisition is not None:
+            supported = supported and capabilities.get('sourceAcquisitionVersion') == 1 and (
+                payload.sourceAcquisition in capabilities.get('sourceAcquisitions', []))
     except (OSError, ValueError, TypeError, AttributeError):
         raise HTTPException(503, 'RUNTIME_CAPABILITIES_UNAVAILABLE') from None
     if not supported:
@@ -401,8 +417,13 @@ def _parse_result(output: bytes, operation: str) -> ExecutionResult:
     return result
 
 
+def _requires_remote_figma(payload: ExecutionRequest) -> bool:
+    return (payload.sourceAcquisition != 'MCP_ONLY' and urlsplit(payload.sourceReference).scheme.lower() == 'https'
+            and (payload.sourceAcquisition == 'REST_FIRST' or not payload.archive))
+
+
 async def _execute(payload: ExecutionRequest) -> ExecutionResult:
-    provider_environment = remote_figma_environment(payload.executionScope) if not payload.archive and payload.sourceReference.startswith('https://') else {}
+    provider_environment = remote_figma_environment(payload.executionScope) if _requires_remote_figma(payload) else {}
     binary, runner, physical = _runner_configuration()
     timeout = _execution_budget(payload, physical)
     directory = None
@@ -439,7 +460,7 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                                 result.analysisView.manifestSha256, analysis=True, deadline=payload.deadlineEpochSeconds)
                 if time() >= payload.deadlineEpochSeconds:
                     raise TimeoutError
-                if not payload.archive and payload.sourceReference.startswith('https://'):
+                if _requires_remote_figma(payload):
                     require_figma_scope(payload.executionScope)
                 keep = True
                 return result.model_copy(update={"promptTraces": traces or None})

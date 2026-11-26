@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "validatedOn": "2026-11-26",
+  "scope": "Kiro MCP acquisition transport; generation and visual scores are reported separately",
+  "cli": {
+    "version": "3.6.2",
+    "executableSha256": "3c1e3ee88154302132d799912c2b5536363432cb8650e3239c2fa68f9d9107db",
+    "transport": "ACP v3"
+  },
+  "authentication": {
+    "nativeClientRegistration": "passed; no manually registered OAuth app required in this installation",
+    "figmaGrant": "mcp:connect; provider consent includes read and write",
+    "executionPolicy": "five exact Figma readers only; shell, filesystem and arbitrary Figma writes denied",
+    "firstAcpConsentElapsedMs": 48587,
+    "independentProcessReuse": [
+      {
+        "status": "CONNECTED",
+        "connectionMs": 9352,
+        "newBrowserConsent": false
+      },
+      {
+        "status": "CONNECTED",
+        "connectionMs": 6900,
+        "newBrowserConsent": false
+      }
+    ],
+    "credentials": "principal and generation bound ACP secret callbacks; private 0700 directories and atomic 0600 files; values excluded from prompts, source evidence and logs",
+    "initialFailuresFixed": [
+      "ACP without client secretStorage keeps MCP grant in memory and cannot reuse it in another process",
+      "15000ms MCP startup timeout also closed the human OAuth callback; authorization now gets 180000ms while collection startup remains bounded separately"
+    ],
+    "remoteRevocationTested": false,
+    "note": "Local revoke, cross-principal isolation, generation rotation and credential deletion were unit tested. Live provider expiry/revocation was not forced on the retained user grant."
+  },
+  "sourceProbes": [
+    {
+      "nodeId": "29876:14784",
+      "status": "actual MCP raw source recovered from the recorded transport probe",
+      "metadataTextChars": 5133,
+      "designContextUtf16Chars": 33091,
+      "hostOffloadBytes": 33321,
+      "hostOffloadSha256": "26f082f5ed728ef397ffe6530273666d5c5191591b1136a50cacc3a6dce05098",
+      "screenshotDimensions": [
+        1370,
+        517
+      ],
+      "rawWireAvailable": false,
+      "note": "The first adapter correctly rejected Kiro's 1031-character excerpt. Full host-declared session offload was then recovered without repeating the three MCP reads. Reprocessed probe is not silently reused as a new managed job's source."
+    },
+    {
+      "nodeId": "29876:14777",
+      "status": "passed actual collection with metadata, design context and inline PNG",
+      "rootType": "INSTANCE",
+      "layoutDimensions": [
+        320,
+        156
+      ],
+      "renderDimensions": [
+        364,
+        204
+      ],
+      "pngBytes": 13558,
+      "pngSha256": "aea031d7ebd7b5e291a62f76a1ebb957d3a4eb2a36b4274ba069ec98363a3023",
+      "rawAcpWireEvents": 18,
+      "wireRevalidation": "all recorded JSONL byte hashes and source PNG chunk integrity passed",
+      "performance": {
+        "connectionMs": 5963,
+        "metadataModelAndToolMs": 11580,
+        "designContextModelAndToolMs": 12683,
+        "captureModelAndToolMs": 9552,
+        "collectionMs": 39936
+      },
+      "note": "Render bounds include effects outside the INSTANCE layout bounds. These dimensions must not be substituted for each other."
+    }
+  ],
+  "reproducibility": {
+    "prompts": "immutable packaged-v2 content hash recorded in private probes; these standalone transport probes do not claim an active BACK release",
+    "modelOption": "auto",
+    "underlyingModel": "not reported; not inferred",
+    "originalRevision": "UNVERIFIED",
+    "comparisonClassification": "REFERENCE_ONLY",
+    "coverage": "metadata inventory and reference design context are available; full authored scene, all component properties and all planning descriptions are not proven"
+  },
+  "fullRestEquivalentExportProbe": {
+    "officialApi": "SceneNode.exportAsync({format: JSON_REST_V1})",
+    "catalog": "use_figma and create_session advertised by the actual authenticated server",
+    "policy": "one exact audited read-only script, exact target, code hash and source-session binding; production reader allowlist was not widened",
+    "result": "BLOCKED_BY_PROVIDER_QUOTA",
+    "providerDiagnostic": "Figma MCP tool call limit reached for View seat on Enterprise plan",
+    "supportConclusion": "UNVERIFIED; not classified as unsupported",
+    "automaticFallback": false,
+    "furtherLiveMcpSourceCalls": "stopped after provider limit"
+  },
+  "recoveryAndIntegrity": {
+    "completedCheckpoint": "atomic, job/file/node/principal-bound source snapshot and hash",
+    "sameJobRetry": "reuses completed evidence; generation does not recollect",
+    "differentJob": "does not implicitly reuse mutable latest source",
+    "partialOrCancelled": "no completed index is published",
+    "offload": "host-declared exact own-session path, no symlinks, bounded bytes, UTF-16 length and digest checked",
+    "rateLimit": "typed FIGMA_MCP_RATE_LIMITED / HTTP 429; no invented reset time or automatic provider switch"
+  },
+  "cleanup": {
+    "status": "completed",
+    "completedOn": "2026-11-26",
+    "artifacts": [
+      {
+        "kind": "private raw MCP source probe fixtures",
+        "files": 4,
+        "bytes": 937371,
+        "sha256Receipts": [
+          {
+            "name": "transport-probe-search-failed.json",
+            "bytes": 201207,
+            "sha256": "0b5927048db97e2c6cef7537d37269b21fa4271c9944d5159675d49830bd0721"
+          },
+          {
+            "name": "transport-probe-search.json",
+            "bytes": 312559,
+            "sha256": "055b423b86884ddcec300446a8ec6bf354f7aebb8edd82deb3d9d06bd401ce85"
+          },
+          {
+            "name": "transport-probe-popup.json",
+            "bytes": 367462,
+            "sha256": "072a12c90ff1696570c1cbd32a79102d8daeb91b294596d2e8a984640aaae136"
+          },
+          {
+            "name": "transport-probe-rest-export.json",
+            "bytes": 56143,
+            "sha256": "a24060693e6945fcdd449e807789f361560adbf5bd1f0c101875afaa63a430d5"
+          }
+        ]
+      },
+      {
+        "kind": "isolated replay source, analysis, generated LWC, previews, reports and runner files",
+        "files": 115,
+        "bytes": 3050907
+      },
+      {
+        "kind": "owned OAuth/source probe transient logs: .kiro/logs",
+        "files": 30,
+        "bytes": 430563
+      },
+      {
+        "kind": "owned OAuth/source probe transient logs: kiro-log",
+        "files": 4,
+        "bytes": 19704
+      },
+      {
+        "kind": "empty CLI shortcut for already deleted own ACP session",
+        "files": 1,
+        "bytes": 5
+      }
+    ],
+    "filesRemoved": 154,
+    "bytesRemoved": 4438550,
+    "providerSessionCleanup": {
+      "advertisedMethod": "_kiro/session/delete",
+      "ownSessionsDeleted": 11,
+      "skippedForeignSessions": 0
+    },
+    "rawProbeFixturesRemaining": 0,
+    "privateReplayDirectoryRemaining": false,
+    "realOauthConnection": "retained authorized principal-scoped configuration, four 0600 secret callback entries and runtime caches",
+    "figmaCanvasWrites": 0,
+    "salesforceOrgWrites": 0,
+    "backRowsCreated": 0,
+    "remoteProviderTelemetry": "Figma create_session records have no advertised delete; no Figma canvas nodes were created"
+  },
+  "verification": {
+    "focusedCommand": ".venv/bin/python -m unittest tests.test_figma_mcp tests.test_managed_execution_progress tests.test_managed_prompts tests.test_managed_service_mode",
+    "testsPassed": 29
+  }
+}

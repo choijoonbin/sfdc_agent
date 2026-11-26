@@ -1,6 +1,7 @@
 /.venv/
 /.pilot/
 /.prompt-management/
+/.figma-mcp/
 /.env*
 __pycache__/
 *.egg-info/

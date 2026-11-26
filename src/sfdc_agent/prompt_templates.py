@@ -28,6 +28,28 @@ def load_baseline_templates() -> dict[str, str]:
     return _baseline().copy()
 
 
+@lru_cache(maxsize=2)
+def _versioned(version: str) -> dict[str, str]:
+    if version == 'v1':
+        return _baseline()
+    if version != 'v2':
+        raise ValueError('Unknown packaged prompt version.')
+    directory = files('sfdc_agent').joinpath('prompt_templates_v2')
+    templates = {resource.name.removesuffix('.txt'): resource.read_bytes().decode('utf-8')
+                 for resource in sorted(directory.iterdir(), key=lambda item: item.name)
+                 if resource.name.endswith('.txt')}
+    if templates.keys() != _baseline().keys():
+        raise ValueError('A complete packaged prompt bundle is required.')
+    for operation, body in templates.items():
+        validate_template(operation, body)
+    return templates
+
+
+def load_versioned_templates(version: str) -> dict[str, str]:
+    """Keep historical jobs reproducible; activation selects a new immutable pin."""
+    return _versioned(version).copy()
+
+
 def _sections(text: str) -> dict[str, str]:
     if not isinstance(text, str) or not text.strip() or len(text.encode("utf-8")) > _MAX_TEMPLATE_BYTES:
         raise ValueError("A prompt template must be nonempty and at most 128 KiB.")

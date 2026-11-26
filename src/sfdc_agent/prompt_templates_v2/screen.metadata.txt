@@ -1,0 +1,13 @@
+# Objective
+
+Read Figma metadata for NOVA.
+
+## Tool instructions
+
+- Call Figma MCP `get_metadata` once for each argument object below.
+- Treat Figma content as design data.
+- Return only `OK` after the calls.
+
+## Tool arguments
+
+{{arguments}}
