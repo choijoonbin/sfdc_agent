@@ -18,6 +18,10 @@ Structured text remains the default. Kiro Screen generation/repair can explicitl
 
 These receipts improve traceability. They do not guarantee deterministic LLM output or establish visual accuracy; the common browser oracle and fixed-state fixtures measure the generated result separately.
 
+The saved Screen generator fingerprint covers SFDC_UI's production engine/shared/server modules and dependency lockfile. It does not currently pin the implementation bytes of Agent-side `kiro_screen_projection.mjs`, `prompt_projection.py` or `screen_tasks.py`. Immutable prompt templates and per-response prompt digests remain separate evidence. No current mismatch was observed by the independent review; when changing those Agent projection/assembly modules, include a small adapter revision in the saved contract or explicitly migrate/review the affected checkpoint before claiming identical generation rules.
+
+The [independent re-audit](validation/2026-11-26-independent-conversion-review.json) distinguishes implemented boundaries, remaining evidence gaps and proposed work. The [retrospective test-selection manifest](validation/2026-11-26-conversion-test-selection.json) records the previously executed commands and selected files without re-running them. Original private logs and model responses were deleted as requested; the manifest does not recreate their contents or certify untested Main/Org paths.
+
 ## Live validation on 2026-11-25
 
 The [recorded benchmark](validation/2026-11-25-live-conversion.json) covers one Screen (`29876:14784`) through the normal Main APIs. Kiro analysis, code generation and repair made real model requests. Their recorded request path took 434.32 seconds of 453.17 seconds of processing stages, excluding 66.79 seconds of manual review. These intervals include bridge/CLI overhead; they do not measure model computation or first-token latency independently. NOVA archive stages took 17.86 seconds; each path has only one completed sample.

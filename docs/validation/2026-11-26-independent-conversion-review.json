@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-26T10:55:28.292101+00:00",
+  "date": "2026-11-26",
+  "purpose": "Independent specialist re-audit and next-work proposal; no implementation approval inferred",
+  "recommendationsOnly": true,
+  "reviewers": [
+    {
+      "task": "architecture_reaudit",
+      "domain": "architecture, immutable evidence and provider boundaries"
+    },
+    {
+      "task": "fidelity_reaudit",
+      "domain": "design, publishing and public component mapping"
+    },
+    {
+      "task": "validation_release_reaudit",
+      "domain": "QA, reproducibility and release contracts"
+    }
+  ],
+  "mode": {
+    "productionCodeChanges": 0,
+    "newTestExecutions": 0,
+    "modelCalls": 0,
+    "figmaCalls": 0,
+    "orgWrites": 0,
+    "serviceRestarts": 0,
+    "activity": "Read-only code/Git/test/report review and independent static production-file hashing; documentation artifacts added afterward"
+  },
+  "baseline": {
+    "uiFeatureCommit": "8a5c34ea861743b29f3881e6da6a1ceaaccf57f2",
+    "uiEvidenceCommit": "6865ad91c0de12f5e372107d1a45f3d880135cae",
+    "uiRemoteObserved": "6d2132752c2684dd5dbe1d25d857ddb7d2b9dfb1",
+    "agentCommit": "2172d4acaa022748a2e5fec5cb2ca7972c68dcbb",
+    "allImplementationCommitsInRemoteDev": true,
+    "conversionUncommittedFiles": 0,
+    "uiOtherWorkPreserved": true,
+    "uiLocalBehindRemoteObserved": 21,
+    "productionUiUpstreamDiff": false,
+    "upstreamTestOnlyDiff": "nextbss/server/workbench.test.mjs polling deadline/diagnostics"
+  },
+  "verdict": {
+    "commonImplementationAndArchitecture": "SUPPORTED_BY_STATIC_REVIEW_AND_EXISTING_EVIDENCE",
+    "newConfirmedP0": 0,
+    "newConfirmedP1": 0,
+    "wholeScreenAccuracyCertified": false,
+    "latestMainIamJobOrNewOrgDeploymentCertified": false,
+    "architectureRewriteRequired": false
+  },
+  "staticIntegrity": {
+    "runtimeManifestSha256": "5937b9d3eaf0fd5d7e7cfef3e09839a09a90ac1bee2233d981a08b17a339feb0",
+    "runtimeEntriesChecked": 308,
+    "runtimeManifestMismatches": 0,
+    "runtimeVersusUiMismatches": 0,
+    "generatorSourceSha256": "bf54cb28da9642fdb358f25675ce102dd521029f77a76c596a658afb258c0563",
+    "productionGeneratorModulesChecked": 254
+  },
+  "confirmedBoundaries": [
+    {
+      "boundary": "saved source/analysis reuse",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/engine/screen-analysis-input.mjs",
+          "line": 89
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/managed-execution.mjs",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "boundary": "cross-generation canonical publication identity on derived copies",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/screen-generation-adapters.mjs",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "boundary": "generic published key/set/variant, source-canvas coordinates and source-proven empty-table recipes",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/engine/library-components.mjs",
+          "line": 1362
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/kiro-button-geometry.mjs",
+          "line": 47
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/kiro-history-table-recipe.mjs",
+          "line": 54
+        }
+      ]
+    },
+    {
+      "boundary": "source-bound native popup receipts and measured local actions",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/kiro-overlay-evidence.mjs",
+          "line": 97
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/conversion-quality/overlay-runtime.mjs",
+          "line": 219
+        }
+      ]
+    },
+    {
+      "boundary": "native/source/pixel acceptance and bounded repair non-regression",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/conversion-quality/preview-review.mjs",
+          "line": 72
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/conversion-quality/repair-loop.mjs",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "boundary": "text/Story isolation and opt-in single-read bound PNG delivery",
+      "evidence": [
+        {
+          "repository": "SFDC_Agent",
+          "path": "src/sfdc_agent/kiro_gateway.py",
+          "line": 274
+        },
+        {
+          "repository": "SFDC_Agent",
+          "path": "src/sfdc_agent/kiro_image_transport.py",
+          "line": 80
+        }
+      ]
+    },
+    {
+      "boundary": "business incompleteness separated from technical failures and explicitly reviewed publishing",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/screen-local-review.mjs",
+          "line": 10
+        },
+        {
+          "repository": "SFDC_BACK",
+          "path": "src/main/java/io/github/choijoonbin/sfdc/back/salesforce/LifecycleArtifactAccess.java",
+          "line": 107
+        },
+        {
+          "repository": "SFDC_BACK",
+          "path": "src/main/java/io/github/choijoonbin/sfdc/back/salesforce/lifecycle/OrgLifecycleService.java",
+          "line": 257
+        }
+      ]
+    }
+  ],
+  "evidenceInterpretation": {
+    "originalPassingTests": 450,
+    "testsRerunThisReview": 0,
+    "suiteScope": [
+      "254 Node selected contracts",
+      "14 critical flow cases",
+      "176 Python contracts",
+      "6 additional diagnostics policy tests"
+    ],
+    "liveModelExecutionBoundary": "isolated Node HTTP -> Python gateway -> Kiro CLI",
+    "finalSearch": {
+      "nodeId": "29876:14784",
+      "changedPixelRatio": 0.010643945276652219,
+      "changedPixels": 7539,
+      "pixels": 708290,
+      "wholeOracleStatus": "failed",
+      "metricCoverage": {
+        "expected": 39,
+        "matched": 29,
+        "unavailable": 10,
+        "mismatched": 4,
+        "unsupported": 2
+      },
+      "nativeCoverage": {
+        "expected": 7,
+        "matched": 7,
+        "failed": 0
+      },
+      "missingHostIsNotConfirmedMissingContent": true,
+      "allBusinessBehaviorVerified": false
+    },
+    "threePlusThreeCohortIsSearchOnly": true,
+    "tableAndPopupKiroPostRecipeCertification": false,
+    "sameCohortCausalImprovementRateClaimed": false,
+    "native7of7MeansAllScreenBehavior": false,
+    "runtimeSurfacePassMeansWholeVisualPass": false,
+    "inheritedNova": {
+      "searchChangedRatioUnchanged": 0.009973316014626777,
+      "tableChangedRatioUnchanged": 0.03127694703841603,
+      "popupSupportedButWholeOracleFailed": true,
+      "searchNativeMatchedOfExpected": [
+        6,
+        7
+      ],
+      "tableNativeMatchedOfExpected": [
+        3,
+        4
+      ],
+      "nativeFailureCountsAreNotYetAttributedToRendererOrOracle": true
+    },
+    "businessIncompleteIsNotBlanketTechnicalBlock": true,
+    "finalSampleManualDeploymentEligibilityCertified": false,
+    "originalCleanupReceiptIndependentlyReexecuted": false
+  },
+  "findings": [
+    {
+      "id": "REVIEW-EVIDENCE-001",
+      "severity": "P2",
+      "status": "PROPOSED_NEXT_IMPLEMENTATION",
+      "title": "Final holds lack retained reason/scope and analysis rejection detail",
+      "trigger": "Classify the final sixteen holds after private cleanup",
+      "observed": "Final report retains code counts only. ANALYSIS_INCOMPLETE count1 is one diagnostic, not proof that only one mapping was rejected.",
+      "impact": "Cannot decide whether a hold is missing business evidence, invalid mapping, duplicated confirmed fact or another unresolved cause.",
+      "minimumAction": "Reuse existing createFindingSummary and retain sanitized reason/category/scope/requiredEvidence/affectsApply/digest plus analysis rejection count/reason enums during the next authorized run; no restoration of deleted originals.",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "docs/validation/2026-11-26-dev-seat-conversion-audit.json",
+          "line": 1021
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/screen-analysis.mjs",
+          "line": 71
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/screen-analysis.mjs",
+          "line": 96
+        },
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/server/conversion-quality/finding-summary.mjs",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "id": "REVIEW-EVIDENCE-002",
+      "severity": "P2",
+      "status": "RETROSPECTIVE_SELECTION_DOCUMENTED_WITH_LIMITS",
+      "title": "Original final report omitted exact test selection",
+      "observed": "Reconstructed the recorded 33 Node files, critical-flow pattern, 24 Python module selection and additional diagnostics command from the execution history and preserved Git source; no test rerun.",
+      "remainingLimit": "Original per-test logs, case names and historical Node version remain unavailable; this is a retrospective manifest, not original execution output.",
+      "artifact": "docs/validation/2026-11-26-conversion-test-selection.json"
+    },
+    {
+      "id": "REVIEW-EVIDENCE-003",
+      "severity": "P2",
+      "status": "ROADMAP_CONDITION_CORRECTED",
+      "title": "Saved response reuse requires a currently authorized retained fixture",
+      "observed": "The six responses were reused before cleanup and were then deleted as requested. Future replay must not assume those files still exist.",
+      "minimumAction": "Preserve the historical replay result and condition future replay on an available authorized fixture."
+    },
+    {
+      "id": "REVIEW-VERSION-001",
+      "severity": "P2",
+      "status": "CURRENT_SCOPE_DOCUMENTED_FUTURE_ADAPTER_CHANGE_GATE",
+      "title": "Agent projection/assembly implementation is outside the UI generator fingerprint",
+      "trigger": "Deploy only Agent projection/assembly changes between analysis and generation",
+      "impact": "The same checkpoint may produce different final model instructions despite unchanged UI generator hash. No current source tampering or deployed mismatch was observed.",
+      "minimumAction": "At the next Agent projection change, add and verify a scoped adapter revision or explicitly migrate/review affected checkpoints; do not expand this into an immediate architecture rewrite.",
+      "evidence": [
+        {
+          "repository": "SFDC_UI",
+          "path": "nextbss/engine/screen-generator-revision.mjs",
+          "line": 22
+        },
+        {
+          "repository": "SFDC_Agent",
+          "path": "src/sfdc_agent/kiro_screen_projection.py",
+          "line": 17
+        },
+        {
+          "repository": "SFDC_Agent",
+          "path": "src/sfdc_agent/screen_tasks.py",
+          "line": 144
+        }
+      ]
+    }
+  ],
+  "proposedExecutionOrder": [
+    {
+      "order": 1,
+      "id": "DIAGNOSTICS_BEFORE_NEW_MODEL_RUNS",
+      "task": "보존할 진단 구조를 먼저 정리하고 원인별로 분류",
+      "work": [
+        "기존 findingSummary를 검증 영수증에 연결",
+        "분석 거절 수와 원인을 제한된 enum으로 기록",
+        "업무 미확정·공개 매핑/분석 검증 실패·입증 사실과 중복되는 진단을 분리"
+      ],
+      "completionGate": "원문·모델 소스 없이 code/reason/scope/requiredEvidence/영향·해시로 다음 조치를 설명할 수 있다. 현재 요약만으로 모르는 항목은 미확정으로 유지한다.",
+      "requiresDevSeatChange": false,
+      "newModelCallsBeforeDeterministicGate": 0
+    },
+    {
+      "order": 2,
+      "id": "COMMON_REST_FIDELITY_AND_NOVA_NATIVE",
+      "task": "REST 기준 host/너비와 NOVA native 차이의 공통 원인 보완",
+      "work": [
+        "source ID 소유권→가시성→중복 ID→실제 host/native surface bounds 순으로 분류",
+        "검증된 공개 컴포넌트의 내부 소비는 계약·런타임 근거로만 판정",
+        "NOVA 공개 구현·생성기 이벤트/상태 연결·검증 표현 차이를 분리"
+      ],
+      "completionGate": "화면 ID 분기, 임계값 완화, 기대 대상의 무근거 삭제 없이 확인된 공통 원인만 수정하고 관련 결정적 회귀를 통과한다.",
+      "codeConnectPrerequisite": false
+    },
+    {
+      "order": 3,
+      "id": "FREEZE_AND_MINIMAL_PRODUCT_PATH_VALIDATION",
+      "task": "후보를 동결하고 실제 사용자 경로와 부족한 대표 화면 근거 확인",
+      "work": [
+        "최종 버전·원본·공식1xPNG·NOVA 공개 계약을 고정",
+        "Main에서 대표1건의 NOVA분석→Kiro생성→결과 재열기로 IAM/핀 전달/worker/저장/polling 연결 확인",
+        "검색·표·팝업 중 새 규칙 또는 미검증 경로에 필요한 최소 표본만 확인",
+        "Salesforce 호환성 인증 시 고정 생성물1건으로 Sandbox 적용·동작·회수·복구 확인 후 테스트 자료 정리"
+      ],
+      "completionGate": "시험별 확인 위험과 통과 조건을 먼저 고정하고, 미검증/실패와 관찰 범위를 보존한다. 새3+3 반복이나38종 전체 재배포를 기본 작업으로 넣지 않는다.",
+      "precondition": "참여 UI 작업/실행 버전 조율. 다른 미커밋 작업을 덮어쓰지 않는다."
+    },
+    {
+      "order": 4,
+      "id": "MCP_SEPARATE_COMPLETION_TRACK",
+      "task": "MCP Code Connect 매핑과 원본 동등성은 별도 경로로 진행",
+      "work": [
+        "NOVA family/variant 매핑 후보를 검토·확정",
+        "게시·비활성화·Figma 쓰기는 별도 승인 범위를 확인",
+        "매핑과 별개로 실제 원본 속성·누락·잘림·리비전 증명 검증"
+      ],
+      "completionGate": "MCP가 동일 리비전을 증명하지 못하면 참고 비교로 유지한다. 불완전 응답을 REST/로컬 성공으로 조용히 대체하지 않는다.",
+      "blocksRestFidelityWork": false
+    },
+    {
+      "order": 5,
+      "id": "BUSINESS_AND_OPTIONAL_CAPABILITIES",
+      "task": "채워진 표·실업무 연동과 선택 기능은 근거에 맞춰 확장",
+      "work": [
+        "채워진 표의 저작 상태/승인된 fixture로 레이아웃을 먼저 검증",
+        "실제 조회·paging·navigation 완료는 API/Apex 계약 확보 후 확인",
+        "이미지 입력은 기본off 유지; 효과 근거가 생기면 별도 채택",
+        "Agent 재투영 변경 시 adapter revision 경계를 보완"
+      ],
+      "completionGate": "업무 API 미확정을 화면 퍼블리싱의 일괄 기술 실패로 취급하지 않는다. 특정 최종표본의 수동 배포 가능성도 별도 허용 계약 없이 보장하지 않는다."
+    }
+  ],
+  "avoidUnnecessaryWork": [
+    "No full450 rerun for docs/test-only changes with unchanged production fingerprints",
+    "No fresh3+3 experiment before a changed and frozen candidate",
+    "No repeated DEV-seat probe without changed access conditions",
+    "No automatic image default rollout",
+    "No full38family Org redeployment for this review",
+    "No restoration of deleted model responses/PNGs/original private logs",
+    "No repeat of existing popup keyboard scenario unless its implementation changes",
+    "No silent waiver of non-allowlisted diagnostics or deletion of source expectations"
+  ],
+  "notYetAuthorizedByThisReview": [
+    "New production feature implementation",
+    "Code Connect publication or disablement",
+    "New actual provider/Org execution"
+  ],
+  "relatedArtifacts": [
+    "docs/conversion-followup-roadmap.json",
+    "docs/conversion-evidence-contract.md",
+    "docs/validation/2026-11-26-conversion-test-selection.json",
+    "SFDC_UI/docs/validation/2026-11-26-dev-seat-conversion-audit.json"
+  ]
+}

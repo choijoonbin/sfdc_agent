@@ -9,7 +9,7 @@
     "Use saved analysis at generation; changed production derivation requires fresh analysis",
     "Failed/incomplete source, native coverage or image delivery is not silently promoted",
     "Unknown business APIs remain separate from confirmed UI/native failures",
-    "No unproductive new 3+3 reruns; reuse exact saved responses for validator regression"
+    "Replay saved model responses only while an authorized fixture exists. The six pilot responses were replayed before cleanup and then deleted; do not assume future availability or restore them for a historical rerun."
   ],
   "evidence": [
     {
@@ -130,23 +130,38 @@
   "remainingPriorities": [
     {
       "rank": 1,
-      "task": "Complete reviewed Code Connect family mappings and full MCP raw-source/revision proof",
-      "dependency": "Mapping evidence/publication authorization; no longer a DEV-seat wait"
+      "id": "DIAGNOSTICS_BEFORE_NEW_MODEL_RUNS",
+      "task": "보존할 진단 구조를 먼저 정리하고 원인별로 분류",
+      "completionGate": "원문·모델 소스 없이 code/reason/scope/requiredEvidence/영향·해시로 다음 조치를 설명할 수 있다. 현재 요약만으로 모르는 항목은 미확정으로 유지한다.",
+      "detailIn": "lastIndependentReview"
     },
     {
       "rank": 2,
-      "task": "Resolve generic source-host/width findings and existing NOVA native-coverage differences without hiding real transforms",
-      "dependency": "Source/public API evidence and offline regression"
+      "id": "COMMON_REST_FIDELITY_AND_NOVA_NATIVE",
+      "task": "REST 기준 host/너비와 NOVA native 차이의 공통 원인 보완",
+      "completionGate": "화면 ID 분기, 임계값 완화, 기대 대상의 무근거 삭제 없이 확인된 공통 원인만 수정하고 관련 결정적 회귀를 통과한다.",
+      "detailIn": "lastIndependentReview"
     },
     {
       "rank": 3,
-      "task": "Validate populated table alignment and real API/paging/navigation contracts",
-      "dependency": "Approved authored states and business API/Apex contract"
+      "id": "FREEZE_AND_MINIMAL_PRODUCT_PATH_VALIDATION",
+      "task": "후보를 동결하고 실제 사용자 경로와 부족한 대표 화면 근거 확인",
+      "completionGate": "시험별 확인 위험과 통과 조건을 먼저 고정하고, 미검증/실패와 관찰 범위를 보존한다. 새3+3 반복이나38종 전체 재배포를 기본 작업으로 넣지 않는다.",
+      "detailIn": "lastIndependentReview"
     },
     {
       "rank": 4,
-      "task": "Certify repeated post-recipe accuracy across frozen screens with a reportable model; revisit unproductive repair cost",
-      "dependency": "The one final 1.0644 percent sample is not a universal accuracy guarantee"
+      "id": "MCP_SEPARATE_COMPLETION_TRACK",
+      "task": "MCP Code Connect 매핑과 원본 동등성은 별도 경로로 진행",
+      "completionGate": "MCP가 동일 리비전을 증명하지 못하면 참고 비교로 유지한다. 불완전 응답을 REST/로컬 성공으로 조용히 대체하지 않는다.",
+      "detailIn": "lastIndependentReview"
+    },
+    {
+      "rank": 5,
+      "id": "BUSINESS_AND_OPTIONAL_CAPABILITIES",
+      "task": "채워진 표·실업무 연동과 선택 기능은 근거에 맞춰 확장",
+      "completionGate": "업무 API 미확정을 화면 퍼블리싱의 일괄 기술 실패로 취급하지 않는다. 특정 최종표본의 수동 배포 가능성도 별도 허용 계약 없이 보장하지 않는다.",
+      "detailIn": "lastIndependentReview"
     }
   ],
   "businessOwnerEvidenceRequired": [
@@ -210,5 +225,14 @@
     "initialPolicyProbe": "Missing required SFDC_MANAGED_ENGINE_ROOT; corrected invocation then 6/6 passed; no production or provider failure",
     "noAdditionalModelCalls": true,
     "noFullRegressionRepeatWhenProductionFingerprintUnchanged": true
+  },
+  "lastIndependentReview": {
+    "path": "docs/validation/2026-11-26-independent-conversion-review.json",
+    "newConfirmedP0": 0,
+    "newConfirmedP1": 0,
+    "mode": "static review; no test/provider/Org execution",
+    "proposalOnly": true,
+    "exactTestSelectionManifest": "docs/validation/2026-11-26-conversion-test-selection.json",
+    "codeConnectIsNotRestImprovementPrerequisite": true
   }
 }
