@@ -31,13 +31,17 @@
     ],
     "legacyNextBssCommonBundleFilesInActiveRelease": 0,
     "designEvidence": "Figma NextBSS v1.9",
-    "mainActiveReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
-    "mainActiveNovaCommit": "da28ff709e45f8db6bb964be9de423fe3e938357",
+    "mainActiveReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "mainActiveNovaCommit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
     "privateCandidateNovaCommit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
     "privateCandidateReleaseId": "nextbss-1.9-afcb2d30f0c1adc5000166cd9a854fc0d7410a20391244a8e4264137f153ded5",
     "privateCandidateReleaseManifestSha256": "e94affc6f9f9b31203556f389b05bbee31cf76f9c63539bb8231b6d18fe2a2fb",
-    "mainActiveReleaseChanged": false,
-    "orgCompatibilityOfNewCandidateCertified": false
+    "orgCompatibilityOfNewCandidateCertified": false,
+    "initialComparisonBaseReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "mainActiveReleaseManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+    "mainActiveReleaseChangedByThisTask": false,
+    "mainActiveReleasePublishedConcurrentlyBySeparateTask": true,
+    "currentMainComponentsMatchPilotPublicApiModulesAndTokens": true
   },
   "devSeatGate": {
     "actualAgentCredentialSources": true,
@@ -185,5 +189,26 @@
       "architecture-acceptance-audit.json": "68d2f4563710f1a82014eeb05b8f7a746dee7895652432b97cf07b40eda2cd4e"
     },
     "mainRuntimeDependenciesPreservedAfterSymlinkCleanup": true
+  },
+  "concurrentMainReleaseProof": {
+    "releaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "manifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+    "source": {
+      "commit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
+      "treeSha256": "4eca914a27c2730d2da69d1c3feb3afb183c91984f44daf83c813c9c5074ee14"
+    },
+    "componentTupleSha256": "5fb0a725c8f2c1d154c40b06308b7baeb578c58383236b93bf19ccb4291fc125",
+    "pilotPublicApiModulesAndTokensEqual": true,
+    "publishedBySeparateNovaSynchronization": true,
+    "thisTaskOrgWrites": 0
+  },
+  "publicationIntegration": {
+    "upstreamUiMergedWithoutConverterOrLockfileDiff": true,
+    "agentUpstreamChanges": "CI workflow and diagnostics test configuration; no production source change",
+    "additionalAgentPolicyTestsPassed": 6,
+    "declaredPolicyRuntime": "canonical installed Node runtime",
+    "initialPolicyProbe": "Missing required SFDC_MANAGED_ENGINE_ROOT; corrected invocation then 6/6 passed; no production or provider failure",
+    "noAdditionalModelCalls": true,
+    "noFullRegressionRepeatWhenProductionFingerprintUnchanged": true
   }
 }

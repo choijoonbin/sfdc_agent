@@ -163,5 +163,26 @@
       "architecture-acceptance-audit.json": "68d2f4563710f1a82014eeb05b8f7a746dee7895652432b97cf07b40eda2cd4e"
     },
     "mainRuntimeDependenciesPreservedAfterSymlinkCleanup": true
+  },
+  "concurrentMainReleaseProof": {
+    "releaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "manifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+    "source": {
+      "commit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
+      "treeSha256": "4eca914a27c2730d2da69d1c3feb3afb183c91984f44daf83c813c9c5074ee14"
+    },
+    "componentTupleSha256": "5fb0a725c8f2c1d154c40b06308b7baeb578c58383236b93bf19ccb4291fc125",
+    "pilotPublicApiModulesAndTokensEqual": true,
+    "publishedBySeparateNovaSynchronization": true,
+    "thisTaskOrgWrites": 0
+  },
+  "publicationIntegration": {
+    "upstreamUiMergedWithoutConverterOrLockfileDiff": true,
+    "agentUpstreamChanges": "CI workflow and diagnostics test configuration; no production source change",
+    "additionalAgentPolicyTestsPassed": 6,
+    "declaredPolicyRuntime": "canonical installed Node runtime",
+    "initialPolicyProbe": "Missing required SFDC_MANAGED_ENGINE_ROOT; corrected invocation then 6/6 passed; no production or provider failure",
+    "noAdditionalModelCalls": true,
+    "noFullRegressionRepeatWhenProductionFingerprintUnchanged": true
   }
 }
