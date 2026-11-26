@@ -1,158 +1,214 @@
 {
   "schemaVersion": 1,
   "updatedOn": "2026-11-26",
-  "status": "PARTIAL_COMPLETION_WITH_EXPLICIT_RESUME_GATES",
+  "status": "IMPLEMENTED_AND_VERIFIED_WITH_EXPLICIT_QUALITY_LIMITS",
   "scope": "Screen conversion accuracy, source equivalence and measured performance",
   "implementationRules": [
-    "Generic source and public-API rules only; no production screen-ID or title conditions",
-    "Preserve original archives, authentication, immutable releases and existing user data",
-    "Do not repeat Figma REST or MCP probes until the user confirms the seat change",
-    "A DEV seat does not itself prove quota recovery, file access or matching revisions",
-    "Do not enable a model image capability until the adapter actually submits and verifies images",
-    "Do not change business or technical approval from a documentation-only audit"
+    "Generic source/public-API rules only; no screen-ID or title branches",
+    "Preserve original archives, auth, active releases and unrelated user/team changes",
+    "Use saved analysis at generation; changed production derivation requires fresh analysis",
+    "Failed/incomplete source, native coverage or image delivery is not silently promoted",
+    "Unknown business APIs remain separate from confirmed UI/native failures",
+    "No unproductive new 3+3 reruns; reuse exact saved responses for validator regression"
   ],
   "evidence": [
     {
       "repository": "SFDC_UI",
-      "path": "docs/validation/2026-11-26-screen-studio-local-contracts.json"
-    },
-    {
-      "repository": "SFDC_UI",
-      "path": "docs/validation/2026-11-26-local-reference-reuse.json"
+      "path": "docs/validation/2026-11-26-dev-seat-conversion-audit.json"
     },
     {
       "repository": "SFDC_Agent",
-      "path": "docs/validation/2026-11-26-followup-audit.json"
+      "path": "docs/validation/2026-11-26-dev-seat-gates.json"
     }
   ],
+  "authority": {
+    "componentSource": "NOVA/packages/nova-ui/main/default/lwc",
+    "componentFamilies": 38,
+    "readyFamilies": 36,
+    "heldFamilies": [
+      "progress-bar",
+      "spinner"
+    ],
+    "legacyNextBssCommonBundleFilesInActiveRelease": 0,
+    "designEvidence": "Figma NextBSS v1.9",
+    "mainActiveReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "mainActiveNovaCommit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
+    "privateCandidateNovaCommit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
+    "privateCandidateReleaseId": "nextbss-1.9-afcb2d30f0c1adc5000166cd9a854fc0d7410a20391244a8e4264137f153ded5",
+    "privateCandidateReleaseManifestSha256": "e94affc6f9f9b31203556f389b05bbee31cf76f9c63539bb8231b6d18fe2a2fb",
+    "orgCompatibilityOfNewCandidateCertified": false,
+    "initialComparisonBaseReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "mainActiveReleaseManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+    "mainActiveReleaseChangedByThisTask": false,
+    "mainActiveReleasePublishedConcurrentlyBySeparateTask": true,
+    "currentMainComponentsMatchPilotPublicApiModulesAndTokens": true
+  },
+  "devSeatGate": {
+    "actualAgentCredentialSources": true,
+    "restAndMcpSameAccount": true,
+    "targetOrganization": "SK Inc",
+    "plan": "Enterprise",
+    "seat": "Dev",
+    "restIdentityHttpStatus": 200,
+    "restNodesHttpStatus": 200,
+    "officialExportsHttpStatus": [
+      200,
+      200,
+      200
+    ],
+    "mcpAuthenticatedWhoamiSucceeded": true,
+    "observed429": false,
+    "remainingQuotaCount": null,
+    "figmaDesignWrites": 0,
+    "authenticationConfigurationWrites": 0
+  },
   "originalPriorities": [
     {
       "id": "P1_FROZEN_COMPARISON",
-      "title": "동일 원본·리비전·1× PNG·릴리스·환경의 비교 기준 고정",
-      "status": "PARTIAL",
+      "status": "VERIFIED_REST_PNG_WITH_MODEL_AND_ARCHIVE_LIMITS",
       "completed": [
-        "Same archive SHA, authored scene, raw snapshot, component release and prompt pins",
-        "Saved-analysis reuse without source recollection during generation",
-        "Local reference PNG and fixed browser environment",
-        "Three paired local NOVA timing runs with identical source, PNG and LWC output"
+        "One remote revision and three official1xPNGs",
+        "Pinned NOVA/API/token and prompt bundle",
+        "Six first-pass samples plus one separate post-recipe default-text E2E",
+        "Saved-input reuse with zero generation source reads"
       ],
       "remaining": [
-        "Prove archive-to-remote revision relationship",
-        "Capture official same-revision 1x PNG and raw remote evidence",
-        "Measure repeated frozen LLM runs and report variance separately from repair effects"
+        "Archive/MCP revision proof",
+        "Reportable exact backend model and repeated post-recipe validation"
       ],
-      "devDependency": "Remote evidence depends on restored Figma access; local repeated runs do not intrinsically require a DEV seat",
-      "completionGate": "All compared runs share verified revision, image bytes, release, prompt, model/transport and browser conditions; no mixed-baseline improvement claim"
+      "devDependency": false
     },
     {
       "id": "P2_MCP_INPUT_EQUIVALENCE",
-      "title": "MCP·REST·로컬 입력 동등성 확보",
-      "status": "WAITING_FOR_REMOTE_EVIDENCE",
+      "status": "PARTIAL_CODE_CONNECT_SOURCE_BLOCKED",
       "completed": [
-        "Common normalized source contract and provenance digests",
-        "Generic local variable/property-reference extraction and explicit unknown coverage"
+        "Actual REST/MCP same-account Dev confirmation",
+        "Native MCP collection and field-level ledger",
+        "Guidance-only rejection before snapshot save/reuse",
+        "Published canonical Code Connect contexts reviewed"
       ],
       "remaining": [
-        "Collect MCP and REST node/style/component/published-key/coordinate evidence at the same verified revision",
-        "Retain private raw responses and tool-call receipts, checking required node coverage and truncation",
-        "Compare authored facts separately from derived rendering assets and acquisition metadata"
+        "Full family mapping confirmation/publication authorization",
+        "Complete MCP raw facts and same-revision proof"
       ],
-      "devDependency": "Wait for user confirmation, then verify actual account, target-organization seat, authorization and quota",
-      "completionGate": "Explain every required-field difference; unsupported fields stay unknown and cannot be silently reconstructed or substituted"
+      "devDependency": false
     },
     {
       "id": "P3_TABLE_TEXT_MAPPING",
-      "title": "표·텍스트의 공통 매핑 보완",
-      "status": "PARTIAL_WITH_COMMON_COLOR_VERIFIER_CORRECTION",
+      "status": "GENERIC_RULES_VERIFIED_VISUAL_FINDINGS_REMAIN",
       "completed": [
-        "Generic source projection and pinned NOVA public-API checks",
-        "Native control, available geometry and typography validation",
-        "Non-regression gates for repair candidates",
-        "Corrected inside-stroke color measurement: 117 table false positives removed with identical LWC, PNG and pixels; missing/wrong paint still fails and complex paints stay unverified"
+        "Published key/set/variant identity",
+        "Source-canvas button coordinates",
+        "Typed empty-table align/padding/border recipe; native source140assertions",
+        "Native popup evidence",
+        "Combined acceptance and full server version fence",
+        "Actual post-recipe Kiro1.0644percent/native7of7; review retained"
       ],
       "remaining": [
-        "Resolve unsupported table transforms, source/public-component appearance mismatches and unverified text/assets against source facts and pinned public APIs",
-        "Investigate popup background and missing measurement hosts without deleting checks or changing source-specific rules",
-        "Validate actual stroke widths, other spacing/typography residuals and any renderer changes independently of the corrected color oracle",
-        "Confirm improvements with the official frozen comparison after remote evidence is available"
+        "Source host/width findings and existing NOVA native differences",
+        "Real transforms and unsupported appearance",
+        "Populated table and business contract validation"
       ],
-      "devDependency": "Local source/API diagnosis can continue before DEV; official cross-source accuracy certification needs remote evidence",
-      "completionGate": "Search, table and popup regressions preserve text, geometry, empty state and native interactions; lower pixels alone is insufficient"
+      "devDependency": false
     },
     {
       "id": "P4_IMAGE_INPUT_REPAIR",
-      "title": "실제 모델 이미지 입력과 보정 강화",
-      "status": "NOT_IMPLEMENTED_FOR_CURRENT_TRANSPORTS",
+      "status": "IMPLEMENTED_LIVE_DELIVERY_VERIFIED_DEFAULT_OFF",
       "completed": [
-        "Immutable PNG capture/binding and browser-side comparison",
-        "Explicit implemented-capability audit; unsupported images are not advertised",
-        "Check installed CLI 3.6.2 ACP initialization in an isolated unauthenticated profile: image:false, one authentication method; no session, prompt or Figma call"
+        "Immutable provider-independent PNG binding",
+        "Actual nonce-only PNG read proof",
+        "Three generation and one repair verified image reads",
+        "Matched three-text/three-image comparison"
       ],
       "remaining": [
-        "Negotiate capabilities in an authenticated isolated Kiro ACP session, or validate another explicitly selected provider image transport; the current API-key headless transport is unchanged",
-        "Implement actual image submission with source/node/revision/scale/hash/size checks",
-        "Verify the adapter does not discard images and records actual delivery",
-        "Run text-only versus image-assisted generation and repair using the same pinned source",
-        "Adopt only candidates that preserve required behaviors and improve measured quality"
+        "Repeatable accuracy benefit before default rollout",
+        "Model internal resolution/resize reporting"
       ],
-      "devDependency": "Adapter implementation is independent of DEV; live model capability and credentials are separate prerequisites",
-      "completionGate": "A live model image-delivery test passes, and repeated pinned comparisons pass pixel, component and behavior gates"
+      "devDependency": false
     }
   ],
-  "currentFollowup": {
-    "completedWithoutDev": [
-      "Audit existing business guidance and implementation; produce a request checklist without inventing API contracts",
-      "Measure local source preparation and eliminate a repeated archive parse for NOVA reference capture",
-      "Verify identical source/PNG/LWC output and retained reference/approval safeguards",
-      "Audit actual provider image capabilities and preserve an explicit deferred plan",
-      "Regenerate search, table and popup from byte-identical saved checkpoints to verify the generic inside-stroke color correction"
-    ],
-    "ownerEvidenceRequired": [
-      "Approved API/Apex contract for search/history, including paging, errors and authorization",
-      "Reset/refresh scope, action activation and navigation receiving contract",
-      "Input-format and hidden option/dependency specifications where not authored in the design"
-    ],
-    "notClaimedComplete": [
-      "REST/MCP/local raw-input parity",
-      "Official same-revision visual accuracy improvement",
-      "All table/text residuals",
-      "Model image submission",
-      "Business API integration or automatic apply eligibility"
-    ]
+  "remainingPriorities": [
+    {
+      "rank": 1,
+      "task": "Complete reviewed Code Connect family mappings and full MCP raw-source/revision proof",
+      "dependency": "Mapping evidence/publication authorization; no longer a DEV-seat wait"
+    },
+    {
+      "rank": 2,
+      "task": "Resolve generic source-host/width findings and existing NOVA native-coverage differences without hiding real transforms",
+      "dependency": "Source/public API evidence and offline regression"
+    },
+    {
+      "rank": 3,
+      "task": "Validate populated table alignment and real API/paging/navigation contracts",
+      "dependency": "Approved authored states and business API/Apex contract"
+    },
+    {
+      "rank": 4,
+      "task": "Certify repeated post-recipe accuracy across frozen screens with a reportable model; revisit unproductive repair cost",
+      "dependency": "The one final 1.0644 percent sample is not a universal accuracy guarantee"
+    }
+  ],
+  "businessOwnerEvidenceRequired": [
+    "Search/history API or Apex with paging/errors/permissions",
+    "Reset/refresh and action activation scope",
+    "Navigation receiving contract",
+    "Unshown options/dependencies where not authored"
+  ],
+  "frozenCandidate": {
+    "generatorSourceSha256": "bf54cb28da9642fdb358f25675ce102dd521029f77a76c596a658afb258c0563",
+    "managedRuntimeSha256": "5937b9d3eaf0fd5d7e7cfef3e09839a09a90ac1bee2233d981a08b17a339feb0",
+    "packageLockSha256": "1fa32459e1540b0082339e4e3e9556bd9db05ea98c9f684987b52d27e7acde50"
   },
-  "resumeAfterDevConfirmation": [
-    {
-      "order": 1,
-      "task": "Confirm the user-authorized Figma account and target organization seat for REST and MCP independently; keep secrets private"
+  "runtimeInstalled": {
+    "status": "passed",
+    "runtimeSha256": "5937b9d3eaf0fd5d7e7cfef3e09839a09a90ac1bee2233d981a08b17a339feb0",
+    "generatorSourceSha256": "bf54cb28da9642fdb358f25675ce102dd521029f77a76c596a658afb258c0563",
+    "productionFileCount": 308,
+    "sourceMatchesTestedRuntime": true
+  },
+  "cleanup": {
+    "status": "COMPLETE",
+    "ownedTemporaryRootsRemoved": 4,
+    "ownedRootsVerifiedAbsent": true,
+    "rawSourcesOfficialPngsModelCodeCheckpointsAndPrivateLogsRemoved": true,
+    "originalArchivesAndActiveReleasesPreserved": true,
+    "mainDatabaseTestWrites": 0,
+    "orgTestArtifactsCreated": 0,
+    "orgTestArtifactsToRemove": 0,
+    "authenticationConfigurationWrites": 0,
+    "rawSourcePngModelCodeOrCredentialsRetainedInRepository": false,
+    "sanitizedReceiptSha256": {
+      "final-candidate-freeze.json": "3232278580383470e517e068861cb23ac76810e4230733b7fb1d50a279d68e33",
+      "final-e2e-receipt.json": "035d0d142cf7a3bc0a306d550a66f191d4952a52b38be27a4afdae11f428863c",
+      "final-node-regression.json": "c9f0f1c0275138058bdfd7e363c253472fd4125b650c8675aa8bb18753bd084d",
+      "final-python-regression.json": "9a946b3fb07450d4f75479dde818ef7250d43c3a9dce7a402108a7ce74b0ef86",
+      "final-saved-response-replay.json": "4956c918a196048a68284acf2e6641f28f3f64feaca4100d41cd5b1685d80dfd",
+      "main-runtime-integration.json": "0347ff67fe77931f60129538dbfb725892b45e765d2936e21500507ba645b11a",
+      "final-installed-runtime-proof.json": "7c76d7d17906da4d87cbc751e03d1351fe1ec42f7702b95de4be4e2a31bef018",
+      "architecture-acceptance-audit.json": "68d2f4563710f1a82014eeb05b8f7a746dee7895652432b97cf07b40eda2cd4e"
     },
-    {
-      "order": 2,
-      "task": "Make bounded read-only quota/authentication checks; honor actual retry headers or reported limits rather than assuming the seat resets them"
+    "mainRuntimeDependenciesPreservedAfterSymlinkCleanup": true
+  },
+  "concurrentMainReleaseProof": {
+    "releaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "manifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+    "source": {
+      "commit": "3b013b934787ccaf8ee90f9f731d019d6e567ce9",
+      "treeSha256": "4eca914a27c2730d2da69d1c3feb3afb183c91984f44daf83c813c9c5074ee14"
     },
-    {
-      "order": 3,
-      "task": "Acquire and freeze one revision's node evidence and official 1x PNG for representative search, table and popup cases"
-    },
-    {
-      "order": 4,
-      "task": "Prove required-field parity and quantify remaining projection gaps before changing prompts or generation mappings"
-    },
-    {
-      "order": 5,
-      "task": "Complete generic mapping and supported image transport; keep prompt/model/release conditions explicit"
-    },
-    {
-      "order": 6,
-      "task": "Run repeated frozen generation/repair comparisons; report pixels, component mapping, native/business scope, time and variance"
-    },
-    {
-      "order": 7,
-      "task": "Remove owned test records, temporary inputs and any explicitly authorized test Org metadata; retain sanitized receipts only"
-    }
-  ],
-  "implementationCommit": {
-    "repository": "SFDC_UI",
-    "branch": "dev",
-    "sha": "065b83eec0dc55887166429574bd0d4b82c3aa5b"
+    "componentTupleSha256": "5fb0a725c8f2c1d154c40b06308b7baeb578c58383236b93bf19ccb4291fc125",
+    "pilotPublicApiModulesAndTokensEqual": true,
+    "publishedBySeparateNovaSynchronization": true,
+    "thisTaskOrgWrites": 0
+  },
+  "publicationIntegration": {
+    "upstreamUiMergedWithoutConverterOrLockfileDiff": true,
+    "agentUpstreamChanges": "CI workflow and diagnostics test configuration; no production source change",
+    "additionalAgentPolicyTestsPassed": 6,
+    "declaredPolicyRuntime": "canonical installed Node runtime",
+    "initialPolicyProbe": "Missing required SFDC_MANAGED_ENGINE_ROOT; corrected invocation then 6/6 passed; no production or provider failure",
+    "noAdditionalModelCalls": true,
+    "noFullRegressionRepeatWhenProductionFingerprintUnchanged": true
   }
 }

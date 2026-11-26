@@ -1,4 +1,4 @@
-"""Run one tool-free conversion turn using a Kiro CLI API key."""
+"""API-key Kiro turns with tool-free text or a single immutable image read."""
 
 import asyncio
 import errno
@@ -14,8 +14,10 @@ from pathlib import Path
 from tempfile import mkdtemp
 
 from .config import project_root
+from .image_input import ImageInput
+from .kiro_image_transport import AGENT_NAME as IMAGE_AGENT_NAME, prepare_image_workspace, verify_image_delivery
 from .kiro_processes import OwnedProcesses, ProcessCleanupError
-from .provider_capabilities import cli_identity, provider_receipt, reported_stream_model
+from .provider_capabilities import cli_identity, provider_capabilities, provider_receipt, reported_stream_model
 from .provider_observation import StreamObservation, reported_usage
 
 
@@ -311,10 +313,13 @@ class HeadlessKiroSession:
             raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
         self._touch()
         if method != "prompt" or not params or not isinstance(params.get("text"), str) or params.get("png"):
-            raise SessionError("KIRO_TASK_INVALID", "헤드리스 세션은 텍스트 작업만 지원합니다.")
+            raise SessionError("KIRO_TASK_INVALID", "헤드리스 세션에는 검증된 작업 입력이 필요합니다.")
+        image = params.get("image")
+        if image is not None and (not isinstance(image, ImageInput) or self.purpose != "screen"):
+            raise SessionError("KIRO_TASK_INVALID", "원본 이미지는 검증된 Screen 생성·보정 작업에서만 지원합니다.")
         if self._turn is not None:
             raise SessionError("KIRO_BUSY", "이미 Kiro 작업이 진행 중입니다.")
-        self._turn = asyncio.create_task(self._run(params["text"], timeout))
+        self._turn = asyncio.create_task(self._run(params["text"], timeout, image=image))
         try:
             return await self._turn
         except asyncio.CancelledError:
@@ -325,7 +330,7 @@ class HeadlessKiroSession:
             self._turn = None
             self._touch()
 
-    async def _run(self, prompt: str, timeout: float) -> dict:
+    async def _run(self, prompt: str, timeout: float, *, image: ImageInput | None = None) -> dict:
         loop = asyncio.get_running_loop()
         started = loop.time()
         deadline = started + timeout
@@ -344,7 +349,14 @@ class HeadlessKiroSession:
         diagnostics = {"exit_status": None, "stdout_bytes": None, "parsed_events": 0}
         try:
             home = Path(root)
-            workspace = prepare_workspace(home)
+            try:
+                image_transport = prepare_image_workspace(home, image) if image is not None else None
+            except (OSError, ValueError):
+                raise SessionError("KIRO_HEADLESS_FAILED", "원본 PNG 전송을 위한 격리 작업공간을 준비하지 못했습니다.") from None
+            workspace = image_transport.workspace if image_transport is not None else prepare_workspace(home)
+            transport_prompt = image_transport.prompt(prompt) if image_transport is not None else prompt
+            if image_transport is not None:
+                performance.update(imageBytes=image.binding.bytes, transportPromptBytes=len(transport_prompt.encode()))
             env = {key: value for key, value in os.environ.items() if key in _KIRO_ENVIRONMENT
                    and key not in {"HOME", "NOVA_KIRO_CLI", "TMPDIR", "TMP", "TEMP"}}
             env.update({"HOME": root, "KIRO_HOME": str(home / ".kiro"), "KIRO_DATA_DIR": str(home / "kiro-data"),
@@ -360,7 +372,8 @@ class HeadlessKiroSession:
             lines = identity.decode("utf-8", errors="replace").splitlines()
             if status or not any(_API_KEY_STATUS.fullmatch(line) for line in lines):
                 raise SessionError("KIRO_KEY_AUTH_REQUIRED", "Kiro가 API 키 인증을 확인하지 못했습니다. 키와 실행 환경을 확인해 주세요.")
-            args = ("chat", "--v3", "--agent", _AGENT_NAME, "--trust-workspace", "--trust-tools=",
+            args = ("chat", "--v3", "--agent", IMAGE_AGENT_NAME if image_transport is not None else _AGENT_NAME,
+                    "--trust-workspace", "--trust-tools=",
                     "--no-interactive", "--output-format", "stream-json")
             remaining = deadline - loop.time()
             if remaining <= 0:
@@ -369,7 +382,7 @@ class HeadlessKiroSession:
             model_started = loop.time()
             observation = StreamObservation()
             diagnostics = {"exit_status": None, "stdout_bytes": None, "parsed_events": 0}
-            status, output = await _execute(binary, args, workspace, env, remaining, prompt=prompt, observation=observation)
+            status, output = await _execute(binary, args, workspace, env, remaining, prompt=transport_prompt, observation=observation)
             performance.update(observation.receipt())
             performance['modelProcessMs'] = max(0, round((loop.time() - model_started) * 1000))
             diagnostics.update(exit_status=status, stdout_bytes=len(output))
@@ -377,7 +390,19 @@ class HeadlessKiroSession:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
             stage = "parse"
             parse_started = loop.time()
-            result = parse_output(output, diagnostics=diagnostics)
+            if image_transport is None:
+                result = parse_output(output, diagnostics=diagnostics)
+            else:
+                try:
+                    text_output, image_receipt = verify_image_delivery(output, image_transport)
+                except (ValueError, KeyError, TypeError, OSError, UnicodeError, RecursionError):
+                    raise SessionError("KIRO_HEADLESS_INCOMPLETE", "원본 PNG가 모델 작업에 실제 전달됐는지 확인하지 못했습니다.") from None
+                result = parse_output(text_output, diagnostics=diagnostics)
+                result["toolCalls"] = [{"name": "read_file", "kind": "image", "status": "completed",
+                                        "sha256": image.binding.sha256}]
+                image_receipt["transportPromptSha256"] = hashlib.sha256(transport_prompt.encode()).hexdigest()
+                self.provider_receipt["imageInput"] = image_receipt
+                self.provider_receipt["capabilities"] = provider_capabilities("kiro", image_verified=True)
             self.provider_receipt["reportedModel"] = reported_stream_model(output)
             performance.update(reported_usage(output))
             performance['parseMs'] = max(0, round((loop.time() - parse_started) * 1000))

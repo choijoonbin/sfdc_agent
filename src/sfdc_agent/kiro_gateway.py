@@ -1,9 +1,9 @@
 """Local model sessions for Screen and Story conversion."""
 
 import asyncio
-import base64
 import hashlib
 import hmac
+import json
 import logging
 import sqlite3
 from contextlib import asynccontextmanager, nullcontext
@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
+from .image_input import ImageBinding, validate_image_input
 from .kiro_screen_projection import project_screen_fields
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
 from .provider_capabilities import provider_receipt
@@ -55,8 +56,8 @@ def kiro_mode(purpose: str) -> str:
 
 
 def _validate_headless_prompt(prompt):
-    if prompt.fields is None or prompt.png is not None:
-        raise ValueError("Headless tasks require structured text evidence.")
+    if prompt.fields is None:
+        raise ValueError("Headless tasks require structured evidence.")
     fields = prompt.fields
     if prompt.operation in {"screen.repair", "screen.plan.repair"}:
         fields = fields.get("evidence")
@@ -93,6 +94,7 @@ class Prompt(BaseModel):
     text: str | None = Field(default=None, min_length=1, max_length=8 * 1024 * 1024)
     fields: dict | None = None
     png: str | None = None
+    imageBinding: ImageBinding | None = None
 
     def build(self, *, templates=None) -> str:
         if self.operation is not None and self.operation not in OPERATIONS:
@@ -108,10 +110,6 @@ class Prompt(BaseModel):
                 text = build_story_task(self.operation, self.fields, templates=templates)
         else:
             raise ValueError("Send a prompt or structured task fields.")
-        if self.png is not None:
-            image = base64.b64decode(self.png, validate=True)
-            if not image.startswith(b"\x89PNG\r\n\x1a\n"):
-                raise ValueError("Expected PNG evidence.")
         if not text or len(text.encode()) > 8 * 1024 * 1024:
             raise ValueError("Kiro prompt exceeds the supported size.")
         return text
@@ -241,7 +239,8 @@ async def start_session(request: Request):
         sessions.pop(session_id, None)
         await session.close()
         raise
-    return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id}
+    return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id,
+            "imageInputContractVersion": 1}
 
 
 @router.get("/{session_id}/events")
@@ -272,6 +271,8 @@ async def prompt_session(request: Request, session_id: str):
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
                 raise ValueError("Unsupported operation for the headless session.")
             _validate_headless_prompt(prompt)
+        image = validate_image_input(prompt.png, prompt.imageBinding, operation=prompt.operation,
+                                     fields=prompt.fields, context=context)
         fields = await project_screen_fields(prompt.operation, prompt.fields)
         projection_ms = max(0, round((monotonic() - projection_started) * 1000))
         if fields is not prompt.fields:
@@ -286,11 +287,17 @@ async def prompt_session(request: Request, session_id: str):
     operation = prompt.operation or "prompt"
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     started = monotonic()
-    result = await get_session(request, session_id).call("prompt", {"text": text, "png": prompt.png})
+    result = await get_session(request, session_id).call("prompt", {
+        "text": text, "png": None, **({"image": image} if image is not None else {})})
     completed_session = get_session(request, session_id)
     receipt = getattr(completed_session, "provider_receipt", None)
     if not isinstance(receipt, dict):
         receipt = provider_receipt("kiro")
+    if image is not None:
+        delivery = receipt.get("imageInput")
+        if (not isinstance(delivery, dict) or delivery.get("status") != "read-verified"
+                or delivery.get("reference") != image.receipt() or delivery.get("completedReads") != 1):
+            raise SessionError("KIRO_HEADLESS_INCOMPLETE", "원본 PNG 입력의 전달 완료 기록을 확인하지 못했습니다.")
     receipt = {**receipt, 'gatewayPerformance': {'schemaVersion': 1, 'projectionMs': projection_ms,
         'promptBuildMs': build_ms, 'sessionCallMs': max(0, round((monotonic() - started) * 1000))}}
     if prompt_run is not None and owner is not None:
@@ -298,7 +305,10 @@ async def prompt_session(request: Request, session_id: str):
     if prompt_run is not None and managed_capture:
         record_managed_trace(request, prompt_run, release, text, execution_mode)
     logger.info("Kiro %s finished (%s, %s)", operation, session_id[:8], result.get("stopReason"))
+    image_digest = hashlib.sha256(payload + b"\0image/png\0" + json.dumps(image.receipt(), sort_keys=True,
+        separators=(",", ":")).encode() + b"\0" + image.content).hexdigest() if image is not None else None
     return {**result, "providerReceipt": receipt, "promptDigest": hashlib.sha256(payload).hexdigest(), "promptBytes": len(payload),
+            **({"inputDigest": image_digest, "imageBytes": image.binding.bytes} if image is not None else {}),
             "executionMode": execution_mode, "promptReleaseId": release.id,
             **({"promptVersion": release.versions[operation]} if prompt.fields is not None else {})}
 

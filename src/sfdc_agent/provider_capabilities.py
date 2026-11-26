@@ -15,17 +15,18 @@ def model_identifier(value):
     return value if isinstance(value, str) and _IDENTIFIER.fullmatch(value) else None
 
 
-def provider_capabilities(provider: str) -> dict:
+def provider_capabilities(provider: str, *, image_verified=False) -> dict:
     """Describe implemented transports, never infer a model's image support.
 
-    Image submission requires a separately implemented and tested adapter. A
-    provider having vision-capable models does not enable images on this server.
+    Only a verified image-read receipt enables images on a Kiro result. A
+    vision-capable model name never implicitly enables a transport or delivery.
     """
     if provider not in _PROVIDERS:
         raise ValueError("Unknown model provider.")
-    return {"structuredText": True, "images": False, "jsonObject": True,
+    verified = provider == "kiro" and image_verified is True
+    return {"structuredText": True, "images": verified, "jsonObject": True,
             "strictSchema": provider == "openai",
-            "imageInputStatus": "unsupported" if provider == "kiro" else "not-enabled"}
+            "imageInputStatus": ("read-verified" if verified else "requires-bound-reference") if provider == "kiro" else "not-enabled"}
 
 
 def provider_receipt(provider: str, configured_model=None, reported_model=None, *, cli=None) -> dict:
