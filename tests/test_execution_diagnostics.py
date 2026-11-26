@@ -2,6 +2,7 @@ import json
 import asyncio
 import os
 import signal
+from importlib.resources import files
 from pathlib import Path
 import unittest
 
@@ -38,11 +39,13 @@ class DiagnosticContractTests(unittest.TestCase):
                     packet() + b' ' * 1025]:
             self.assertIsNone(decode_worker_failure(raw))
 
-    def test_packaged_policies_match_canonical_engine(self):
-        root = Path(__file__).resolve().parents[2]
-        canonical = (root/'SFDC_Ui/nextbss/shared/execution-diagnostics-policy.json').read_bytes()
-        self.assertEqual(canonical, (root/'SFDC_Agent/src/sfdc_agent/execution_diagnostics_policy.json').read_bytes())
-        self.assertEqual(canonical, (root/'SFDC_BACK/src/main/resources/execution-diagnostics-policy.json').read_bytes())
+    def test_packaged_policy_matches_declared_canonical_engine(self):
+        self.assertIn('SFDC_MANAGED_ENGINE_ROOT', os.environ, 'Declare the approved Node runtime for the policy contract.')
+        root = Path(os.environ['SFDC_MANAGED_ENGINE_ROOT'])
+        self.assertTrue(root.is_absolute(), 'The declared Node runtime must be an absolute path.')
+        canonical = (root/'nextbss/shared/execution-diagnostics-policy.json').read_bytes()
+        self.assertEqual(canonical, files('sfdc_agent').joinpath('execution_diagnostics_policy.json').read_bytes())
+        # BACK checks its actual packaged JAR policy in its artifact delivery gate.
 
 
 class ActualWorkerDiagnosticTests(unittest.IsolatedAsyncioTestCase):
