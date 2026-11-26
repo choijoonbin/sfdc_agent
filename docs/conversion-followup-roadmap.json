@@ -242,7 +242,40 @@
     "strategy": "Scoped commits; merge publication in isolated worktrees where upstream has advanced. Unrelated working tree changes are preserved.",
     "finalConverterProductionFingerprintVerified": true,
     "noBlanketRegressionOrThreePlusThreeModelRepeat": true,
-    "newProviderCallsAfterObservationOnlyFix": 0
+    "newProviderCallsAfterObservationOnlyFix": 0,
+    "verification": {
+      "repos": {
+        "SFDC_Ui": {
+          "featureCommit": "7cc36ffdb71e9a6ac2ffe0cdc616976a79f90bf4",
+          "publicationCommit": "21d31f0ee1a2f616eb51fa1d58c9b7fb69ee1ad6",
+          "remoteBranch": "dev",
+          "remoteConfirmed": true,
+          "unrelatedWorkPreserved": true,
+          "mergedTestSha256": "f907069fdf7b30f681d5a8382e5b5cc768e9ccbf0918ecf53e8ec18c29b4f84e"
+        },
+        "SFDC_BACK": {
+          "featureCommit": "d9324c1a345c74884c3a003da158a0bfbf3d7120",
+          "publicationCommit": "83fb88eb7a91307b2cb56c77b652ed900d542775",
+          "remoteBranch": "dev",
+          "remoteConfirmed": true,
+          "unrelatedWorkPreserved": true
+        }
+      },
+      "ownedPublicationWorktreesRemoved": true,
+      "matrixGate": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skip": 0,
+        "durationMs": 7454.052417,
+        "modelCalls": 0,
+        "orgWrites": 0
+      },
+      "reasonForAdditionalGate": "Only the upstream test helper changed during integration; these are the same two synthetic cases, not two additional unique scenarios.",
+      "productionFilesMatchTestedBytes": true,
+      "newProviderCalls": 0,
+      "newOrgWrites": 0
+    }
   },
   "lastIndependentReview": {
     "path": "docs/validation/2026-11-26-independent-conversion-review.json",
