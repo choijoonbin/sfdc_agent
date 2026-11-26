@@ -298,6 +298,30 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         status, _, _ = await self.request(GENERATION)
         self.assertEqual(status, 502)
 
+    async def test_saved_screen_generation_neither_downloads_archive_nor_exposes_figma_credentials(self):
+        from tests.test_screen_analysis_contract import checkpoint, request as contract_request
+        archive='a'*64
+        record=checkpoint(engine='KIRO',acquisition='LOCAL_FILE',actual='LOCAL_FILE',archive=archive)
+        payload=contract_request(record,engine='NOVA',acquisition='LOCAL_FILE',archive=archive)
+        payload.update(timeoutSeconds=10,deadlineEpochSeconds=int(time())+11)
+        caps=Path(self.directory)/'nextbss/engine/managed-runtime-capabilities.json'
+        caps.parent.mkdir(parents=True)
+        caps.write_text(json.dumps({'schemaVersion':1,'generationFamilies':[],
+                                   'sourceAcquisitionVersion':1,'sourceAcquisitions':['LOCAL_FILE'],'screenAnalysisContractVersion':1}))
+        self.write_runner(GENERATION_SCRIPT.replace('summary: { workflow: request.workflowId }',
+            'summary: { receivedFigmaToken:Boolean(process.env.FIGMA_ACCESS_TOKEN), receivedPlanToken:Boolean(process.env.FIGMA_PLAN_ACCESS_TOKEN) }'))
+        storage=Mock();storage.prepare.return_value={}
+        with patch(f'{RUNNER_MODULE}.ManagedObjectStorage.configured',return_value=storage), \
+             patch(f'{RUNNER_MODULE}.remote_figma_environment',side_effect=AssertionError('source recollection')), \
+             patch(f'{RUNNER_MODULE}.require_figma_scope') as scope, \
+             patch('sfdc_agent.managed_execution_progress.require_figma_scope') as progress_scope:
+            status,reply,_=await self.request(payload)
+        self.assertEqual(status,200)
+        self.assertEqual(reply['summary'],{'receivedFigmaToken':False,'receivedPlanToken':False})
+        storage.prepare.assert_called_once()
+        self.assertIsNone(storage.prepare.call_args.kwargs['archive'])
+        scope.assert_not_called();progress_scope.assert_not_called()
+
     async def test_rejects_wrong_status_unusable_output_or_errors_without_worker_details(self):
         self.write_runner(ANALYSIS_SCRIPT)
         status, _, _ = await self.request(GENERATION)

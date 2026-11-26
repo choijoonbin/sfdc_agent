@@ -143,7 +143,8 @@ async def execution_progress(payload, token, timeout):
     source = urlsplit(payload.sourceReference)
     match = re.match(r'^/(?:design|file)/([A-Za-z0-9]{1,160})(?:/|$)', source.path)
     remote = bool(source.scheme == 'https' and source.hostname in {'figma.com', 'www.figma.com'} and source.port in {None, 443}
-                  and match and (payload.archive is None or getattr(payload, 'sourceAcquisition', None) == 'REST_FIRST'))
+                  and match and (payload.archive is None or getattr(payload, 'sourceAcquisition', None) in {'REST_FIRST','REST_ONLY'})
+                  and not (getattr(payload,'operation',None)=='GENERATE' and payload.kind=='SCREEN' and getattr(payload,'_screen_contract',None) is not None))
     file_key = match[1] if remote else None
     if remote and getattr(payload, 'sourceAcquisition', None) != 'MCP_ONLY':
         require_figma_scope(payload.executionScope)

@@ -154,6 +154,9 @@ def verify(directory, payload, result, runtime_root):
         original = record.get('analysis') if payload.kind == 'SCREEN' else record
         if not isinstance(original, dict) or original.get('id') != analysis_id:
             raise invalid()
+        if payload.kind=='SCREEN':
+            from .screen_analysis_contract import validate_checkpoint
+            validate_checkpoint(payload,result.checkpoint)
         runtime = _decode_json(_bytes(runtime_root / 'managed-runtime.json', 2 * 1024 * 1024))
         if not HASH.fullmatch(manifest['producerRuntimeSha256']) or runtime.get('sha256') != manifest['producerRuntimeSha256']:
             raise invalid()
@@ -178,6 +181,9 @@ def verify(directory, payload, result, runtime_root):
         view = _decode_json(view_bytes)
         if not isinstance(view, dict) or view.get('id') != manifest['analysisId'] or not isinstance(view.get('source'), dict):
             raise invalid()
+        if payload.kind=='SCREEN' and 'contract' in original:
+            if any(view.get(field)!=original.get(field) for field in ('contract','allowedGenerationEngines','generationOptions')):
+                raise invalid()
         if not payload.archive and view['source'].get('fileKey') not in (None, key):
             raise invalid()
         references = _source_nodes(view, manifest['analysisId'])

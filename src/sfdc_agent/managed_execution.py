@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from .execution_diagnostics import WorkerExecutionFailure, decode_worker_failure, safe_diagnostic
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_validator
 from starlette.requests import ClientDisconnect
 
 from .managed_prompts import PromptBundle, execution_prompts, runner_token
@@ -31,6 +31,7 @@ from .component_library import ComponentLibrary
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
 from .managed_object_storage import ManagedObjectStorage, storage_io
+from .screen_analysis_contract import validate_checkpoint as validate_screen_checkpoint
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
@@ -104,8 +105,9 @@ class ExecutionRequest(BaseModel):
     workflowId: RegistryLabel | None = None
     archive: ArchiveSelection | None = None
     inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
-    sourceAcquisition: Literal['REST_FIRST', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
+    sourceAcquisition: Literal['REST_FIRST', 'REST_ONLY', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
     sourceVersion: RegistryLabel | None = None
+    _screen_contract: dict | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def validate_review(self):
@@ -115,10 +117,13 @@ class ExecutionRequest(BaseModel):
                              or self.archive.workspaceId != self.executionScope.workspaceId):
             raise ValueError("The selected archive belongs to a different execution scope.")
         remote = urlsplit(self.sourceReference).scheme.lower() == 'https'
-        if self.sourceAcquisition == 'REST_FIRST' and (self.kind != 'SCREEN' or self.engine != 'NOVA'
+        if self.sourceAcquisition in {'REST_FIRST', 'REST_ONLY'} and (self.kind != 'SCREEN'
                 or self.inputMode != 'SOURCE' or not remote):
-            raise ValueError('REST-first acquisition requires a NOVA Screen URL.')
-        if self.sourceAcquisition == 'MCP_ONLY' and (self.kind != 'SCREEN' or self.engine != 'KIRO'
+            raise ValueError('REST acquisition requires a Screen URL.')
+        if self.operation=='ANALYZE' and ((self.sourceAcquisition=='REST_FIRST' and self.engine!='NOVA')
+                or (self.sourceAcquisition=='REST_ONLY' and self.engine!='KIRO')):
+            raise ValueError('Select NOVA API-first analysis or Kiro API-only analysis.')
+        if self.sourceAcquisition == 'MCP_ONLY' and (self.kind != 'SCREEN' or (self.operation == 'ANALYZE' and self.engine != 'KIRO')
                 or self.inputMode != 'SOURCE' or not remote or self.archive
                 or not self.executionScope.actorUserId):
             raise ValueError('MCP acquisition requires an actor-scoped Kiro Screen URL without an archive.')
@@ -126,7 +131,7 @@ class ExecutionRequest(BaseModel):
                 or (remote and self.inputMode != 'MEASURED')):
             raise ValueError('Local acquisition requires an explicitly selected archive.')
         if self.inputMode == 'MEASURED':
-            if self.kind != 'SCREEN' or self.engine != 'NOVA' or not self.archive or self.sourceVersion != 'local-' + self.archive.sha256:
+            if self.kind != 'SCREEN' or self.operation == 'ANALYZE' and self.engine != 'NOVA' or not self.archive or self.sourceVersion != 'local-' + self.archive.sha256:
                 raise ValueError('Measured input requires the exact registered Screen archive.')
         elif self.sourceVersion is not None:
             raise ValueError('Source version is only supplied for measured input.')
@@ -135,6 +140,9 @@ class ExecutionRequest(BaseModel):
                 raise ValueError("Generation requires a prior analysis checkpoint.")
             if len(_encode_json(self.analysis)) > _CHECKPOINT_BYTES:
                 raise ValueError("Analysis checkpoint is too large.")
+            self._screen_contract = validate_screen_checkpoint(self,self.analysis)
+            if self.inputMode=='MEASURED' and self.engine!='NOVA' and self._screen_contract is None:
+                raise ValueError('Cross-engine measured generation requires a saved Screen contract.')
         elif self.analysisJobId is not None or self.analysis is not None or self.workflowId is not None:
             raise ValueError("Analysis starts without a prior checkpoint.")
         return self
@@ -281,6 +289,8 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
         if payload.sourceAcquisition is not None:
             supported = supported and capabilities.get('sourceAcquisitionVersion') == 1 and (
                 payload.sourceAcquisition in capabilities.get('sourceAcquisitions', []))
+        if payload._screen_contract is not None:
+            supported = supported and capabilities.get('screenAnalysisContractVersion') == 1
     except (OSError, ValueError, TypeError, AttributeError):
         raise HTTPException(503, 'RUNTIME_CAPABILITIES_UNAVAILABLE') from None
     if not supported:
@@ -418,8 +428,10 @@ def _parse_result(output: bytes, operation: str) -> ExecutionResult:
 
 
 def _requires_remote_figma(payload: ExecutionRequest) -> bool:
+    if payload.operation=='GENERATE' and payload.kind=='SCREEN' and payload._screen_contract is not None:
+        return False
     return (payload.sourceAcquisition != 'MCP_ONLY' and urlsplit(payload.sourceReference).scheme.lower() == 'https'
-            and (payload.sourceAcquisition == 'REST_FIRST' or not payload.archive))
+            and (payload.sourceAcquisition in {'REST_FIRST','REST_ONLY'} or not payload.archive))
 
 
 async def _execute(payload: ExecutionRequest) -> ExecutionResult:
@@ -437,7 +449,8 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                 async with execution_progress(payload, runner_token(), timeout) as context:
                     environment = dict(provider_environment)
                     if storage:
-                        environment.update(await storage_io(storage.prepare, scratch, archive=payload.archive,
+                        saved_source=payload.operation=='GENERATE' and payload.kind=='SCREEN' and payload._screen_contract is not None
+                        environment.update(await storage_io(storage.prepare, scratch, archive=None if saved_source else payload.archive,
                             release_id=payload.designReleaseId, manifest_sha=payload.designManifestSha256,
                             deadline=payload.deadlineEpochSeconds))
                     if payload.engine == 'KIRO':
@@ -544,7 +557,7 @@ async def execute(request: Request) -> ExecutionResult:
     tasks = ()
     try:
         payload = await _parse_request(request)
-        if not payload.archive and payload.sourceReference.startswith('https://'):
+        if _requires_remote_figma(payload):
             require_figma_scope(payload.executionScope)
         _execution_budget(payload, _runner_configuration()[2])
         _check_component_library_configuration(payload)
