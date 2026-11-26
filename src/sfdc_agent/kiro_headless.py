@@ -16,6 +16,7 @@ from tempfile import mkdtemp
 from .config import project_root
 from .kiro_processes import OwnedProcesses, ProcessCleanupError
 from .provider_capabilities import cli_identity, provider_receipt, reported_stream_model
+from .provider_observation import StreamObservation, reported_usage
 
 
 IDLE_SECONDS = 16 * 60
@@ -224,13 +225,16 @@ async def _send_input(process, prompt):
 async def _read_output(process, limit):
     output = bytearray()
     while chunk := await process.stdout.read(64 * 1024):
+        observation = getattr(process, 'sfdc_observation', None)
+        if observation is not None:
+            observation.feed(chunk)
         if len(output) + len(chunk) > limit:
             raise SessionError("KIRO_OUTPUT_TOO_LARGE", "Kiro 출력이 허용된 크기를 초과했습니다.")
         output.extend(chunk)
     return bytes(output)
 
 
-async def _execute(binary, args, workspace, env, timeout, *, prompt=None, limit=_STREAM_LIMIT):
+async def _execute(binary, args, workspace, env, timeout, *, prompt=None, limit=_STREAM_LIMIT, observation=None):
     creation = asyncio.create_task(asyncio.create_subprocess_exec(
             binary, *args, cwd=workspace, env=env, start_new_session=True,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
@@ -248,6 +252,7 @@ async def _execute(binary, args, workspace, env, timeout, *, prompt=None, limit=
         raise
     except OSError:
         raise SessionError("KIRO_UNAVAILABLE", "Kiro CLI 실행 파일을 시작하지 못했습니다.") from None
+    process.sfdc_observation = observation
     tasks = (asyncio.create_task(_send_input(process, prompt)), asyncio.create_task(_read_output(process, limit)))
     owned = OwnedProcesses(process, workspace)
     primary = None
@@ -321,6 +326,9 @@ class HeadlessKiroSession:
             self._touch()
 
     async def _run(self, prompt: str, timeout: float) -> dict:
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        deadline = started + timeout
         binary = os.environ.get("NOVA_KIRO_CLI")
         installed = Path.home() / ".local" / "bin" / "kiro-cli"
         binary = shutil.which(binary or (str(installed) if installed.is_file() else "kiro-cli"))
@@ -328,8 +336,7 @@ class HeadlessKiroSession:
             raise SessionError("KIRO_UNAVAILABLE", "Kiro CLI 실행 파일을 찾지 못했습니다.")
         binary = str(Path(binary).resolve())
         self.provider_receipt = provider_receipt("kiro", cli=await asyncio.to_thread(cli_identity, binary))
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + timeout
+        performance = {'schemaVersion': 1, 'scope': 'kiro-headless-client', 'promptBytes': len(prompt.encode())}
         root = mkdtemp(prefix="sfdc-kiro-headless-")
         result = None
         primary = None
@@ -344,9 +351,12 @@ class HeadlessKiroSession:
                         "XDG_CONFIG_HOME": str(home / "config"), "XDG_DATA_HOME": str(home / "data"),
                         "XDG_CACHE_HOME": str(home / "cache"), "TMPDIR": root, "NO_COLOR": "1",
                         "KIRO_API_KEY": self._key})
+            performance['workspacePrepareMs'] = max(0, round((loop.time() - started) * 1000))
+            identity_started = loop.time()
             status, identity = await _execute(binary, ("whoami", "--format", "plain"), workspace, env,
                                               min(timeout, 15), limit=16 * 1024)
             diagnostics.update(exit_status=status, stdout_bytes=len(identity))
+            performance['authenticationMs'] = max(0, round((loop.time() - identity_started) * 1000))
             lines = identity.decode("utf-8", errors="replace").splitlines()
             if status or not any(_API_KEY_STATUS.fullmatch(line) for line in lines):
                 raise SessionError("KIRO_KEY_AUTH_REQUIRED", "Kiro가 API 키 인증을 확인하지 못했습니다. 키와 실행 환경을 확인해 주세요.")
@@ -356,14 +366,21 @@ class HeadlessKiroSession:
             if remaining <= 0:
                 raise SessionError("KIRO_TIMEOUT", "Kiro 헤드리스 응답 시간이 초과됐습니다.")
             stage = "model"
+            model_started = loop.time()
+            observation = StreamObservation()
             diagnostics = {"exit_status": None, "stdout_bytes": None, "parsed_events": 0}
-            status, output = await _execute(binary, args, workspace, env, remaining, prompt=prompt)
+            status, output = await _execute(binary, args, workspace, env, remaining, prompt=prompt, observation=observation)
+            performance.update(observation.receipt())
+            performance['modelProcessMs'] = max(0, round((loop.time() - model_started) * 1000))
             diagnostics.update(exit_status=status, stdout_bytes=len(output))
             if status:
                 raise SessionError("KIRO_HEADLESS_FAILED", "Kiro 헤드리스 작업이 실패했습니다. 키 권한과 호출 한도를 확인해 주세요.")
             stage = "parse"
+            parse_started = loop.time()
             result = parse_output(output, diagnostics=diagnostics)
             self.provider_receipt["reportedModel"] = reported_stream_model(output)
+            performance.update(reported_usage(output))
+            performance['parseMs'] = max(0, round((loop.time() - parse_started) * 1000))
             from .kiro_readiness import record_model_success
             record_model_success(self._key)
             return result
@@ -377,6 +394,7 @@ class HeadlessKiroSession:
                 record_auth_failure(self._key, error.code)
             raise
         finally:
+            cleanup_started = loop.time()
             if not getattr(primary, "cleanup_incomplete", False):
                 try:
                     await _settle_cleanup(_cleanup_workspace(Path(root)), primary)
@@ -393,6 +411,9 @@ class HeadlessKiroSession:
                         logger.error("Kiro workspace cleanup failed; primary outcome retained")
                     elif result is None:
                         raise SessionError("KIRO_WORKSPACE_CLEANUP_FAILED", "Kiro 임시 작업공간 정리를 확인할 수 없습니다.") from error
+            performance['cleanupMs'] = max(0, round((loop.time() - cleanup_started) * 1000))
+            performance['totalMs'] = max(0, round((loop.time() - started) * 1000))
+            self.provider_receipt['performance'] = performance
 
     async def close(self):
         if self.closed:

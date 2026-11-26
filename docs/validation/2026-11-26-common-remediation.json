@@ -1,0 +1,615 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-26",
+  "timezone": "Asia/Seoul",
+  "product": "SFDC_UI",
+  "baselineUiCommit": "d18a5f8374013ade61acc4686579dee4a2f68808",
+  "activeRelease": {
+    "id": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "manifestSha256": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09"
+  },
+  "source": {
+    "archiveSha256": "a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76",
+    "authoredSceneSha256": "b6c0fd344cdedb38388624eb6c54042aafaabe58354c8ea47d68877c964d9311",
+    "novaKiroAuthoredSceneEqual": true,
+    "novaKiroProvenanceEqual": true,
+    "derivedAssetsDifferent": true,
+    "rawSnapshotIsOriginalTransferBytes": false,
+    "remoteRevisionVerified": false,
+    "archiveUnchanged": true
+  },
+  "remoteAttempt": {
+    "code": "FIGMA_RATE_LIMITED",
+    "stage": "source-preparation",
+    "schemaVersion": 1,
+    "retryAfterSeconds": 228799
+  },
+  "offlineNovaComparison": [
+    {
+      "role": "search",
+      "nodeId": "29876:14784",
+      "comparisonClassification": "REFERENCE_ONLY_ARCHIVE_REMOTE_REVISION_UNLINKED",
+      "sameArchiveAndRelease": true,
+      "sourceTreeUnchangedDuringEachCapture": true,
+      "visualDifferencePercentagePointDelta": 0.05703878354911124,
+      "visualImprovementEstablished": false,
+      "baseline": {
+        "sourceTreeSha256": "587ad57e3a6e742d97ffcdfc99e640201e2a885464ee1b14fc22e9183f852f00",
+        "changedRatio": 0.00845275240367646,
+        "strictChangedRatio": 0.015989213457764474,
+        "nativeControls": {
+          "nativeInputCount": 1,
+          "nativeInputPresent": true,
+          "inputEditable": true,
+          "nativeResetPresent": true,
+          "nativeSearchPresent": false,
+          "resetEnabled": true,
+          "searchEnabled": null,
+          "disabledButtonCount": 0,
+          "initialValueLength": 11,
+          "inputAcceptsEdit": true,
+          "resetClearsField": true,
+          "searchClicked": false,
+          "eventTypes": [],
+          "businessApiVerified": false
+        },
+        "timing": {
+          "archiveOpenMs": 7305.1611250000005,
+          "standardReadMs": 669.0462919999991,
+          "conversionMs": 159.55512500000077,
+          "compileMs": 81.73158400000102,
+          "mountedMs": 832.6585000000014,
+          "screenshotMs": 35.58508400000028,
+          "captureAndProbeMs": 965.5240000000013,
+          "totalMs": 11396.22875,
+          "sampleCount": 1,
+          "distributionEstablished": false
+        }
+      },
+      "current": {
+        "sourceTreeSha256": "4d0a94483e10610aca08692b9d72a8b31d3fb98c3e85d7c850157481412d36c1",
+        "changedRatio": 0.009023140239167572,
+        "strictChangedRatio": 0.016072512671363424,
+        "nativeControls": {
+          "nativeInputCount": 1,
+          "nativeInputPresent": true,
+          "inputEditable": true,
+          "nativeResetPresent": true,
+          "nativeSearchPresent": true,
+          "resetEnabled": true,
+          "searchEnabled": true,
+          "disabledButtonCount": 3,
+          "initialValueLength": 11,
+          "inputAcceptsEdit": true,
+          "resetClearsField": true,
+          "searchClicked": true,
+          "eventTypes": [
+            "search"
+          ],
+          "businessApiVerified": false
+        },
+        "timing": {
+          "archiveOpenMs": 7786.568125,
+          "standardReadMs": 381.6048329999994,
+          "conversionMs": 127.07899999999972,
+          "compileMs": 168.72816700000112,
+          "mountedMs": 656.4317499999997,
+          "screenshotMs": 30.81800000000112,
+          "captureAndProbeMs": 822.3036670000001,
+          "totalMs": 10716.178582999999,
+          "sampleCount": 1,
+          "distributionEstablished": false
+        }
+      }
+    },
+    {
+      "role": "table",
+      "nodeId": "29876:14593",
+      "comparisonClassification": "REFERENCE_ONLY_ARCHIVE_REMOTE_REVISION_UNLINKED",
+      "sameArchiveAndRelease": true,
+      "sourceTreeUnchangedDuringEachCapture": true,
+      "visualDifferencePercentagePointDelta": 0.014037526988816898,
+      "visualImprovementEstablished": false,
+      "baseline": {
+        "sourceTreeSha256": "587ad57e3a6e742d97ffcdfc99e640201e2a885464ee1b14fc22e9183f852f00",
+        "changedRatio": 0.02740526340416714,
+        "strictChangedRatio": 0.03929772257835948,
+        "nativeControls": {
+          "nativeInputCount": 1,
+          "nativeInputPresent": true,
+          "inputEditable": true,
+          "nativeResetPresent": true,
+          "nativeSearchPresent": false,
+          "resetEnabled": true,
+          "searchEnabled": null,
+          "disabledButtonCount": 0,
+          "initialValueLength": 11,
+          "inputAcceptsEdit": true,
+          "resetClearsField": true,
+          "searchClicked": false,
+          "eventTypes": [],
+          "businessApiVerified": false
+        },
+        "timing": {
+          "archiveOpenMs": 7089.869791,
+          "standardReadMs": 414.1632500000005,
+          "conversionMs": 160.74366700000064,
+          "compileMs": 106.43808300000092,
+          "mountedMs": 790.9604580000014,
+          "screenshotMs": 47.237042000000656,
+          "captureAndProbeMs": 924.2360829999998,
+          "totalMs": 10570.263875,
+          "sampleCount": 1,
+          "distributionEstablished": false
+        }
+      },
+      "current": {
+        "sourceTreeSha256": "4d0a94483e10610aca08692b9d72a8b31d3fb98c3e85d7c850157481412d36c1",
+        "changedRatio": 0.02754563867405531,
+        "strictChangedRatio": 0.03933716134466139,
+        "nativeControls": {
+          "nativeInputCount": 1,
+          "nativeInputPresent": true,
+          "inputEditable": true,
+          "nativeResetPresent": true,
+          "nativeSearchPresent": true,
+          "resetEnabled": true,
+          "searchEnabled": true,
+          "disabledButtonCount": 1,
+          "initialValueLength": 11,
+          "inputAcceptsEdit": true,
+          "resetClearsField": true,
+          "searchClicked": true,
+          "eventTypes": [
+            "search"
+          ],
+          "businessApiVerified": false
+        },
+        "timing": {
+          "archiveOpenMs": 6990.095582999999,
+          "standardReadMs": 434.3653750000003,
+          "conversionMs": 114.57724999999937,
+          "compileMs": 105.83458299999984,
+          "mountedMs": 724.7081250000001,
+          "screenshotMs": 64.86620799999946,
+          "captureAndProbeMs": 925.6777919999995,
+          "totalMs": 9725.594375,
+          "sampleCount": 1,
+          "distributionEstablished": false
+        }
+      }
+    }
+  ],
+  "popup": {
+    "nodeId": "29876:14777",
+    "sourceType": "INSTANCE",
+    "status": "SOURCE_ENTRY_UNSUPPORTED",
+    "errorCode": "FIGMA_FRAME_REQUIRED"
+  },
+  "actualScreen": {
+    "nodeId": "29876:14784",
+    "nova": {
+      "nativeCoverage": {
+        "failed": 0,
+        "matched": 7,
+        "expected": 7,
+        "truncated": false,
+        "unavailable": 0,
+        "unsupported": 0
+      },
+      "sourceMetricCoverage": {
+        "matched": 27,
+        "expected": 27,
+        "truncated": false,
+        "mismatched": 0,
+        "unavailable": 0,
+        "unsupported": 0
+      },
+      "technical": {
+        "status": "passed",
+        "reasonCodes": [],
+        "findingCount": 0
+      },
+      "interaction": {
+        "status": "passed",
+        "reasonCodes": [],
+        "findingCount": 0
+      },
+      "finalNativeCoverage": {
+        "failed": 0,
+        "matched": 7,
+        "expected": 7,
+        "truncated": false,
+        "unavailable": 0,
+        "unsupported": 0
+      },
+      "finalSourceMetricCoverage": {
+        "matched": 27,
+        "expected": 27,
+        "truncated": false,
+        "mismatched": 0,
+        "unavailable": 0,
+        "unsupported": 0
+      },
+      "nativeChecks": 20,
+      "publishedHeaderCount": 1,
+      "headerReceiptPreservedInHandoff": true,
+      "comparisonContract": {
+        "purpose": "source-publishing-comparison",
+        "reference": {
+          "scale": null,
+          "bounds": "unverified",
+          "format": null,
+          "nodeId": "29876:14784",
+          "fileKey": "6cFc4ujRtcFACUcMtLfH1l",
+          "revision": null,
+          "exportMetadata": "unverified",
+          "outsideEffects": "unverified",
+          "sourceRevision": "local-a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76"
+        },
+        "thresholds": {
+          "geometry": {
+            "size": 1,
+            "fontSize": 0.5,
+            "position": 1,
+            "fontWeight": 1,
+            "lineHeight": 0.5,
+            "maxChangedRatio": 0.005
+          },
+          "pixelTolerance": 12,
+          "maxChangedRatio": 0.005
+        },
+        "environment": {
+          "state": "authored-initial-state-before-interaction-probes",
+          "canvas": "#FFFFFF",
+          "browser": "158.0.8127.38",
+          "viewport": {
+            "width": 1370,
+            "height": 517
+          },
+          "fontScope": "visible-composed-text-and-native-controls",
+          "fontFamily": "Pretendard",
+          "fontSha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
+          "canvasScope": "isolated-document-html-only",
+          "colorScheme": "light",
+          "compositing": "source-and-preview-on-same-canvas",
+          "fontFamilies": [
+            "Pretendard",
+            "Pretendard, sans-serif"
+          ],
+          "fontLoadState": "loaded",
+          "reducedMotion": "reduce",
+          "comparisonSize": {
+            "width": 1370,
+            "height": 517
+          },
+          "screenshotScale": "css",
+          "deviceScaleFactor": 1,
+          "fontFamiliesCount": 2,
+          "fontFamiliesSha256": "36939ab7ef241f84a5a7b926ebeaf0cfc2c85d7d641419f71ba0a47d95b116ee",
+          "fontObservedElements": 99,
+          "fontFamiliesTruncated": false,
+          "originalPreviewCanvas": "rgb(243, 243, 243)",
+          "fontObservationTruncated": false
+        },
+        "schemaVersion": 1
+      },
+      "savedAnalysisDigestReused": true
+    },
+    "kiro": {
+      "savedAnalysisDigestReused": true,
+      "analysisDigest": "f869c812410e4d0e7560ea5aff89604d9c9462f2e43b6435264d7c40a8410c6d",
+      "nativeCoverage": {
+        "failed": 0,
+        "matched": 7,
+        "expected": 7,
+        "truncated": false,
+        "unavailable": 0,
+        "unsupported": 0
+      },
+      "sourceMetricCoverage": {
+        "matched": 26,
+        "expected": 32,
+        "truncated": false,
+        "mismatched": 7,
+        "unavailable": 6,
+        "unsupported": 0
+      },
+      "canApply": false,
+      "blockerCodes": [
+        "KIRO_DRAFT_REVIEW",
+        "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+        "KIRO_SCREEN_COMPONENT_UNCONFIRMED",
+        "KIRO_VISUAL_VERIFICATION_UNAVAILABLE"
+      ],
+      "repairHistory": [
+        {
+          "reason": "visual-findings-regressed",
+          "attempt": 1,
+          "outcome": "regression-or-no-improvement",
+          "draftSha256": "3327e76acb74b4089793ea15ebc9758294cb8b995c9b30539a46a9edf0242f05"
+        }
+      ],
+      "referenceComparison": {
+        "classification": "REFERENCE_ONLY",
+        "reason": "ARCHIVE_REMOTE_REVISION_UNPROVEN",
+        "viewport": {
+          "width": 1370,
+          "height": 517
+        },
+        "canvas": "#FFFFFF",
+        "deviceScaleFactor": 1,
+        "sourcePngSha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+        "renderedSha256": "f17113952ac1a35614e951e6cd2860a50cf28fa6ad626cc877b211f0accb11b7",
+        "controls": {
+          "inputs": 1,
+          "buttons": 5,
+          "disabledButtons": 3,
+          "tables": 1,
+          "h2": 1
+        },
+        "runtimeErrors": 0,
+        "tolerance": 12,
+        "changedPixels": 17887,
+        "changedRatio": 0.025253780231261208,
+        "strictChangedRatio": 0.030769882392805207
+      }
+    }
+  },
+  "performance": {
+    "kiroStagesMs": {
+      "source-preparation": 19986,
+      "analysis": 34668,
+      "user-review": 417792,
+      "generation": 88116,
+      "compile-validation": 6691,
+      "repair": 70932
+    },
+    "processingExcludingManualReviewMs": 220393,
+    "llmRequestPathMs": 193716,
+    "llmRequestPathShare": 0.8789571356622035,
+    "providerRuns": [
+      {
+        "operation": "screen.generate",
+        "performance": {
+          "scope": "kiro-headless-client",
+          "parseMs": 4,
+          "totalMs": 87627,
+          "cleanupMs": 133,
+          "inputTokens": null,
+          "usageStatus": "unreported",
+          "outputTokens": null,
+          "schemaVersion": 1,
+          "firstContentMs": 42743,
+          "modelProcessMs": 82967,
+          "authenticationMs": 4270,
+          "firstStreamByteMs": 2362,
+          "firstContentStatus": "observed",
+          "workspacePrepareMs": 252
+        },
+        "promptBytes": 281800,
+        "gatewayPerformance": {
+          "projectionMs": 446,
+          "promptBuildMs": 33,
+          "schemaVersion": 1,
+          "sessionCallMs": 87627
+        }
+      },
+      {
+        "operation": "screen.repair",
+        "performance": {
+          "scope": "kiro-headless-client",
+          "parseMs": 3,
+          "totalMs": 70548,
+          "cleanupMs": 128,
+          "inputTokens": null,
+          "usageStatus": "unreported",
+          "outputTokens": null,
+          "schemaVersion": 1,
+          "firstContentMs": 24386,
+          "modelProcessMs": 62811,
+          "authenticationMs": 7457,
+          "firstStreamByteMs": 2281,
+          "firstContentStatus": "observed",
+          "workspacePrepareMs": 149
+        },
+        "promptBytes": 306384,
+        "gatewayPerformance": {
+          "projectionMs": 372,
+          "promptBuildMs": 5,
+          "schemaVersion": 1,
+          "sessionCallMs": 70549
+        }
+      }
+    ],
+    "analysisFineGrainedReceiptAvailable": false,
+    "promptBytes": {
+      "analysis": 248120,
+      "generation": 281800,
+      "repair": 306384
+    },
+    "reportedModel": null,
+    "tokensReported": false,
+    "generalSpeedImprovementEstablished": false,
+    "note": "One actual sample; client intervals include CLI/authentication. No inference-only or optimization causality claim. Stream first-content intervals start at model-process launch after authentication; they are not request TTFT."
+  },
+  "org": {
+    "applied": true,
+    "published": true,
+    "browser": {
+      "host": "skt-nova--sktdev1.sandbox.lightning.force.com",
+      "selected": "true",
+      "rendered": true,
+      "inputs": 1,
+      "buttons": 5,
+      "disabledButtons": 3,
+      "tables": 1,
+      "h2": 1,
+      "editable": true,
+      "resetCleared": true,
+      "requiredEmptyInvalid": true,
+      "businessApiInvoked": false
+    },
+    "businessApiInvoked": false,
+    "cleanup": {
+      "unpublish": "SUCCEEDED",
+      "remove": "SUCCEEDED",
+      "applicationState": "REMOVED",
+      "publicationState": "UNPUBLISHED",
+      "originalPageCanonicalSha256": "8189c4f7be10d13b2ce7fcf50f24e675753827ff99a716dc4a9e047122c1321a",
+      "originalPageCanonicalDigestRestored": true,
+      "currentSourceFilesEqualOrgTestedFiles": true,
+      "sourceFilesCompared": 36,
+      "sharedDependenciesPreserved": true
+    }
+  },
+  "limits": [
+    "All PNG comparisons are REFERENCE_ONLY: archive-to-remote revision proof is absent.",
+    "Figma nodes endpoint returned quota failure; no retry loop was used.",
+    "Historical source JSON is an editor projection, not a REST raw response.",
+    "NOVA native controls improved; search/table pixel ratios slightly increased.",
+    "Popup INSTANCE is unsupported by the current Screen root contract.",
+    "Kiro repair was rejected for regression; the original candidate was retained.",
+    "No external business API contract or data refresh is certified.",
+    "The user 1.13%/1.30% report-plus-PNG baselines are unavailable; no improvement rate against them is claimed."
+  ],
+  "cleanup": {
+    "status": "COMPLETE_WITH_IMMUTABLE_AUDIT_RETENTION",
+    "testJobsRemoved": 10,
+    "savedAnalysesRemoved": 4,
+    "promptTracesRemoved": 3,
+    "resultsRemovedFromActiveLists": 4,
+    "resultRowsPhysicallyPurged": 3,
+    "archivedAuditResultRowsRetained": 1,
+    "retentionReason": "salesforce.org_application_version has an unconditional BEFORE UPDATE OR DELETE immutability trigger. Preserve its result/artifact references and the completed lifecycle audit instead of disabling the guard.",
+    "remainingJobs": 0,
+    "activeResults": 0,
+    "immutableAuditResults": 1,
+    "remainingPromptTraces": 0,
+    "deletedTestExclusiveObjects": 11,
+    "retainedReferencedObjects": 58,
+    "preservedPreexistingObjects": 0,
+    "immutableGuardsDisabled": false,
+    "removedTerminalAttemptDirectories": 4,
+    "immutableDatabaseAuditRetained": true,
+    "removedAnalysisIngressDirectories": 5,
+    "removedIsolatedTestFixtureRoots": 2,
+    "allJobUrls404": true,
+    "jobCount": 10,
+    "allResultUrls404": true,
+    "resultCount": 4,
+    "previewGrantRevoked": true,
+    "activeResultCount": 0,
+    "salesforceConnection": "CONNECTED",
+    "originalSourcesAndActiveReleasesPreserved": true,
+    "temporaryCaptureSessionDirectoryRemoved": true,
+    "ownMainSessionRevoked": true,
+    "originalArchiveSha256Unchanged": true,
+    "activeDesignReleaseUnchanged": true,
+    "salesforceConnectionPreserved": true,
+    "temporaryScreenshotsAndBrowserStorageDeleted": true
+  },
+  "finalRuntime": {
+    "sha256": "af1521fdf40c01f98e4323b7509b2a20e6b549836bde7fd63f43230656567e31",
+    "sourceCount": 277,
+    "includedSourcesMatch": true,
+    "testFixturesExcluded": true
+  },
+  "liveRuntimeSpan": {
+    "analysis": "ffb78b3134245cd2aea10dfa5f30d2aa64c9eb3c5cd46e43b64aff26a3e2df25",
+    "kiroGeneration": "1d4024c504f71f38ca64df6e90cda32ff955c446fc05e4671374e7634d675064",
+    "final": "af1521fdf40c01f98e4323b7509b2a20e6b549836bde7fd63f43230656567e31",
+    "laterChanges": "Version coverage, packaging and diagnostic/capture receipt projection; final NOVA source files equal the Org-tested files."
+  },
+  "versionGuard": {
+    "oldAnalysisCode": "SCREEN_ANALYSIS_STANDARD_CHANGED",
+    "diagnostic": {
+      "code": "SCREEN_ANALYSIS_STANDARD_CHANGED",
+      "stage": "runtime",
+      "schemaVersion": 1
+    },
+    "automaticModelRetry": false,
+    "freshAnalysisThenGeneration": "SUCCEEDED",
+    "sharedSourcesAndPoliciesCovered": true
+  },
+  "tests": {
+    "broadNode": {
+      "cases": 988,
+      "initialPassed": 987,
+      "initialFailed": 1,
+      "failure": "A reference-image expectation lacked the newly recorded exportSettings; expectation updated.",
+      "correctedAndAffectedWorkbenchRetest": {
+        "passed": 14,
+        "failed": 0
+      }
+    },
+    "finalBoundaryRetest": {
+      "passed": 29,
+      "failed": 0
+    },
+    "fontAndProjectionNode": {
+      "passed": 17,
+      "failed": 0,
+      "actualChrome": true
+    },
+    "versionAndUiFailure": {
+      "passed": 41,
+      "failed": 0
+    },
+    "providerTiming": {
+      "passed": 2,
+      "failed": 0
+    },
+    "agentFull": {
+      "passed": 231,
+      "failed": 0
+    },
+    "agentFinalDiagnosticRetest": {
+      "passed": 6,
+      "failed": 0
+    },
+    "backendIsolatedIntegrationAndContracts": {
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0
+    },
+    "backendFinalFontContracts": {
+      "passed": 11,
+      "failed": 0
+    },
+    "frontendBuild": "PASSED",
+    "countsAreIndependentGroupsNotAdditive": true
+  },
+  "serviceHealth": {
+    "status": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING",
+    "url": "https://localhost:4186",
+    "agentReadiness": {
+      "provider": "kiro",
+      "authenticationEvidenceTtlSeconds": 300,
+      "operations": [
+        {
+          "purpose": "screen",
+          "executionMode": "headless",
+          "configured": true,
+          "authentication": "UNKNOWN",
+          "checkedAt": null,
+          "reasonCode": "KIRO_AUTH_NOT_VERIFIED",
+          "ready": null
+        },
+        {
+          "purpose": "story",
+          "executionMode": "headless",
+          "configured": true,
+          "authentication": "UNKNOWN",
+          "checkedAt": null,
+          "reasonCode": "KIRO_AUTH_NOT_VERIFIED",
+          "ready": null
+        }
+      ]
+    },
+    "authenticationNote": "UNKNOWN is expected until an explicitly requested model call; this check makes none.",
+    "modelCalls": 0,
+    "providerCalls": 0,
+    "MainActions": 0
+  }
+}

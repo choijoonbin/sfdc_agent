@@ -19,4 +19,4 @@ sfdc-agent = "sfdc_agent.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-sfdc_agent = ["*.mjs", "prompt_templates_v1/*.txt", "prompt_templates_v1/contract.json"]
+sfdc_agent = ["*.mjs", "execution_diagnostics_policy.json", "prompt_templates_v1/*.txt", "prompt_templates_v1/contract.json"]

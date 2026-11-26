@@ -105,6 +105,9 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 | `src/sfdc_agent/providers.py` | 공급자 선택, Kiro Key headless 및 선택형 OpenAI Responses API 연결 |
 | `src/sfdc_agent/azure_provider.py` | AI Hub 인증·토큰 캐시 및 선택형 Azure Chat Completions 연결 |
 | `src/sfdc_agent/provider_capabilities.py` | 공급자별 실제 전송 기능과 모델·CLI 실행 영수증 |
+| `src/sfdc_agent/prompt_projection.py` | 원본을 유지한 단계별 근거·공개 API 설명 투영과 릴리스별 제한 캐시 |
+| `src/sfdc_agent/provider_observation.py` | 응답 본문을 저장하지 않는 클라이언트 지연·명시적 토큰 사용량 계측 |
+| `src/sfdc_agent/execution_diagnostics.py` | Worker 실패에서 공개 가능한 코드·단계·재시도 시각 정보만 전달 |
 | `src/sfdc_agent/nova_prompt_evidence.py` | 고정 NOVA 공개 계약과 모델 입력의 최종 경계 검증 |
 | `src/sfdc_agent/pilot.py` | 분석, 기준 변환, 모델 제안, 생성과 검증의 순서 |
 | `src/sfdc_agent/storage.py` | 작업 상태와 재개 정보 저장 |

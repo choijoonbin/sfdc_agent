@@ -17,6 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from .execution_diagnostics import WorkerExecutionFailure, decode_worker_failure, safe_diagnostic
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 from starlette.requests import ClientDisconnect
 
@@ -352,9 +353,12 @@ async def _run_process(binary: str, runner: Path, scratch: str, timeout: int, pa
         async with asyncio.timeout(timeout):
             _, output = await asyncio.gather(*tasks)
             exit_code = await process.wait()
-        finished = True
         if exit_code != 0:
+            diagnostic = decode_worker_failure(output)
+            if diagnostic is not None:
+                raise WorkerExecutionFailure(diagnostic)
             raise IncompleteExecution
+        finished = True
         return output
     finally:
         if not finished:
@@ -441,6 +445,8 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                 return result.model_copy(update={"promptTraces": traces or None})
     except TimeoutError:
         raise HTTPException(504, "Managed execution timed out.") from None
+    except WorkerExecutionFailure as failure:
+        raise HTTPException(502, failure.diagnostic) from None
     except (IncompleteExecution, ValueError, OSError, RecursionError):
         if context is not None and context.provider_error in AUTH_ERROR_CODES:
             raise HTTPException(502, context.provider_error) from None
@@ -532,6 +538,8 @@ async def execute(request: Request) -> ExecutionResult:
             return execution.result()
         raise HTTPException(499, "Managed execution request disconnected.")
     except HTTPException as failure:
+        if failure.status_code == 502 and safe_diagnostic(failure.detail) is not None:
+            return JSONResponse(failure.detail, status_code=502)
         if isinstance(failure.detail, str) and (failure.detail.startswith('EXECUTION_') or failure.detail in AUTH_ERROR_CODES | {'LIMIT_MISMATCH', 'RELEASE_RUNTIME_INCOMPATIBLE', 'RUNTIME_CAPABILITIES_UNAVAILABLE'}):
             return JSONResponse({'code': failure.detail}, status_code=failure.status_code, headers=failure.headers)
         raise

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 from .prompt_templates import PromptTemplate
 from .component_library import ComponentLibrary
 from .nova_prompt_evidence import prompt_source_context
+from .prompt_projection import source_for_prompt, contract_for_prompt
 
 
 class TaskFields(BaseModel):
@@ -141,7 +142,8 @@ def _repair(args: RepairFields, template: PromptTemplate) -> str:
 
 
 def _generation(args: GenerationFields, template: PromptTemplate) -> str:
-    source_context = prompt_source_context(args.sourceContext, args.novaContract)
+    source_context = source_for_prompt(prompt_source_context(args.sourceContext, args.novaContract))
+    contract = contract_for_prompt(args.novaContract, source_context, stage='generation')
     dimensions = args.layoutDimensions
     width, height = (dimensions.width, dimensions.height) if dimensions else (1234, 700)
     has_review = args.reviewedAnalysis is not None
@@ -205,7 +207,7 @@ def _generation(args: GenerationFields, template: PromptTemplate) -> str:
         dimensions_line=dimensions_line, reading=reading, rules=template.render("source_rules", version=args.version),
         action_evidence=action_evidence, reviewed=reviewed, additional_rules=template.render("additional_rules"),
         table_rules=table_rules, accordion=template.render("accordion_rules", evidence=accordion_evidence),
-        component_contracts=template.render("component_contracts") + "\nPinned NOVA public contract JSON:\n" + _json(args.novaContract),
+        component_contracts=template.render("component_contracts") + "\nPinned NOVA public contract JSON:\n" + _json(contract),
         component_variants=args.componentVariants,
         token_declarations=args.tokenDeclarations, typography_groups=", ".join(args.typographyGroups),
         output_format=template.render("output_format", name=args.name), example=example, payload=payload,
@@ -220,7 +222,7 @@ def _review_plan(args: GenerationFields, template: PromptTemplate) -> str:
         "splitLayout": args.splitLayout, "actions": args.actions, "novaContract": args.novaContract,
     }
     if args.local:
-        source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = prompt_source_context(args.sourceContext, args.novaContract)
+        source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = source_for_prompt(prompt_source_context(args.sourceContext, args.novaContract))
     else:
         source["figmaContext"] = [section.model_dump() for section in (args.capturedContext or args.sourceSections)]
     if args.historyTables and (not args.local or (args.sourceContext or {}).get("historyTables") != args.historyTables):

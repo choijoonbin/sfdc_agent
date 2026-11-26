@@ -266,16 +266,20 @@ async def prompt_session(request: Request, session_id: str):
     release = session.prompt_release
     owner = trace_owner(request.headers) if prompt.fields is not None and prompt.operation in PROMPTS else None
     managed_capture = prompt.fields is not None and prompt.operation in OPERATIONS and managed_trace_enabled(request)
+    projection_started = monotonic()
     try:
         if execution_mode == "headless":
             if prompt.operation not in _HEADLESS_OPERATIONS[session.purpose]:
                 raise ValueError("Unsupported operation for the headless session.")
             _validate_headless_prompt(prompt)
         fields = await project_screen_fields(prompt.operation, prompt.fields)
+        projection_ms = max(0, round((monotonic() - projection_started) * 1000))
         if fields is not prompt.fields:
             prompt = prompt.model_copy(update={"fields": fields})
+        build_started = monotonic()
         with capture_prompt_run(prompt.operation) if owner or managed_capture else nullcontext() as prompt_run:
             text = prompt.build(templates=release.templates)
+        build_ms = max(0, round((monotonic() - build_started) * 1000))
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
     payload = text.encode()
@@ -287,6 +291,8 @@ async def prompt_session(request: Request, session_id: str):
     receipt = getattr(completed_session, "provider_receipt", None)
     if not isinstance(receipt, dict):
         receipt = provider_receipt("kiro")
+    receipt = {**receipt, 'gatewayPerformance': {'schemaVersion': 1, 'projectionMs': projection_ms,
+        'promptBuildMs': build_ms, 'sessionCallMs': max(0, round((monotonic() - started) * 1000))}}
     if prompt_run is not None and owner is not None:
         request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
     if prompt_run is not None and managed_capture:
