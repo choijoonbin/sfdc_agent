@@ -70,21 +70,25 @@ class SnapshotStore:
         # the whole tool transcript has been validated and fsynced atomically.
         value = {"schemaVersion": 1, "identity": self.identity, "collectedAtEpochSeconds": int(time()), **collected}
         digest = sha256(_encode(value)).hexdigest()
+        response = self.response(value, digest, reused=False)
         _directory(self.root)
         path = self.root / (digest + ".json")
         if not path.exists():
             _write_private(path, value)
         _write_private(self.root / (self.key + ".index.json"), {"identity": self.identity, "snapshotId": digest})
-        return self.response(value, digest, reused=False)
+        return response
 
     @staticmethod
     def response(value, digest, reused):
         tools = value["toolEvidence"]
+        design_assessments = []
         for call in tools:
             if any(call["output"].get(key) is True for key in ("truncated", "isTruncated", "hasMore")):
                 raise SessionError("FIGMA_MCP_EVIDENCE_INCOMPLETE", "저장된 Figma MCP 원문이 잘려 다시 수집해야 합니다.")
             if call["name"] == "get_design_context":
-                validate_design_context_output(call["output"])
+                # The same raw-content guard runs again on historical cache
+                # entries; a completed provider question is not source input.
+                design_assessments.append(validate_design_context_output(call["output"]))
         provenance = {"provider": "figma-mcp", "revisionStatus": "UNVERIFIED", "comparison": "REFERENCE_ONLY",
                       "collectedAtEpochSeconds": value["collectedAtEpochSeconds"], "snapshotId": digest,
                       "promptReleaseId": value.get("promptReleaseId"), "acquisitionTemplates": value.get("acquisitionTemplates", {}),
@@ -109,6 +113,13 @@ class SnapshotStore:
                     continue
         coverage = {"status": "PARTIAL", "transportRawPreserved": True,
                     "tools": sorted({item["name"] for item in tools}),
+                    "designContextReadiness": {"status": "CONTEXT_OBSERVED" if design_assessments
+                        and all(item["status"] == "CONTEXT_OBSERVED" for item in design_assessments) else "RETRY_REQUIRED",
+                        "contextCount": len(design_assessments),
+                        "implementationBlockCount": sum(item.get("implementationBlockCount", 0) for item in design_assessments),
+                        "geometryBlockCount": sum(item.get("geometryBlockCount", 0) for item in design_assessments),
+                        "codes": sorted({code for item in design_assessments for code in item["codes"]}),
+                        "assessmentSha256": sha256(_encode(design_assessments)).hexdigest(), "authoredCompleteness": "NOT_PROVEN"},
                     "truncation": {"status": "NOT_DETECTED", "scope": "recognized-provider-notices-and-output-flags",
                                    "authoredCompleteness": "NOT_PROVEN"},
                     "metadata": {"nodeCount": len(metadata_nodes), "nodes": metadata_nodes,

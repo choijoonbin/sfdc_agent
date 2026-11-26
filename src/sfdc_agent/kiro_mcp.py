@@ -26,6 +26,7 @@ from .kiro_processes import OwnedProcesses
 from .prompt_templates import PromptTemplate, load_baseline_templates
 from .figma_mcp_secrets import McpSecretStore
 from .provider_capabilities import cli_identity, model_identifier
+from .mcp_acquisition_readiness import require_design_context_content
 
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_CALLS = 64
@@ -95,6 +96,7 @@ def validate_design_context_output(output):
     An unmarked omission is still unknown. This only recognizes a bounded,
     standalone prose envelope, not arbitrary source text or generated code.
     """
+    assessment = require_design_context_content(output)
     if not isinstance(output, dict) or any(output.get(key) is True for key in ("truncated", "isTruncated", "hasMore")):
         raise _error("FIGMA_MCP_EVIDENCE_INCOMPLETE", "잘린 Figma 디자인 원문은 생성 근거로 사용할 수 없습니다.")
     texts = _text_blocks(output)
@@ -107,6 +109,7 @@ def validate_design_context_output(output):
             continue
         if _NOTICE_INCOMPLETE.search(notice) and _NOTICE_CONTEXT.search(notice):
             raise _error("FIGMA_MCP_EVIDENCE_INCOMPLETE", "Figma 공급자가 원문 잘림 또는 크기 제한을 알렸습니다. 더 작은 원본 범위로 다시 수집해 주세요.")
+    return assessment
 
 
 def _metadata_root(text):

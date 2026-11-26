@@ -13,7 +13,9 @@ class ProviderCapabilitiesTests(unittest.TestCase):
             capabilities = provider_capabilities(provider)
             self.assertTrue(capabilities["structuredText"])
             self.assertFalse(capabilities["images"])
-        self.assertEqual(provider_capabilities("kiro")["imageInputStatus"], "unsupported")
+        self.assertEqual(provider_capabilities("kiro")["imageInputStatus"], "requires-bound-reference")
+        self.assertTrue(provider_capabilities("kiro", image_verified=True)["images"])
+        self.assertFalse(provider_capabilities("openai", image_verified=True)["images"])
         with self.assertRaises(ValueError):
             provider_capabilities("automatic-fallback")
 

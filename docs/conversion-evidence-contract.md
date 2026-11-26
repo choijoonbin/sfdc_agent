@@ -14,7 +14,7 @@ The managed prompt registry remains the only versioned prompt authority. Do not 
 
 Prompt responses and provider evaluations include `providerReceipt` with the configured model, explicitly reported model, capability flags, and model-selection policy. Kiro includes the launched CLI byte hash and executable basename. No local executable path or credentials are included. If the CLI does not report a version/model, the receipt records an unreported value rather than guessing.
 
-All current conversion adapters submit structured text. Image input remains disabled: Kiro reports it unsupported; OpenAI/Azure report it not enabled by these adapters. Enabling multimodal input requires an explicit adapter, model capability check, immutable image/reference binding and tests; provider branding alone is not evidence of image support.
+Structured text remains the default. Kiro Screen generation/repair can explicitly opt into `SFDC_AGENT_SCREEN_IMAGE_INPUT=bound-png-v1`: the provider-independent binding validator checks the saved analysis, source identity and PNG bytes, and the Kiro adapter permits exactly one verified read of that private image. Only a delivered result advertises image capability and `read-verified`; protocol negotiation alone does not. Story and OpenAI/Azure image input remain unchanged. The controlled 3+3 experiment did not establish an image quality benefit, so this option is not enabled by default.
 
 These receipts improve traceability. They do not guarantee deterministic LLM output or establish visual accuracy; the common browser oracle and fixed-state fixtures measure the generated result separately.
 
@@ -49,6 +49,23 @@ The [November 26 measurements](validation/2026-11-26-common-remediation.json) co
 The matching-revision remote comparison remained blocked by Figma quota. Archive comparisons remain reference-only: NOVA search/table differences changed from 0.8453%/2.7405% to 0.9023%/2.7546%; the observed Kiro difference was 2.5254%. Native lookup controls improved, while visual accuracy improvement was not established. At that validation point, the popup INSTANCE was outside the Screen FRAME/GROUP root contract. The real Kiro processing stages took 220.39 seconds excluding manual review; 193.72 seconds belonged to model-request stages. These single samples do not establish a general speed improvement. First-content counters start at the model-process stream after authentication and are not request TTFT.
 
 ## Current follow-up status on 2026-11-26
+
+Actual Agent credentials were checked independently: REST identity and MCP `whoami` refer to the same account, and the target SK Inc organization reports Enterprise/Dev. REST nodes and three official 1× PNG exports returned HTTP 200. No 429 was observed in these bounded checks; successful responses did not report a remaining-quota count. This supersedes the earlier waiting-for-DEV status, without implying unlimited calls.
+
+The representative search, result table and popup share one pinned REST revision and individually hashed official PNGs. The component authority is the 38 NOVA families under `/Users/a10697/Work/NOVA/packages`; NextBSS v1.9 names the Figma design evidence. The private candidate release pins NOVA commit `3b013b934787ccaf8ee90f9f731d019d6e567ce9`. Main's active release remains separate and is not silently replaced. Frozen comparisons use the explicitly selected repository baseline `prompts-v1`, not a claim about Main's active prompt release. Kiro reports no exact backend model version.
+
+| Original priority | Verified now | Still incomplete |
+| --- | --- | --- |
+| Frozen comparison | Immutable REST revision, three official 1× PNGs, pinned NOVA/API/token bytes, saved-input reuse and six frozen first-pass Kiro samples. | No archive-to-remote or MCP-to-revision proof; backend model version is unreported. Historical 1.x% values are not this cohort's baseline. |
+| MCP input equivalence | Actual authenticated metadata/design/screenshot collection; safe field-level REST/local/MCP comparison and guidance-only source rejection. | Code Connect returns mapping guidance rather than complete design facts. User requested mapping review; no disable, publish or design mutation was performed. |
+| Generic mapping | Strict published keys/set/variant discovery; native popup verification; source-canvas button coordinates; source-proven typed empty-table recipes and native style checks. | Real transforms, unsupported appearance/text hosts and filled-table/business semantics retain their findings. Recipe input is not a claim that every LLM output follows it. |
+| Image delivery | Actual nonce-in-PNG capability proof plus three generation image reads and one repair read, all with immutable binding. | No repeatable visual gain; model image resizing/internal resolution is unreported. Default remains text. |
+
+The acceptance result combines source, visual and native-control evidence. Perfect pixels cannot hide a failed local handler or incomplete expected control coverage. Unknown business APIs remain separate from confirmed native failures. Repair preserves those checks and rejects regressions. The saved-analysis generator fingerprint now binds production engine, shared and server modules plus the lockfile; a server-only recipe/validator change requires fresh analysis before any provider call. Source and actual packaged-runtime fingerprints are regression-tested together.
+
+Detailed measurement, final E2E, regression counts and cleanup receipts are recorded in [the DEV validation report](../../SFDC_Ui/docs/validation/2026-11-26-dev-seat-conversion-audit.json) and [the Agent execution report](validation/2026-11-26-dev-seat-gates.json). The versioned [follow-up roadmap](conversion-followup-roadmap.json) remains the task ledger. These reports distinguish implemented safeguards from unresolved visual accuracy and do not grant Org deployment or automatic application.
+
+## Follow-up before DEV verification (historical)
 
 The versioned [follow-up roadmap](conversion-followup-roadmap.json) is the current task ledger. Older validation reports preserve their historical measurements and are not retroactively upgraded to passes. [The offline audit](validation/2026-11-26-followup-audit.json) records existing business evidence, remaining confirmation requests, model image capabilities and performance evidence.
 
