@@ -1,0 +1,1377 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-26",
+  "status": "ACTUAL_MAIN_PATH_VERIFIED_QUALITY_REVIEW_REQUIRED",
+  "scope": "Screen NOVA analysis -> explicit review -> Kiro generation -> immutable storage -> UI reopen -> owned cleanup",
+  "candidate": {
+    "managedRuntimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4",
+    "generatorSourceSha256": "73a31547f83e278a65451e15a193a8fa7c38b7936894bfd03e6efe064b499299",
+    "backendManifest": {
+      "repository": "SFDC_BACK",
+      "path": "docs/validation/2026-11-26-conversion-diagnostics-contract.json"
+    }
+  },
+  "source": {
+    "schemaVersion": 1,
+    "purpose": "main-analysis-frozen-source-equivalence",
+    "checkpointSha256": "ef36184c67517232685e42f55ce246dfff697465aae585b7e176e09bbd3cb4b3",
+    "sourceNodeId": "29876:14784",
+    "revision": "2425957427219410685",
+    "dimensions": {
+      "width": 1370,
+      "height": 517
+    },
+    "designReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+    "sourceRawDigestMatchesStoredContract": true,
+    "sourceSceneMatchesStoredContract": true,
+    "publishedAnalysisEvidenceMatchesDecodedScene": true,
+    "frozenAuthoredSceneMatches": true,
+    "digests": {
+      "authoredSceneSha256": {
+        "stored": "100180109d904b655362cd7c50bc16f0845a04b572b6ec240253c937cfc6af24",
+        "frozen": "100180109d904b655362cd7c50bc16f0845a04b572b6ec240253c937cfc6af24",
+        "equal": true
+      },
+      "rawSnapshotSha256": {
+        "stored": "779b74b8a021c7075ee2633382a097d45f02e874abf77462ce93c9f505cf64e1",
+        "frozen": "779b74b8a021c7075ee2633382a097d45f02e874abf77462ce93c9f505cf64e1",
+        "equal": true
+      },
+      "derivedAssetsSha256": {
+        "stored": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "frozen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "equal": true
+      },
+      "provenanceSha256": {
+        "stored": "4a04e1cd1bef489c6ec7d4fcee0a6b7067f1fa15847dbaaa9a260f82fcaaf7b8",
+        "frozen": "4a04e1cd1bef489c6ec7d4fcee0a6b7067f1fa15847dbaaa9a260f82fcaaf7b8",
+        "equal": true
+      }
+    },
+    "referenceCapture": {
+      "officialPngInAnalysis": false,
+      "error": "FIGMA_REFERENCE_APPROVAL_REQUIRED"
+    },
+    "sourceOriginalBytesUnchanged": true,
+    "checkpointBytesUnchanged": true,
+    "newNetworkCalls": 0,
+    "modelCalls": 0,
+    "orgWrites": 0,
+    "publishedSourceEvidenceRecomputedExactly": true,
+    "publishedSourceEvidenceProvenanceSha256Matches": true
+  },
+  "jobs": [
+    {
+      "id": "3ff5520a-eba4-4fc6-a6c1-ebb5522dfec0",
+      "kind": "SCREEN",
+      "engine": "NOVA",
+      "status": "REVIEW_REQUIRED",
+      "attempt": 1,
+      "resultId": null,
+      "createdAt": "2026-11-26T11:23:30.111777+00:00",
+      "errorCode": null,
+      "operation": "ANALYZE",
+      "updatedAt": "2026-11-26T11:23:38.307319+00:00",
+      "analysisJobId": null,
+      "requestSha256": "14177cc079d71eadeec7c6ba11423eee8fea548e65f17d7653428db81f7cac2d",
+      "generationMode": "MANUAL",
+      "designReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+      "promptReleaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "actorScopeSha256": "6314c47ed56ccfdb1b1d22b6806a9170a1784373d88cdf2b7a97b6e97704e477",
+      "sourceAcquisition": "REST_FIRST",
+      "designManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+      "promptManifestSha256": "805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "promptReleaseVersion": "1.0.1"
+    },
+    {
+      "id": "5f7b5859-f168-423b-b57e-9f355ba36ea9",
+      "kind": "SCREEN",
+      "engine": "KIRO",
+      "status": "FAILED",
+      "attempt": 1,
+      "resultId": null,
+      "createdAt": "2026-11-26T11:24:05.769495+00:00",
+      "errorCode": "OUTPUT_PERSISTENCE_FAILED",
+      "operation": "GENERATE",
+      "updatedAt": "2026-11-26T11:26:41.623499+00:00",
+      "analysisJobId": "3ff5520a-eba4-4fc6-a6c1-ebb5522dfec0",
+      "requestSha256": "f0439d667cc6150eef4db3bb89ba85b2d75701a236103a1e6b71ac0bf139556d",
+      "generationMode": "MANUAL",
+      "designReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+      "promptReleaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "actorScopeSha256": "6314c47ed56ccfdb1b1d22b6806a9170a1784373d88cdf2b7a97b6e97704e477",
+      "sourceAcquisition": "REST_FIRST",
+      "designManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+      "promptManifestSha256": "805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "promptReleaseVersion": "1.0.1"
+    },
+    {
+      "id": "5d46782f-ea07-4d6f-b258-b64eea4e97cf",
+      "kind": "SCREEN",
+      "engine": "KIRO",
+      "status": "SUCCEEDED",
+      "attempt": 1,
+      "resultId": "5d46782f-ea07-4d6f-b258-b64eea4e97cf",
+      "createdAt": "2026-11-26T11:42:13.48521+00:00",
+      "errorCode": null,
+      "operation": "GENERATE",
+      "updatedAt": "2026-11-26T11:45:04.456128+00:00",
+      "analysisJobId": "3ff5520a-eba4-4fc6-a6c1-ebb5522dfec0",
+      "requestSha256": "f0439d667cc6150eef4db3bb89ba85b2d75701a236103a1e6b71ac0bf139556d",
+      "generationMode": "MANUAL",
+      "designReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+      "promptReleaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "actorScopeSha256": "6314c47ed56ccfdb1b1d22b6806a9170a1784373d88cdf2b7a97b6e97704e477",
+      "sourceAcquisition": "REST_FIRST",
+      "designManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+      "promptManifestSha256": "805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "promptReleaseVersion": "1.0.1"
+    }
+  ],
+  "timing": {
+    "analysisJobWallSeconds": 8.196,
+    "firstFailedKiroJobWallSeconds": 155.854,
+    "successfulKiroJobWallSeconds": 170.971,
+    "workerTiming": {
+      "totalMs": 1290791,
+      "stages": [
+        {
+          "id": "source-preparation",
+          "durationMs": 6450
+        },
+        {
+          "id": "analysis",
+          "durationMs": 42
+        },
+        {
+          "id": "user-review",
+          "durationMs": 1116632
+        },
+        {
+          "id": "generation",
+          "durationMs": 88036
+        },
+        {
+          "id": "compile-validation",
+          "durationMs": 6355
+        },
+        {
+          "id": "repair",
+          "durationMs": 73273
+        },
+        {
+          "id": "reference-image",
+          "durationMs": 3
+        }
+      ],
+      "gapIncludesFirstFailedGenerationAndInvestigation": true,
+      "providerRuns": [
+        {
+          "operation": "screen.generate",
+          "promptBytes": 367194,
+          "performance": {
+            "parseMs": 4,
+            "totalMs": 87678,
+            "cleanupMs": 132,
+            "schemaVersion": 1,
+            "firstContentMs": 41686,
+            "modelProcessMs": 83661,
+            "authenticationMs": 3875,
+            "firstStreamByteMs": 3191,
+            "workspacePrepareMs": 2
+          },
+          "gatewayPerformance": {
+            "projectionMs": 327,
+            "promptBuildMs": 17,
+            "schemaVersion": 1,
+            "sessionCallMs": 87679
+          }
+        },
+        {
+          "operation": "screen.repair",
+          "promptBytes": 394342,
+          "performance": {
+            "parseMs": 4,
+            "totalMs": 72839,
+            "cleanupMs": 126,
+            "schemaVersion": 1,
+            "firstContentMs": 26357,
+            "modelProcessMs": 69202,
+            "authenticationMs": 3503,
+            "firstStreamByteMs": 2334,
+            "workspacePrepareMs": 4
+          },
+          "gatewayPerformance": {
+            "projectionMs": 413,
+            "promptBuildMs": 6,
+            "schemaVersion": 1,
+            "sessionCallMs": 72839
+          }
+        }
+      ]
+    },
+    "comparisonLimit": "One selected successful execution; user-review timing includes the earlier failed execution and investigation. This is not a repeated latency benchmark."
+  },
+  "diagnostics": {
+    "schemaVersion": 1,
+    "purpose": "conversion-diagnostics",
+    "summaryScope": "result",
+    "findingSummary": {
+      "findings": [
+        {
+          "code": "KIRO_VISUAL_VERIFICATION_UNAVAILABLE",
+          "reason": "visual-verification",
+          "category": "visual",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14785",
+          "reason": "other",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "manual-review"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "I29876:14785;5721:22590",
+          "reason": "component-mapping",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "source-component-definition",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20212;4539:3744",
+          "reason": "visual-appearance",
+          "category": "visual",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20213;4539:3747",
+          "reason": "visual-appearance",
+          "category": "visual",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14807",
+          "reason": "layout",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "source-node-data",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14812",
+          "reason": "component-mapping",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "source-component-definition",
+            "runtime-measurement"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14813",
+          "reason": "other",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "manual-review"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14788",
+          "reason": "history-data",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-api-contract"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14801",
+          "reason": "other",
+          "category": "publishing",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "manual-review"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14817",
+          "reason": "action-effect",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-behavior-specification"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14816",
+          "reason": "reset-scope",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-behavior-specification"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14804",
+          "reason": "action-activation",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-behavior-specification"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14805",
+          "reason": "action-activation",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-behavior-specification"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "KIRO_DRAFT_REVIEW",
+          "nodeId": "29876:14806",
+          "reason": "action-activation",
+          "category": "business",
+          "affectsApply": true,
+          "requiredEvidence": [
+            "business-behavior-specification"
+          ],
+          "affectsGeneration": false
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:4528",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:4528;4539:4526",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20212",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20212;4539:3745",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20213",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20213;4539:3748",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "not-observed",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 0
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "nodeId": "I29876:14785;5721:22627",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "missing-source-host",
+          "hostStatus": "hidden-marker",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 0,
+          "affectsGeneration": false,
+          "observedHostCount": 1
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_MISMATCH",
+          "nodeId": "I29876:14801;5645:2348",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "width",
+          "hostStatus": "single-visible-marker",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 1,
+          "affectsGeneration": false,
+          "observedHostCount": 1
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_MISMATCH",
+          "nodeId": "I29876:14801;5645:2350",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "x",
+          "hostStatus": "single-visible-marker",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 1,
+          "affectsGeneration": false,
+          "observedHostCount": 1
+        },
+        {
+          "code": "SCREEN_VISUAL_SOURCE_MISMATCH",
+          "nodeId": "I29876:14801;5645:2350",
+          "reason": "visual-verification",
+          "category": "visual",
+          "property": "width",
+          "hostStatus": "single-visible-marker",
+          "affectsApply": false,
+          "requiredEvidence": [
+            "same-revision-figma-png",
+            "runtime-measurement"
+          ],
+          "visibleHostCount": 1,
+          "affectsGeneration": false,
+          "observedHostCount": 1
+        }
+      ],
+      "findingCount": 25,
+      "blockingCount": 15,
+      "inputCoverage": {
+        "sourceFindingCount": 0,
+        "sourceFindingsTruncated": false,
+        "completeSnapshotVerified": true,
+        "availableSourceFindingCount": 0
+      },
+      "policyVersion": "finding-summary-v1",
+      "schemaVersion": 1,
+      "findingsSha256": "c8a107b99831131c22427dcc60280819a85c923130dd6eb9417fed388f3e7fa9",
+      "findingsTruncated": false
+    },
+    "checks": {
+      "resultMetadataSummaryEqual": true,
+      "resultHandoffSummaryEqual": true,
+      "storedParentSummaryEqual": true,
+      "sourceContractEqual": true,
+      "resultMetadataQualityEqual": true,
+      "qualityImpactPreserved": true,
+      "novaParserDiagnosticAbsencePreserved": true,
+      "analysisMethodPreserved": true,
+      "distinctAnalysisAndFinalSummary": true,
+      "eligibilityNotPromoted": true
+    },
+    "analysis": {
+      "schemaVersion": 1,
+      "purpose": "conversion-diagnostics",
+      "summaryScope": "analysis",
+      "findingSummary": {
+        "schemaVersion": 1,
+        "policyVersion": "finding-summary-v1",
+        "findingCount": 5,
+        "blockingCount": 0,
+        "inputCoverage": {
+          "sourceFindingCount": 0,
+          "availableSourceFindingCount": 0,
+          "sourceFindingsTruncated": false,
+          "completeSnapshotVerified": false
+        },
+        "findings": [
+          {
+            "code": "UNMAPPED_LIBRARY_VARIANT",
+            "nodeId": "29876:14785",
+            "category": "technical",
+            "reason": "other",
+            "requiredEvidence": [
+              "compiled-lwc"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": false
+          },
+          {
+            "code": "UNMAPPED_LIBRARY_VARIANT",
+            "nodeId": "29876:14812",
+            "category": "technical",
+            "reason": "other",
+            "requiredEvidence": [
+              "compiled-lwc"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": false
+          },
+          {
+            "code": "UNCLASSIFIED_FINDING",
+            "nodeId": "29876:14807",
+            "category": "review",
+            "reason": "other",
+            "requiredEvidence": [
+              "manual-review"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": false
+          },
+          {
+            "code": "DRAFT_ASSET_UNVERIFIED",
+            "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20212;4539:3744;4237:723",
+            "category": "publishing",
+            "reason": "other",
+            "requiredEvidence": [
+              "manual-review"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": false
+          },
+          {
+            "code": "DRAFT_ASSET_UNVERIFIED",
+            "nodeId": "I29876:14785;5721:22590;4539:3784;29876:20213;4539:3747;4237:723",
+            "category": "publishing",
+            "reason": "other",
+            "requiredEvidence": [
+              "manual-review"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": false
+          }
+        ],
+        "findingsTruncated": false,
+        "findingsSha256": "fbbfef3c02bd2c8f3c7c047a7a700083c371630f9c82f3b9034e31a14156e438"
+      }
+    },
+    "quality": {
+      "source": {
+        "impact": {
+          "displayStatus": "complete",
+          "originVerified": true,
+          "displayFindingCount": 0,
+          "businessFindingCount": 0,
+          "referenceFindingCount": 0
+        },
+        "status": "passed",
+        "reasonCodes": [],
+        "findingCount": 0
+      },
+      "visual": {
+        "status": "review-required",
+        "reasonCodes": [
+          "SCREEN_VISUAL_SOURCE_UNVERIFIED",
+          "SCREEN_VISUAL_SOURCE_MISMATCH",
+          "KIRO_VISUAL_VERIFICATION_UNAVAILABLE"
+        ],
+        "findingCount": 11
+      },
+      "business": {
+        "status": "incomplete",
+        "reasonCodes": [
+          "KIRO_DRAFT_REVIEW"
+        ],
+        "findingCount": 6
+      },
+      "technical": {
+        "status": "passed",
+        "reasonCodes": [],
+        "findingCount": 0
+      },
+      "publishing": {
+        "status": "review-required",
+        "reasonCodes": [
+          "KIRO_VISUAL_VERIFICATION_UNAVAILABLE",
+          "KIRO_DRAFT_REVIEW"
+        ],
+        "findingCount": 9
+      },
+      "interaction": {
+        "status": "review-required",
+        "reasonCodes": [],
+        "findingCount": 0
+      },
+      "policyVersion": "conversion-quality-v1",
+      "schemaVersion": 1
+    },
+    "applyBlockerCount": 15,
+    "repairHistory": [
+      {
+        "reason": "visual-findings-regressed",
+        "attempt": 1,
+        "outcome": "regression-or-no-improvement",
+        "draftSha256": "10e2fa667378e576f915c5dfc783bb861863a64fc59a12fc7b5e1d3e4fdf6bce"
+      }
+    ],
+    "timing": {
+      "totalMs": 1290791,
+      "stages": [
+        {
+          "id": "source-preparation",
+          "durationMs": 6450
+        },
+        {
+          "id": "analysis",
+          "durationMs": 42
+        },
+        {
+          "id": "user-review",
+          "durationMs": 1116632
+        },
+        {
+          "id": "generation",
+          "durationMs": 88036
+        },
+        {
+          "id": "compile-validation",
+          "durationMs": 6355
+        },
+        {
+          "id": "repair",
+          "durationMs": 73273
+        },
+        {
+          "id": "reference-image",
+          "durationMs": 3
+        }
+      ],
+      "gapIncludesFirstFailedGenerationAndInvestigation": true,
+      "providerRuns": [
+        {
+          "operation": "screen.generate",
+          "promptBytes": 367194,
+          "performance": {
+            "parseMs": 4,
+            "totalMs": 87678,
+            "cleanupMs": 132,
+            "schemaVersion": 1,
+            "firstContentMs": 41686,
+            "modelProcessMs": 83661,
+            "authenticationMs": 3875,
+            "firstStreamByteMs": 3191,
+            "workspacePrepareMs": 2
+          },
+          "gatewayPerformance": {
+            "projectionMs": 327,
+            "promptBuildMs": 17,
+            "schemaVersion": 1,
+            "sessionCallMs": 87679
+          }
+        },
+        {
+          "operation": "screen.repair",
+          "promptBytes": 394342,
+          "performance": {
+            "parseMs": 4,
+            "totalMs": 72839,
+            "cleanupMs": 126,
+            "schemaVersion": 1,
+            "firstContentMs": 26357,
+            "modelProcessMs": 69202,
+            "authenticationMs": 3503,
+            "firstStreamByteMs": 2334,
+            "workspacePrepareMs": 4
+          },
+          "gatewayPerformance": {
+            "projectionMs": 413,
+            "promptBuildMs": 6,
+            "schemaVersion": 1,
+            "sessionCallMs": 72839
+          }
+        }
+      ]
+    }
+  },
+  "pythonBoundaryGate": {
+    "schemaVersion": 1,
+    "purpose": "producer-python-optional-diagnostics-compatibility",
+    "status": "passed",
+    "sourceFilesChanged": false,
+    "productionBoundariesReviewed": {
+      "analysisIngress": "src/sfdc_agent/managed_analysis_output.py",
+      "savedScreenCheckpoint": "src/sfdc_agent/screen_analysis_contract.py",
+      "generationArtifactTransport": "src/sfdc_agent/managed_execution.py::_parse_result",
+      "managedResultOutputModuleExists": false
+    },
+    "sourceSha256": {
+      "src/sfdc_agent/managed_analysis_output.py": "a014c3bda39361bccb5f184dd707021d501b0e2918eb6d37667302ad8d0f3985",
+      "src/sfdc_agent/screen_analysis_contract.py": "5e220f8cf596a2ce56ff1abb40bef6740970b661a197da9eb6fe7cacd88a04b8",
+      "src/sfdc_agent/managed_execution.py": "bbdc8d201d7a665b2b4dd2960059fec7d56d9e4c1a3b4593c61e09263ee4929b"
+    },
+    "producerSha256": {
+      "nextbss/server/managed-analysis-output.mjs": "6e0902ca22dd8f8ee689b5ae61a0ca98dcab81fe8c30d9b0003fff32e05dc5d3",
+      "nextbss/server/managed-original-analysis.mjs": "81e1551f9a9267b829c3db2227730dd924e925c3508d494ad5a8111f8a48bda6",
+      "nextbss/server/conversion-quality/finding-summary.mjs": "6b59d32524605d26e4ade1e04c9b62eb885af4f03912eec8373b47c6b13b8297",
+      "nextbss/shared/finding-summary.mjs": "b3c3d2e831c647f1808fc1ba2fdde3383ed70a09156a2f58ff509878332f854e",
+      "nextbss/shared/screen-analysis-diagnostics.mjs": "da0f4bf3c9aebe035d9d3b7ff6862a49c34169c9bcc940d30aa8d3c364f6d119"
+    },
+    "regression": {
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PYTHONPATH=/Users/a10697/Work/SFDC_LWC/SFDC_Agent/src:/Users/a10697/Work/SFDC_LWC/SFDC_Agent",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "SFDC_MANAGED_ENGINE_ROOT=/Users/a10697/Work/SFDC_LWC/SFDC_Ui",
+        "/Users/a10697/Work/SFDC_LWC/SFDC_Agent/.venv/bin/python",
+        "-m",
+        "unittest",
+        "tests.test_managed_analysis_output",
+        "tests.test_screen_analysis_contract",
+        "tests.test_managed_execution.ManagedExecutionTests.test_generation_accepts_artifacts_with_relative_bundle_paths",
+        "-v"
+      ],
+      "cwd": "/Users/a10697/Work/SFDC_LWC/SFDC_Agent",
+      "tests": 16,
+      "pass": 16,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "reportedDurationSeconds": 1.028
+    },
+    "compatibilityProbe": {
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PYTHONPATH=/Users/a10697/Work/SFDC_LWC/SFDC_Agent/src:/Users/a10697/Work/SFDC_LWC/SFDC_Agent",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "SFDC_MANAGED_ENGINE_ROOT=/Users/a10697/Work/SFDC_LWC/SFDC_Ui",
+        "/Users/a10697/Work/SFDC_LWC/SFDC_Agent/.venv/bin/python",
+        "/private/var/folders/qp/_8pgqkt50bn5qm2hyh4y6km40000gq/T/nova-common-fidelity-ad8bdli8/agent-diagnostics-compatibility-probe.py"
+      ],
+      "cwd": "/Users/a10697/Work/SFDC_LWC/SFDC_Agent",
+      "sourceSha256": "bdc3e6d64e8782cf2a59d33f3cecc0cb32d3d3374db63ee08a5f068a6b90ade9",
+      "schemaVersion": 1,
+      "status": "passed",
+      "checks": 4,
+      "checksPassed": [
+        "actual-node-screen-export-python-analysis-verification",
+        "saved-optional-fields-cross-engine-envelope",
+        "analysis-and-final-summaries-remain-distinct",
+        "generation-artifact-bytes-preserved"
+      ],
+      "fixtures": "synthetic-typed-contract-and-output-envelope",
+      "productionSceneConversionClaimed": false,
+      "sourceFilesChanged": false,
+      "networkCalls": 0,
+      "providerCalls": 0,
+      "databaseCalls": 0,
+      "orgCalls": 0,
+      "privateScratchRemovedByTemporaryDirectory": true,
+      "nodeProbeSha256": "0c2f9e615712cb64f6293e366d4b3cea72ae6f7dbf1bdbf14f839fe36062ec2c"
+    },
+    "findings": {
+      "newOptionalFieldsAcceptedAndPreserved": true,
+      "differentAnalysisAndFinalSummariesAccepted": true,
+      "checkpointBytesPreserved": true,
+      "generationArtifactBytesPreserved": true,
+      "legacyEvidenceReconstructed": false,
+      "pythonOwnsNewDiagnosticFieldSchema": false,
+      "strictDiagnosticSchemaOwners": [
+        "Node-producer",
+        "Spring-ingress"
+      ],
+      "additionalAgentImplementationRequired": false
+    },
+    "constraints": {
+      "isolatedEnvironment": true,
+      "inheritedEnvironment": false,
+      "syntheticProbeOnly": true,
+      "realSceneConversionOrAccuracyCertified": false,
+      "mainServiceInvoked": false,
+      "mainDatabaseReadOrWrite": false,
+      "figmaRestCalls": 0,
+      "mcpCalls": 0,
+      "modelCalls": 0,
+      "orgCalls": 0,
+      "serviceRestarts": 0,
+      "credentialValuesReadOrRetained": false,
+      "rawOutputRetained": false,
+      "probeScratchRemoved": true
+    }
+  },
+  "actualMainStorage": {
+    "parentCheckpointSha256": "ef36184c67517232685e42f55ce246dfff697465aae585b7e176e09bbd3cb4b3",
+    "analysisId": "d37e2820-0bd7-4ade-9c52-f831f3619a61",
+    "sourceDigest": "aceca4801b1c685fea6834e273cf6782ebde0fdb8c5de601476d96358e6e9f65",
+    "contract": {
+      "schemaVersion": 1,
+      "analysisEngine": "NOVA",
+      "sourceAcquisition": "REST_FIRST",
+      "actualAcquisition": "REST",
+      "sourceDigest": "779b74b8a021c7075ee2633382a097d45f02e874abf77462ce93c9f505cf64e1",
+      "sceneSha256": "100180109d904b655362cd7c50bc16f0845a04b572b6ec240253c937cfc6af24",
+      "designReleaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+      "promptReleaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+      "generatorSourceSha256": "73a31547f83e278a65451e15a193a8fa7c38b7936894bfd03e6efe064b499299"
+    },
+    "summaryPreserved": true,
+    "novaParserDiagnosticsAbsent": true,
+    "checkpointNotRewritten": true,
+    "artifactCount": 43,
+    "artifactBytes": 187394,
+    "artifactHashesVerified": true,
+    "previewAssetCount": 36,
+    "previewAssetHashesVerified": true,
+    "privateMaterializationOnly": true
+  },
+  "browser": {
+    "schemaVersion": 1,
+    "actualAuthenticatedUserPath": true,
+    "syntheticSessionOrBrowserStorageUsed": false,
+    "novaAnalysisJob": "3ff5520a-eba4-4fc6-a6c1-ebb5522dfec0",
+    "kiroGenerationJob": "5d46782f-ea07-4d6f-b258-b64eea4e97cf",
+    "resultId": "5d46782f-ea07-4d6f-b258-b64eea4e97cf",
+    "storedResultReopenedInReview": true,
+    "browserReloadRestoresRenderedLwc": true,
+    "studioStoredResultReopened": true,
+    "provenanceBadgeCorrectedAndObserved": "source-kiro",
+    "applyHeld": true,
+    "orgApplyEnabled": false,
+    "sourceReferencePngApprovedInMain": false,
+    "archiveConfirmedInUi": true,
+    "currentTestTabsClosed": 2,
+    "olderOwnedTabsUnmarkedForAutomaticCleanup": 2,
+    "originalUserTabsPreserved": true
+  },
+  "runtimeInstallation": {
+    "schemaVersion": 1,
+    "actions": [
+      {
+        "action": "stop",
+        "seconds": 2.025,
+        "status": "CANONICAL_APPLICATIONS_STOPPED"
+      },
+      {
+        "action": "refresh-runtime",
+        "seconds": 20.592,
+        "status": "LIVE_MANAGED_RUNTIME_REFRESHED"
+      },
+      {
+        "action": "start",
+        "seconds": 15.656,
+        "status": "CANONICAL_MAIN_DEVELOPMENT_READY"
+      },
+      {
+        "action": "doctor",
+        "seconds": 0.045,
+        "status": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING"
+      }
+    ],
+    "startedAt": 1795692093.1724951,
+    "protectedFileCount": 20,
+    "runtimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4",
+    "passed": true,
+    "protectedFilesUnchanged": true,
+    "finishedAt": 1795692131.8799129,
+    "totalSeconds": 38.707
+  },
+  "backendReload": {
+    "schemaVersion": 1,
+    "action": "official-reload-backend",
+    "health": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING",
+    "seconds": 2.974,
+    "protectedConfigurationAndActiveReleaseUnchanged": true,
+    "runtimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4",
+    "providerCalls": 0
+  },
+  "sourceImpactCompatibility": {
+    "actualSavedParentNovaOutput": {
+      "schemaVersion": 1,
+      "purpose": "one-offline-nova-producer-envelope",
+      "status": "passed",
+      "exitCode": 0,
+      "outputBytes": 3877688,
+      "artifactCount": 70,
+      "metadataQualitySourceImpactPresent": true,
+      "viewQualitySourceImpactPresent": true,
+      "qualitySourceEqual": true,
+      "network": {
+        "schemaVersion": 1,
+        "loopbackRequests": 33,
+        "blockedRequests": 0,
+        "externalRequestsAllowed": 0
+      },
+      "runtimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4",
+      "parentCheckpointSha256": "ef36184c67517232685e42f55ce246dfff697465aae585b7e176e09bbd3cb4b3",
+      "inputSha256": "6d717a940a3266227d3c84a0501771c20bbd19c778756ecdadf464ba1ad51af4",
+      "outputSha256": "f977e4a5cc45df145274354fa2a1393e97757d31f83b1e444e30d7be66c9bf83",
+      "releaseId": "nextbss-1.9-5e50d31f7db2f19df8081db5d9ac0cac23f6a4577e97736309237fe0088c9f43",
+      "releaseManifestSha256": "23e5f7b9cdb295d72be3b6a92237e408ddd416a7243acb116eeb9b87cca92197",
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "--import",
+        "/private/var/folders/qp/_8pgqkt50bn5qm2hyh4y6km40000gq/T/nova-common-fidelity-ad8bdli8/main-private/nova-offline-network-guard.mjs",
+        "/private/var/folders/qp/_8pgqkt50bn5qm2hyh4y6km40000gq/T/nova-common-fidelity-ad8bdli8/final-candidate/nextbss/server/managed-execution.mjs"
+      ],
+      "durationMs": 4582,
+      "scratchRemoved": true,
+      "workerExecutions": 1,
+      "mainJobsCreated": 0,
+      "providerCalls": 0,
+      "figmaSourceApiCalls": 0,
+      "authenticationCalls": 0,
+      "productionSourceEdits": 0,
+      "npmCi": false
+    },
+    "backendRedGreenReceipt": {
+      "repository": "SFDC_BACK",
+      "path": "docs/validation/2026-11-26-conversion-diagnostics-contract.json"
+    },
+    "firstKiroRejectedFieldRecovered": false,
+    "firstFailure": {
+      "resultRows": 0,
+      "artifactReferences": 0,
+      "jobId": "5f7b5859-f168-423b-b57e-9f355ba36ea9",
+      "errorCode": "OUTPUT_PERSISTENCE_FAILED",
+      "uiObserved": true,
+      "generationScratchAlreadyReclaimed": true,
+      "incompleteResultNotPublished": true
+    }
+  },
+  "salesforceReadHealth": {
+    "schemaVersion": 1,
+    "endpoint": "GET /api/v1/tenants/nova-local/workspaces/main/salesforce/connection",
+    "authenticatedUserRead": true,
+    "connected": false,
+    "safeProviderDiagnostic": {
+      "stage": "IDENTITY",
+      "httpStatus": 403,
+      "exceptionClass": "NONE"
+    },
+    "previousHealthyBaselineAvailable": false,
+    "causeAttributedToConversionChange": false,
+    "credentialsOrOAuthSettingsEdited": false,
+    "orgDeployAttempted": false,
+    "limitation": "Existing Salesforce read connection returned unavailable. This observation does not certify authentication success or prove when it became unavailable."
+  },
+  "cleanup": {
+    "archived": true,
+    "previewGrants": 0,
+    "orgApplications": 0,
+    "schemaVersion": 1,
+    "status": "ARCHIVED_NOT_HARD_PURGED",
+    "ownedResultCount": 1,
+    "uiListEmpty": true,
+    "resultAndPreviewReopenedBeforeArchive": true,
+    "provenanceBadge": "NOVA -> Kiro",
+    "jobsNotRepeatedOnReopen": true,
+    "retained": [
+      "execution job and attempt audit",
+      "analysis checkpoint and analysis view/materialization",
+      "archived immutable result metadata/view/artifacts"
+    ],
+    "privateRootsPendingCleanup": false,
+    "orgTestObjectsCreated": 0,
+    "promptRuntimeTraceRowsDeleted": 2,
+    "promptRuntimeTraceRowsRemaining": 0,
+    "traceCleanupMethod": "Explicit user-requested exact owned scope/job/actor fenced ephemeral-row DELETE; no FK or trigger bypass; immutable job/source/result audit retained",
+    "rawPromptSubstitutionsRead": false,
+    "ownedTemporaryRootsRemoved": 3,
+    "ownedTemporaryFilesRemoved": 5772,
+    "dependencySymlinksUnlinkedWithoutFollowing": 3,
+    "ownedRootsVerifiedAbsent": true,
+    "originalArchivesAuthActiveReleaseAndLiveDependenciesUnchanged": true,
+    "finalHealth": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING",
+    "rawSourcePngModelCodeOrCredentialPayloadsRetainedInRepository": false,
+    "unattributedOutsideTemporaryRootsPreserved": 12
+  },
+  "mcpReview": {
+    "mode": "read-only source/release mapping review; no new MCP calls or Figma writes",
+    "componentSource": "/Users/a10697/Work/NOVA/packages/nova-ui/main/default/lwc",
+    "publicFamilies": 38,
+    "observedPublicFamiliesInThreeRepresentativeScreens": 8,
+    "sourceComponentIdsObserved": 38,
+    "sourceInstancesObserved": 187,
+    "visibleSourceInstancesObserved": 182,
+    "codeConnectPublicationAuthorized": false,
+    "codeConnectPublicationPerformed": false,
+    "liveMcpInputEquivalenceCertified": false,
+    "fullFamilyCoverageClaimed": false
+  },
+  "qualityLimits": [
+    "Successful generation/storage and native checks do not certify pixel fidelity or business API integration. Org apply remains held.",
+    "No source metric target was removed and no visual threshold/review permission was relaxed.",
+    "The Main analysis had no approved official PNG. A separate frozen private official oracle is reported separately; Main is not relabeled as officially compared.",
+    "One repair was rejected because visual findings regressed; the earlier accepted draft was retained.",
+    "The exact backend model is not reported by Kiro; repeated quality improvement across all screens is not certified.",
+    "Salesforce read authentication returned Identity HTTP403; credentials/settings were not edited and no pre-change healthy baseline is available.",
+    "Owned result is archived, not hard-purged. Immutable execution/checkpoint/result payloads remain under existing product retention."
+  ],
+  "relatedEvidence": [
+    {
+      "repository": "SFDC_UI",
+      "path": "docs/validation/2026-11-26-common-diagnostics-native.json"
+    },
+    {
+      "repository": "SFDC_BACK",
+      "path": "docs/validation/2026-11-26-conversion-diagnostics-contract.json"
+    }
+  ],
+  "postMainVisibilityFix": {
+    "runtimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
+    "generatorSourceSha256": "1e3d183070a8bfba4b75acb6aa2984d5851c1479fdd0c339d673cab6804bda9f",
+    "gate": {
+      "schemaVersion": 1,
+      "purpose": "generic-physical-visibility-fix-gate",
+      "files": {
+        "nextbss/server/conversion-quality/source-metrics.mjs": "351dd4406a8b9487ac3483be7bad90f47cfcd85b1c5208ca43a3379524578037",
+        "nextbss/server/conversion-quality/native-controls.mjs": "1ffad17a67096d3e378a849be6f3d41748bb8ecad98ae2ad13bab397bcda20e9",
+        "nextbss/server/conversion-quality/overlay-runtime.mjs": "8e5b9ec3950a7a613889c642b0e07febbbc3dad52533a995b902c0bc3c9c056a",
+        "nextbss/server/conversion-quality/rendered-fonts.mjs": "126ddf420bc219fa9ddb60cfa9e3277354f6106446b5bf36fab2e3190c4e30b9",
+        "nextbss/server/conversion-quality/physical-visibility.test.mjs": "fd70ba1f8da94d35523859c566f30078b27ff90965e8df702f00e2e01846ca09"
+      },
+      "productionFileCount": 4,
+      "newRegressionFileCount": 1,
+      "serializedObserverFunctionsRemainSelfContained": true,
+      "schemaOrPermissionChanges": false,
+      "screenOrComponentSpecificBranchesAdded": false,
+      "thresholdChanges": false,
+      "expectedTargetChanges": false,
+      "clippingRulesChanged": false,
+      "confirmedOldRuleFailures": [
+        "decorative-divider-public-hidden-getter",
+        "custom-getter-true",
+        "custom-getter-false",
+        "visibility-collapse"
+      ],
+      "strictNegativeCoverage": [
+        "native-hidden",
+        "native-hidden-false-string",
+        "hidden-until-found",
+        "custom-getter-with-hidden-attribute",
+        "ancestor-opacity-zero",
+        "ancestor-display-none",
+        "ancestor-visibility-hidden",
+        "ancestor-visibility-collapse",
+        "ancestor-content-visibility-hidden"
+      ],
+      "greenGate": {
+        "argv": [
+          "node",
+          "--test",
+          "nextbss/server/conversion-quality/physical-visibility.test.mjs",
+          "nextbss/server/conversion-quality/native-controls.test.mjs",
+          "nextbss/server/conversion-quality/quality.test.mjs",
+          "nextbss/server/conversion-quality/overlay-runtime.test.mjs",
+          "nextbss/server/conversion-quality/rendered-fonts.test.mjs",
+          "nextbss/server/conversion-quality/source-transform-metrics.test.mjs"
+        ],
+        "tests": 61,
+        "passed": 61,
+        "failed": 0,
+        "skipped": 0,
+        "newPhysicalCases": 26,
+        "countSource": {
+          "kind": "node-test-final-summary",
+          "sessionId": 77613,
+          "exitCode": 0,
+          "tests": 61,
+          "pass": 61,
+          "fail": 0,
+          "skipped": 0,
+          "nestedSubtestsIncluded": true,
+          "sourceFileCount": 6
+        },
+        "testFileSha256": {
+          "nextbss/server/conversion-quality/physical-visibility.test.mjs": "fd70ba1f8da94d35523859c566f30078b27ff90965e8df702f00e2e01846ca09",
+          "nextbss/server/conversion-quality/native-controls.test.mjs": "8ba7dfea139648007c05c7f85af5daac8090f99fe6036610cb1cad7bfbc3b0d3",
+          "nextbss/server/conversion-quality/quality.test.mjs": "95d0ee7161a902d487c422268f6b9d90be3e4863355f68bce5b3413d4499d36d",
+          "nextbss/server/conversion-quality/overlay-runtime.test.mjs": "1630b7a1ce89aeb30f949ea5fe44c8d9983e81d22d7854b84f5498f458f1a2bd",
+          "nextbss/server/conversion-quality/rendered-fonts.test.mjs": "56b20b209ff64cb30f53a8ddd3c31c6412859ed40598234f463c541e38a98d34",
+          "nextbss/server/conversion-quality/source-transform-metrics.test.mjs": "7cfd98895c3150a064df5e6469f3665b54fbfa57a8f73066e73b67340c237132"
+        }
+      },
+      "mainStoredAssetRevalidation": {
+        "captureCalls": 1,
+        "screenshotCalls": 1,
+        "oldAndNewRulesUseSameRenderedPngBytes": true,
+        "renderedPngSha256": "ac1a3fed85ea35eab0ef2cf44068168dd72066214f3a965db18a4d8f8146dcc4",
+        "sourcePngSha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+        "allStoredAssetHashesVerified": true,
+        "allGeneratedLwcHashesVerified": true,
+        "sourcePngUnchanged": true,
+        "priorE3PngHashWasNotRetained": true,
+        "priorE3PixelCountsEqual": true,
+        "dividerRecovered": true,
+        "oldRuleCoverage": {
+          "expected": 39,
+          "matched": 32,
+          "unavailable": 7,
+          "mismatched": 2,
+          "unsupported": 2,
+          "truncated": false,
+          "sourceStatus": "complete",
+          "displayStatus": "complete",
+          "referenceFindingCount": 0,
+          "businessFindingCount": 0,
+          "originVerified": true
+        },
+        "newRuleCoverage": {
+          "expected": 39,
+          "matched": 33,
+          "unavailable": 6,
+          "mismatched": 3,
+          "unsupported": 2
+        },
+        "nativeCoverage": {
+          "expected": 7,
+          "matched": 7,
+          "unavailable": 0,
+          "unsupported": 0,
+          "failed": 0
+        },
+        "pixels": {
+          "changedRatio": 0.012578181253441387,
+          "changedPixels": 8909,
+          "totalPixels": 708290
+        },
+        "verdict": "failed",
+        "remainingProperties": {
+          "missing-source-host": 6,
+          "pixel-difference": 1,
+          "width": 2,
+          "x": 1,
+          "y": 1
+        },
+        "breadcrumbExpectedTargetsRetained": true,
+        "realTransformsRemainUnsupported": 2
+      },
+      "revalidationReceiptSha256": "e0fde3fd75e1ae482684b0bf73f57957c20a41026a91aa5592c53e0ae75419cb",
+      "officialReceiptSha256": "9ea74ee8edae117256904cf7162ddba68b95b8ec9304e4d40973ab6d455a5f18",
+      "modelCalls": 0,
+      "sourceApiCalls": 0,
+      "orgCalls": 0,
+      "mainDbWrites": 0,
+      "mainServiceRestarts": 0,
+      "stageCommitPushActions": 0,
+      "frozenProductionFileHashesStillMatch": true,
+      "privateCloseoutReceiptSha256": "42deac743cf0e69a3b952338895512c8807749e797c9afd19e74fb81d9c0fb5b"
+    },
+    "actualStoredAssetProof": {
+      "allArtifactHashesVerified": true,
+      "allPreviewHashesVerified": true,
+      "actualCompiledAssetsReused": true,
+      "sourceSnapshotMatchesStoredContract": true,
+      "mainReferenceUnavailable": true,
+      "sourceMetricCoverage": {
+        "expected": 39,
+        "matched": 33,
+        "unavailable": 6,
+        "mismatched": 3,
+        "unsupported": 2
+      },
+      "classificationCounts": {
+        "breadcrumb-internal-marker-ownership-unproven": 6,
+        "recovered-divider-position-mismatch": 1,
+        "unique-visible-host-geometry-difference": 3,
+        "measured-source-mismatch": 1
+      },
+      "propertyCounts": {
+        "missing-source-host": 6,
+        "pixel-difference": 1,
+        "width": 2,
+        "x": 1,
+        "y": 1
+      },
+      "unsupportedCounts": {
+        "SOURCE_METRIC_TRANSFORM_UNSUPPORTED": 2
+      },
+      "sourceBytesUnchanged": true,
+      "newSourceCalls": 0,
+      "modelCalls": 0,
+      "orgCalls": 0,
+      "noThresholdOrExpectedTargetChanges": true,
+      "previousMainE3ResultUntouched": true,
+      "noSourceOrLwcRegeneration": true
+    },
+    "controlledReclassification": {
+      "expectedTargets": 39,
+      "matchedBefore": 32,
+      "matchedAfter": 33,
+      "unavailableBefore": 7,
+      "unavailableAfter": 6,
+      "mismatchedTargetsBefore": 2,
+      "mismatchedTargetsAfter": 3,
+      "unsupportedTargets": 2,
+      "breadcrumbMarkersWithoutOwnershipProof": 6,
+      "widthFindings": 2,
+      "xFindings": 1,
+      "newlyObservedDividerYFindings": 1,
+      "nativeMatched": 7,
+      "nativeExpected": 7,
+      "overallVerdict": "failed"
+    },
+    "officialPngComparison": {
+      "changedPixels": 8909,
+      "totalPixels": 708290,
+      "changedPercent": 1.2578,
+      "officialPngSha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+      "renderedPngSha256": "ac1a3fed85ea35eab0ef2cf44068168dd72066214f3a965db18a4d8f8146dcc4",
+      "sameCapturedImageUsedForOldAndNewVerdicts": true,
+      "earlierE3PngHashCollected": false,
+      "earlierE3ImageByteEqualityClaimed": false,
+      "earlierE3ChangedPixelCountEqual": true,
+      "initialPrivateMimeFailureExcluded": true,
+      "pixelImprovementClaimed": false
+    },
+    "finalCrossGenerationGate": {
+      "argv": [
+        "env",
+        "SFDC_NOVA_PROJECT_ROOT=/Users/a10697/Work/NOVA",
+        "node",
+        "--test",
+        "--test-concurrency=2",
+        "--test-name-pattern=^Screen Studio",
+        "nextbss/server/workbench.test.mjs"
+      ],
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 7323.107459,
+      "provider": "fixture only, not a fresh actual model execution"
+    },
+    "finalRuntimeInstallation": {
+      "schemaVersion": 1,
+      "actions": [
+        {
+          "action": "stop",
+          "seconds": 1.898,
+          "status": "CANONICAL_APPLICATIONS_STOPPED"
+        },
+        {
+          "action": "refresh-runtime",
+          "seconds": 18.672,
+          "status": "LIVE_MANAGED_RUNTIME_REFRESHED"
+        },
+        {
+          "action": "start",
+          "seconds": 15.63,
+          "status": "CANONICAL_MAIN_DEVELOPMENT_READY"
+        },
+        {
+          "action": "doctor",
+          "seconds": 0.033,
+          "status": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING"
+        }
+      ],
+      "startedAt": 1795694799.445785,
+      "protectedFileCount": 20,
+      "runtimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
+      "passed": true,
+      "protectedFilesUnchanged": true,
+      "finishedAt": 1795694836.089771,
+      "totalSeconds": 36.644
+    },
+    "verificationBoundary": "Actual Main NOVA->Kiro user flow ran on E3. Final change only corrects physical observation; the same actual stored Kiro output was revalidated with no new model/source/Main test jobs. Fresh synthetic cross-generation captures cover the final fingerprint. No post-fix actual Kiro generation improvement is claimed."
+  },
+  "finalInstalledRuntimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb"
+}
