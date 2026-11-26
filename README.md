@@ -2,6 +2,8 @@
 
 Kiro의 Figma MCP 수집 연결·최초 승인·인증 재사용 방법은 [Figma MCP 설정](docs/figma-mcp-setup.md)을 참고하세요. Kiro API 키와 Figma OAuth 승인은 별개입니다.
 
+변환 품질의 완료 범위·남은 작업·DEV 시트 확인 후 재개 조건은 [후속 작업 로드맵](docs/conversion-followup-roadmap.json)과 [근거·공급자 계약](docs/conversion-evidence-contract.md#current-follow-up-status-on-2026-11-26)에 보관합니다. 이미지 입력 어댑터와 업무 명세 확인은 DEV 시트와 별개의 선행 조건입니다.
+
 `SFDC_Agent`는 NOVA의 Screen·Story Kiro 분석과 LWC 코드 생성을 처리한다. CLI 파일럿은 `SFDC_Ui/nextbss`의 원본 파서, NextBSS 표준, LWC 생성기와 브라우저 검사기를 사용해 변환 결과를 비교한다. 파일럿 작업 상태는 SQLite에 기록하고, 모델 제안·LWC 번들·PNG·비교 보고서는 실행별 폴더에 저장한다.
 
 ## Spring 통합 실시간 개발 (`dev`)
@@ -60,9 +62,9 @@ curl -fsS http://127.0.0.1:8766/health
 
 ### Screen·Story 원본 처리
 
-Screen은 Figma REST에서 선택한 노드의 원본을 읽는다. REST를 사용할 수 없고 버전을 별도로 지정하지 않은 경우에는 일치하는 등록 `.fig` 사본을 사용한다. Story 원본은 기존 `.fig` 또는 Figma REST 경로로 수집한다. 헤드리스 모델 작업은 임시 작업공간에서 실행하며, Kiro CLI의 API 키 인증을 확인한 뒤 원본 근거를 표준 입력으로 전달한다. 헤드리스 작업의 Figma 원본은 모델 실행 전에 수집한다.
+Screen Studio는 분석 경로와 생성기를 구분한다. NOVA 규칙 분석은 REST 우선이며, 허용된 오류에서 버전이 지정되지 않은 링크의 등록 `.fig` 사본을 사용한다. AI 분석은 Figma API(REST 전용) 또는 Figma MCP(MCP 전용)를 명시적으로 선택한다. 로컬 `.fig` 분석은 선택한 파일만 사용한다. AI 수집 실패를 다른 경로로 자동 대체하지 않는다. Story의 기존 `.fig`·REST 수집 계약은 유지한다.
 
-Screen에서 검토가 필요한 경우, 분석을 확인한 뒤 저장된 분석으로 생성한다. 원본을 확보할 수 없으면 변환 화면에 원인을 표시한다. Story의 실행 모드는 생성 영수증 `generationReceipt.executionMode`와 Agent 로그에서 확인한다. 새 Story 분석으로 검증하면 저장된 LWC 결과를 재사용하지 않는다.
+Screen Studio는 분석 → 검토 확인 → NOVA 규칙 생성 또는 AI 코드 생성(Kiro) 순서로 진행한다. 신규 분석 계약의 생성에서는 저장한 장면·분석·PNG를 재사용하며 REST/MCP 재수집과 아카이브 재열기를 하지 않는다. 원본이나 필수 조건이 부족하면 사용 가능한 생성기를 제한하고 사유를 표시한다. 헤드리스 모델 작업은 임시 작업공간에서 실행하며 Kiro CLI의 API 키 인증 후 구조화한 텍스트 근거를 전달한다. 현재 어댑터는 PNG를 모델에 전달하지 않으며, PNG 비교는 브라우저 검증에 사용한다. Story의 실행 모드는 생성 영수증 `generationReceipt.executionMode`와 Agent 로그에서 확인한다. 새 Story 분석으로 검증하면 저장된 LWC 결과를 재사용하지 않는다.
 
 `kiro_gateway.py`가 모델 세션·작업 요청을 관리하고, `kiro_headless.py`가 Key를 격리된 Kiro CLI headless 프로세스에 전달한다. `screen_tasks.py`와 `story_tasks.py`가 분석·생성 프롬프트를 구성한다. Agent는 `SFDC_Ui/nextbss` 엔진을 사용해 원본 처리·NOVA 생성·LWC 컴파일을 수행한다. Main의 작업 상태·결과 저장·권한·Salesforce 세션은 Spring이 관리하고, 프론트는 화면과 API 연결을 담당한다.
 

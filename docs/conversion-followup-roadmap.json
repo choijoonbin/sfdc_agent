@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "updatedOn": "2026-11-26",
+  "status": "PARTIAL_COMPLETION_WITH_EXPLICIT_RESUME_GATES",
+  "scope": "Screen conversion accuracy, source equivalence and measured performance",
+  "implementationRules": [
+    "Generic source and public-API rules only; no production screen-ID or title conditions",
+    "Preserve original archives, authentication, immutable releases and existing user data",
+    "Do not repeat Figma REST or MCP probes until the user confirms the seat change",
+    "A DEV seat does not itself prove quota recovery, file access or matching revisions",
+    "Do not enable a model image capability until the adapter actually submits and verifies images",
+    "Do not change business or technical approval from a documentation-only audit"
+  ],
+  "evidence": [
+    {
+      "repository": "SFDC_UI",
+      "path": "docs/validation/2026-11-26-screen-studio-local-contracts.json"
+    },
+    {
+      "repository": "SFDC_UI",
+      "path": "docs/validation/2026-11-26-local-reference-reuse.json"
+    },
+    {
+      "repository": "SFDC_Agent",
+      "path": "docs/validation/2026-11-26-followup-audit.json"
+    }
+  ],
+  "originalPriorities": [
+    {
+      "id": "P1_FROZEN_COMPARISON",
+      "title": "동일 원본·리비전·1× PNG·릴리스·환경의 비교 기준 고정",
+      "status": "PARTIAL",
+      "completed": [
+        "Same archive SHA, authored scene, raw snapshot, component release and prompt pins",
+        "Saved-analysis reuse without source recollection during generation",
+        "Local reference PNG and fixed browser environment",
+        "Three paired local NOVA timing runs with identical source, PNG and LWC output"
+      ],
+      "remaining": [
+        "Prove archive-to-remote revision relationship",
+        "Capture official same-revision 1x PNG and raw remote evidence",
+        "Measure repeated frozen LLM runs and report variance separately from repair effects"
+      ],
+      "devDependency": "Remote evidence depends on restored Figma access; local repeated runs do not intrinsically require a DEV seat",
+      "completionGate": "All compared runs share verified revision, image bytes, release, prompt, model/transport and browser conditions; no mixed-baseline improvement claim"
+    },
+    {
+      "id": "P2_MCP_INPUT_EQUIVALENCE",
+      "title": "MCP·REST·로컬 입력 동등성 확보",
+      "status": "WAITING_FOR_REMOTE_EVIDENCE",
+      "completed": [
+        "Common normalized source contract and provenance digests",
+        "Generic local variable/property-reference extraction and explicit unknown coverage"
+      ],
+      "remaining": [
+        "Collect MCP and REST node/style/component/published-key/coordinate evidence at the same verified revision",
+        "Retain private raw responses and tool-call receipts, checking required node coverage and truncation",
+        "Compare authored facts separately from derived rendering assets and acquisition metadata"
+      ],
+      "devDependency": "Wait for user confirmation, then verify actual account, target-organization seat, authorization and quota",
+      "completionGate": "Explain every required-field difference; unsupported fields stay unknown and cannot be silently reconstructed or substituted"
+    },
+    {
+      "id": "P3_TABLE_TEXT_MAPPING",
+      "title": "표·텍스트의 공통 매핑 보완",
+      "status": "PARTIAL_WITH_COMMON_COLOR_VERIFIER_CORRECTION",
+      "completed": [
+        "Generic source projection and pinned NOVA public-API checks",
+        "Native control, available geometry and typography validation",
+        "Non-regression gates for repair candidates",
+        "Corrected inside-stroke color measurement: 117 table false positives removed with identical LWC, PNG and pixels; missing/wrong paint still fails and complex paints stay unverified"
+      ],
+      "remaining": [
+        "Resolve unsupported table transforms, source/public-component appearance mismatches and unverified text/assets against source facts and pinned public APIs",
+        "Investigate popup background and missing measurement hosts without deleting checks or changing source-specific rules",
+        "Validate actual stroke widths, other spacing/typography residuals and any renderer changes independently of the corrected color oracle",
+        "Confirm improvements with the official frozen comparison after remote evidence is available"
+      ],
+      "devDependency": "Local source/API diagnosis can continue before DEV; official cross-source accuracy certification needs remote evidence",
+      "completionGate": "Search, table and popup regressions preserve text, geometry, empty state and native interactions; lower pixels alone is insufficient"
+    },
+    {
+      "id": "P4_IMAGE_INPUT_REPAIR",
+      "title": "실제 모델 이미지 입력과 보정 강화",
+      "status": "NOT_IMPLEMENTED_FOR_CURRENT_TRANSPORTS",
+      "completed": [
+        "Immutable PNG capture/binding and browser-side comparison",
+        "Explicit implemented-capability audit; unsupported images are not advertised",
+        "Check installed CLI 3.6.2 ACP initialization in an isolated unauthenticated profile: image:false, one authentication method; no session, prompt or Figma call"
+      ],
+      "remaining": [
+        "Negotiate capabilities in an authenticated isolated Kiro ACP session, or validate another explicitly selected provider image transport; the current API-key headless transport is unchanged",
+        "Implement actual image submission with source/node/revision/scale/hash/size checks",
+        "Verify the adapter does not discard images and records actual delivery",
+        "Run text-only versus image-assisted generation and repair using the same pinned source",
+        "Adopt only candidates that preserve required behaviors and improve measured quality"
+      ],
+      "devDependency": "Adapter implementation is independent of DEV; live model capability and credentials are separate prerequisites",
+      "completionGate": "A live model image-delivery test passes, and repeated pinned comparisons pass pixel, component and behavior gates"
+    }
+  ],
+  "currentFollowup": {
+    "completedWithoutDev": [
+      "Audit existing business guidance and implementation; produce a request checklist without inventing API contracts",
+      "Measure local source preparation and eliminate a repeated archive parse for NOVA reference capture",
+      "Verify identical source/PNG/LWC output and retained reference/approval safeguards",
+      "Audit actual provider image capabilities and preserve an explicit deferred plan",
+      "Regenerate search, table and popup from byte-identical saved checkpoints to verify the generic inside-stroke color correction"
+    ],
+    "ownerEvidenceRequired": [
+      "Approved API/Apex contract for search/history, including paging, errors and authorization",
+      "Reset/refresh scope, action activation and navigation receiving contract",
+      "Input-format and hidden option/dependency specifications where not authored in the design"
+    ],
+    "notClaimedComplete": [
+      "REST/MCP/local raw-input parity",
+      "Official same-revision visual accuracy improvement",
+      "All table/text residuals",
+      "Model image submission",
+      "Business API integration or automatic apply eligibility"
+    ]
+  },
+  "resumeAfterDevConfirmation": [
+    {
+      "order": 1,
+      "task": "Confirm the user-authorized Figma account and target organization seat for REST and MCP independently; keep secrets private"
+    },
+    {
+      "order": 2,
+      "task": "Make bounded read-only quota/authentication checks; honor actual retry headers or reported limits rather than assuming the seat resets them"
+    },
+    {
+      "order": 3,
+      "task": "Acquire and freeze one revision's node evidence and official 1x PNG for representative search, table and popup cases"
+    },
+    {
+      "order": 4,
+      "task": "Prove required-field parity and quantify remaining projection gaps before changing prompts or generation mappings"
+    },
+    {
+      "order": 5,
+      "task": "Complete generic mapping and supported image transport; keep prompt/model/release conditions explicit"
+    },
+    {
+      "order": 6,
+      "task": "Run repeated frozen generation/repair comparisons; report pixels, component mapping, native/business scope, time and variance"
+    },
+    {
+      "order": 7,
+      "task": "Remove owned test records, temporary inputs and any explicitly authorized test Org metadata; retain sanitized receipts only"
+    }
+  ],
+  "implementationCommit": {
+    "repository": "SFDC_UI",
+    "branch": "dev",
+    "sha": "065b83eec0dc55887166429574bd0d4b82c3aa5b"
+  }
+}

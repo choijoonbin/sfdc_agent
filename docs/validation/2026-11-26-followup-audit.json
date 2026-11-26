@@ -1,0 +1,553 @@
+{
+  "schemaVersion": 1,
+  "auditedOn": "2026-11-26",
+  "scope": "OFFLINE_CONVERSION_FOLLOWUP_EVIDENCE_AUDIT",
+  "priorMeasurement": {
+    "repository": "SFDC_UI",
+    "path": "docs/validation/2026-11-26-screen-studio-local-contracts.json",
+    "sha256": "734ff4e8791ddf07310c0a23c9abab255062d3e44eae72e187e270ea3326138a"
+  },
+  "sourcePins": {
+    "archiveSha256": "a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76",
+    "nodeId": "29876:14784",
+    "pageId": "29876:13869",
+    "remoteRevisionVerified": false,
+    "officialSameRevision1xPng": false
+  },
+  "releasePins": {
+    "designReleaseId": "nextbss-1.9-3624b88e2efab32160a943e1322daf8a4807994857c050793d165da18085a8bb",
+    "manifestSha256": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09",
+    "componentLibrary": {
+      "schemaVersion": 1,
+      "family": "NOVA_PUBLIC",
+      "libraryVersion": "1.0.0",
+      "descriptorSha256": "167a03a03d486dce8cf6fac731ab06308a3113d679b3ce1127fe17cbd172c28d",
+      "contractSha256": "f8cd2ffff377f94c18a57d1ddebc36f2b2a7080fa977d6df02302e883c1038b2",
+      "moduleManifestSha256": "f7c61c9011aa0e4d48b77dcdb66993304ced1709f3736af8ca64d28892078916",
+      "tokenCssSha256": "01211736287d3c2717e01f7640c49df02037365faab80dd129c0dc533a40d956"
+    },
+    "promptReleaseId": "prompts-nova-805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d",
+    "promptBundleSha256": "805460318475fab8c122a9a7ac7ecb74481de0e49e5d4a057e9bed91b2d6781d"
+  },
+  "reviewedFiles": [
+    {
+      "repository": "NOVA",
+      "path": "docs/number-portability-lwc-guide.md",
+      "sha256": "38501e97453d67851c66e8008e1620e67d6e2d943a1e8a10f633a7e356b52e7d"
+    },
+    {
+      "repository": "NOVA",
+      "path": "force-app/main/default/lwc/numberPortabilityManagement/numberPortabilityManagement.js",
+      "sha256": "81997966a4411770690421e5ff3ea72413fd387d353904f923b895156b418bbb"
+    },
+    {
+      "repository": "SFDC_Agent",
+      "path": "src/sfdc_agent/provider_capabilities.py",
+      "sha256": "cc04e373ca6310c8e9d1dcc94adb9c0594010e073f085e555e497417e1af10d3"
+    },
+    {
+      "repository": "SFDC_Agent",
+      "path": "src/sfdc_agent/kiro_headless.py",
+      "sha256": "3f24aa523d2e679cfdf6282e5e0b730f69ab8812ea9421a62691e4ecdb686f3e"
+    },
+    {
+      "repository": "SFDC_Agent",
+      "path": "src/sfdc_agent/kiro_gateway.py",
+      "sha256": "e34a40b7189f160c212d5d6cd6966f83bcbfcb1fada6fc4c588cd442145bb16d"
+    }
+  ],
+  "businessEvidence": {
+    "status": "OWNER_SPECIFICATION_REQUIRED",
+    "reviewedLocalGuideIsApprovedSameRevisionContract": false,
+    "existingExampleImplementation": {
+      "search": "TODO_APEX_SETS_EMPTY_RESULTS_LOCALLY",
+      "reset": "LOCAL_INPUT_RESULTS_AND_FLAGS_RESET",
+      "npdb": "TODO_POPUP_OR_NAVIGATION",
+      "termination": "TODO_BUSINESS_ACTION",
+      "join": "LOCAL_EVENT_ONLY_RECEIVER_NAVIGATION_NOT_IMPLEMENTED"
+    },
+    "automaticResolutionApplied": false,
+    "notes": [
+      "Existing code is implementation evidence, not an approved business contract for this Figma revision.",
+      "No endpoints, response fields, hidden options or successful remote actions were invented.",
+      "The older guide component recommendations do not replace the pinned NOVA public API.",
+      "An other reason is retained as unresolved; related node IDs alone do not establish equivalent causes."
+    ],
+    "priorFindingsByGeneration": {
+      "NOVA_TO_NOVA": {
+        "originalBlockingCount": 0,
+        "businessFindingCount": 0,
+        "businessFindings": [],
+        "eligibilityUnchanged": true
+      },
+      "NOVA_TO_KIRO": {
+        "originalBlockingCount": 10,
+        "businessFindingCount": 5,
+        "businessFindings": [
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14788",
+            "category": "business",
+            "reason": "history-data",
+            "requiredEvidence": [
+              "business-api-contract"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14817",
+            "category": "business",
+            "reason": "action-effect",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14816",
+            "category": "business",
+            "reason": "reset-scope",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14813",
+            "category": "business",
+            "reason": "required-validation",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14804",
+            "category": "business",
+            "reason": "action-activation",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          }
+        ],
+        "eligibilityUnchanged": true
+      },
+      "KIRO_TO_NOVA": {
+        "originalBlockingCount": 5,
+        "businessFindingCount": 4,
+        "businessFindings": [
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14817",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14816",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14804",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14788",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          }
+        ],
+        "eligibilityUnchanged": true
+      },
+      "KIRO_TO_KIRO": {
+        "originalBlockingCount": 15,
+        "businessFindingCount": 10,
+        "businessFindings": [
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14817",
+            "category": "business",
+            "reason": "search-result-scope",
+            "requiredEvidence": [
+              "business-api-contract",
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14816",
+            "category": "business",
+            "reason": "reset-scope",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14813",
+            "category": "business",
+            "reason": "required-validation",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14805",
+            "category": "business",
+            "reason": "action-activation",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14806",
+            "category": "business",
+            "reason": "action-activation",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_DRAFT_REVIEW",
+            "nodeId": "29876:14788",
+            "category": "business",
+            "reason": "history-data",
+            "requiredEvidence": [
+              "business-api-contract"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14817",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14816",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14804",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          },
+          {
+            "code": "KIRO_SCREEN_BEHAVIOR_UNCONFIRMED",
+            "nodeId": "29876:14788",
+            "category": "business",
+            "reason": "other",
+            "requiredEvidence": [
+              "business-behavior-specification"
+            ],
+            "affectsGeneration": false,
+            "affectsApply": true
+          }
+        ],
+        "eligibilityUnchanged": true
+      }
+    },
+    "ownerChecklist": [
+      {
+        "id": "search-and-history",
+        "requiredEvidence": [
+          "business-api-contract"
+        ],
+        "confirm": [
+          "Request method and endpoint or Apex method",
+          "Input parameters, validation and permission checks",
+          "Response fields, row identity, paging/sorting and totals",
+          "Empty, loading, error and cancellation/stale-response behavior"
+        ]
+      },
+      {
+        "id": "reset-and-refresh",
+        "requiredEvidence": [
+          "business-behavior-specification"
+        ],
+        "confirm": [
+          "Which inputs, results and button states reset together",
+          "Whether a reset or navigation cancels in-flight work",
+          "Refresh data scope and post-refresh selection state"
+        ]
+      },
+      {
+        "id": "validation",
+        "requiredEvidence": [
+          "business-behavior-specification"
+        ],
+        "confirm": [
+          "Rules beyond the authored required/disabled/read-only UI state",
+          "Accepted formats, masks, lengths and error behavior"
+        ]
+      },
+      {
+        "id": "action-and-navigation",
+        "requiredEvidence": [
+          "business-behavior-specification"
+        ],
+        "confirm": [
+          "Activation and visibility by business state and permission",
+          "Destination screen or dialog, event payload and receiving contract",
+          "Expected success, cancellation and failure behavior"
+        ]
+      },
+      {
+        "id": "hidden-select-options",
+        "requiredEvidence": [
+          "selection-options-specification"
+        ],
+        "confirm": [
+          "Authoritative option source, values and labels",
+          "Dependencies and defaults only where explicitly specified"
+        ]
+      }
+    ],
+    "uiGatePolicy": "Business incompleteness is recorded separately; this audit never changes apply authorization or waives technical failures."
+  },
+  "imageInput": {
+    "currentImplementedAdapters": {
+      "kiro": {
+        "images": false,
+        "status": "unsupported-by-current-headless-transport"
+      },
+      "openai": {
+        "images": false,
+        "status": "not-enabled"
+      },
+      "azure": {
+        "images": false,
+        "status": "not-enabled"
+      }
+    },
+    "installedKiroCliVersion": "3.6.2",
+    "staticCliHelpChecked": true,
+    "liveModelImageDeliveryTested": false,
+    "pngCurrentlyUsedFor": "BROWSER_VALIDATION_NOT_MODEL_GENERATION_OR_REPAIR",
+    "requiresDevSeatForAdapterImplementation": false,
+    "liveVerificationPrerequisites": [
+      "Supported and tested model image transport",
+      "Image byte hash, source/revision/node/scale binding",
+      "Explicit capability rejection instead of silently dropping images",
+      "Actual model delivery receipt and pixel/native-control non-regression"
+    ],
+    "mcpScreenshotPresenceDoesNotProveModelImageDelivery": true,
+    "acpInitializeProbe": {
+      "schemaVersion": 1,
+      "scope": "ISOLATED_KIRO_ACP_INITIALIZE_ONLY",
+      "status": "INITIALIZED",
+      "cliVersion": "3.6.2",
+      "cliSha256": "3c1e3ee88154302132d799912c2b5536363432cb8650e3239c2fa68f9d9107db",
+      "advertisedImagePromptCapability": false,
+      "authenticationMethodsOffered": 1,
+      "credentialsProvided": false,
+      "sessionCreated": false,
+      "promptSent": false,
+      "modelCalls": 0,
+      "figmaCalls": 0,
+      "actualImageDeliveryVerified": false,
+      "currentConversionAdapterChanged": false,
+      "processTerminated": true,
+      "cliBytesUnchanged": true,
+      "profileIsolation": "DEDICATED_KIRO_HOME_NO_AUTH_VALUES_PROVIDED",
+      "authenticatedCapabilityVerificationPending": true
+    },
+    "officialReferences": [
+      {
+        "url": "https://kiro.dev/docs/cli/acp/",
+        "topic": "ACP initialization, authentication and image capability negotiation"
+      },
+      {
+        "url": "https://kiro.dev/docs/acp/",
+        "topic": "The running server capability advertisement is authoritative"
+      }
+    ],
+    "nextTransportGate": "Authenticated capability negotiation and actual image-delivery verification are required; the isolated unauthenticated image:false response is not evidence that all Kiro models lack vision."
+  },
+  "performanceAudit": {
+    "newOfflineMeasurement": {
+      "repository": "SFDC_UI",
+      "path": "docs/validation/2026-11-26-local-reference-reuse.json"
+    },
+    "priorKiroSamples": [
+      {
+        "generation": "NOVA_TO_KIRO",
+        "seconds": 230.068,
+        "modelCallsIncludingRepairs": 3,
+        "promptBytesByCall": [
+          400654,
+          422799,
+          422880
+        ]
+      },
+      {
+        "generation": "KIRO_TO_KIRO",
+        "seconds": 297.587,
+        "modelCallsIncludingRepairs": 4,
+        "promptBytesByCall": [
+          402761,
+          423531,
+          423499,
+          423556
+        ]
+      }
+    ],
+    "providerInternalComputeOrNetworkTtftMeasured": false,
+    "noNewBilledModelCalls": true,
+    "existingOptimizationAlreadyPresent": [
+      "Stage-specific public-API prose projection while preserving all signatures",
+      "Exact duplicate source coverage alias removal",
+      "Bounded repair budget and candidate non-regression gates"
+    ],
+    "remaining": [
+      "Test supported image transport before another visual-quality benchmark",
+      "Use repeated frozen model runs to measure variance after input contract is stable",
+      "Do not omit required source facts or skip required behavior checks to improve latency"
+    ]
+  },
+  "remoteCalls": {
+    "figmaRest": 0,
+    "figmaMcp": 0,
+    "llm": 0,
+    "org": 0
+  },
+  "cleanup": {
+    "status": "OWNED_TEST_DATA_REMOVED_ORIGINALS_PRESERVED",
+    "ownedTemporaryRootRemoved": true,
+    "originalArchiveSha256VerifiedAfterCleanup": "a8bd7e45cac1cfa01d3ff4128cac0e88fba986a874962199f49da8ef89b93c76",
+    "activeReleaseManifestSha256VerifiedAfterCleanup": "6f4c9a9ccdbbd46a051ee44b5e0dfda109e1c21ac32db9947da2718d68160a09",
+    "originalSourcePreserved": true,
+    "activeReleasePreserved": true,
+    "mainDatabaseTestWrites": 0,
+    "testOrgMetadataCreated": 0,
+    "testOrgMetadataRemaining": 0,
+    "retained": "SANITIZED_METRICS_HASHES_DIAGNOSTIC_CAUSES_AND_ROADMAP_ONLY",
+    "ownedTopLevelDirectories": 15,
+    "sourceArchiveBytes": 40775994
+  },
+  "localMappingFollowup": {
+    "source": "SFDC_UI/docs/validation/2026-11-26-local-reference-reuse.json",
+    "before": {
+      "table": {
+        "mismatched": 117,
+        "borderColorFindings": 117
+      },
+      "popup": {
+        "backgroundMismatch": 1,
+        "missingHosts": 7
+      }
+    },
+    "diagnosis": "The oracle compared unused borderTopColor while the renderer painted authored inside strokes as inset box-shadows.",
+    "commonCorrection": "Read solid native and zero-blur inset edge colors using authored side weights; complex or ambiguous compositing remains unverified.",
+    "after": {
+      "table": {
+        "mismatched": 0,
+        "unsupported": 5,
+        "borderColorFindings": 0,
+        "canApply": false
+      },
+      "popup": {
+        "backgroundMismatch": 1,
+        "missingHosts": 7
+      }
+    },
+    "lwcPngAndPixelsUnchanged": true,
+    "notAVisualAccuracyImprovement": true,
+    "noPromptTemplateOrReleaseChange": true,
+    "technicalAndBusinessGatesNotWaived": true,
+    "scope": "Color presence on authored painted edges; not full stroke-width/effect/raster validation."
+  },
+  "verification": {
+    "nodeRegressionTestsPassed": 157,
+    "nodeRegressionTestsFailed": 0,
+    "agentProviderCapabilityTestsPassed": 4,
+    "agentHeadlessTestsPassed": 10,
+    "allProviderTestsMocked": true
+  },
+  "runtimeValidation": {
+    "status": "PASS_CANONICAL_MAIN_READ_ONLY_HEALTH_AND_SERVICE_TOKEN_BINDING",
+    "managedRuntimeSha256": "e3c1ad192315f73e0b93b7353318771a205dad0b3589697f086e278afa950f2b",
+    "manifestEntriesVerified": 301,
+    "workspaceSourceEntriesMatched": 299,
+    "allOwnedProductionFilesMatched": true,
+    "runtimeDependencyMetadataMatchesIsolatedTestSnapshot": true,
+    "concurrentUnrelatedWorkspaceMetadataChangesExcluded": [
+      "package-lock.json",
+      "package.json"
+    ],
+    "mainActions": 0,
+    "modelCalls": 0,
+    "providerCalls": 0,
+    "authenticationProbe": "NOT_REQUESTED_EXISTING_CONFIGURATION_PRESERVED"
+  },
+  "implementationCommit": {
+    "repository": "SFDC_UI",
+    "branch": "dev",
+    "sha": "065b83eec0dc55887166429574bd0d4b82c3aa5b"
+  }
+}
