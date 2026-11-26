@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Fail-closed Agent unit gate with a matched, explicitly supplied Node runtime."""
 import argparse
+import base64
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -9,7 +11,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
+import zipfile
 
 REQUIRED = (
     'package.json', 'package-lock.json',
@@ -18,23 +22,36 @@ REQUIRED = (
     'nextbss/server/managed-original-analysis.mjs',
     'nextbss/server/kiro-nova-contract.mjs', 'nextbss/shared/preview-validation-protocol.mjs',
     'nextbss/design-system/nova-library.json', 'nextbss/design-system/nova-public-contract.json',
-    'nextbss/design-system/nova-module-manifest.json', 'nextbss/design-system/lwc/novaTokens/novaTokens.css',
+    'nextbss/design-system/nova-module-manifest.json',
 )
 NODE_VERSION = 'v26.13.0'
+FIXTURE_ROOT = Path(__file__).resolve().parents[1] / 'tests/fixtures/immutable-nova-v1'
+# Independent model-free immutable library input. Never read NOVA's working
+# tree or restore duplicate LWC source files into the UI checkout for this gate.
+FIXTURE_PINS = {
+    'library-files.zip': (220448, 'b20a4ffadbab1b8ed1fc706c83af8a02a0c90859977c5b9e7152763b447464fa'),
+    'component-library.json': (411, '486cb0a2e96c98afb1b2bd44e7ff5d846118bf0315e5c88b5c567a42a8062381'),
+}
 NODE_PREFLIGHT = r"""
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const root=process.argv[1];
+const fixture=JSON.parse(await readFile(process.argv[2],'utf8'));
 globalThis.fetch=()=>{throw Error('Provider calls are forbidden in unit preflight');};
 const fromRoot=path=>import(pathToFileURL(resolve(root,path)).href);
 const {readComponentLibrary,assertManagedLibraryCompatible}=await fromRoot('nextbss/engine/component-library.mjs');
-const library=await readComponentLibrary(path=>readFile(resolve(root,'nextbss/design-system',path),'utf8'));
+const readDesign=async path=>{
+  if(!Object.hasOwn(fixture.entries,path)) throw Object.assign(Error('Fixture entry unavailable'),{code:'RELEASE_FILE_NOT_FOUND'});
+  return Buffer.from(fixture.entries[path],'base64');
+};
+const library=await readComponentLibrary(readDesign,fixture.componentLibrary);
 await assertManagedLibraryCompatible(library.tuple);
 for(const path of ['nextbss/server/managed-execution.mjs','nextbss/server/managed-analysis-output.mjs',
   'nextbss/server/managed-original-analysis.mjs',
   'nextbss/shared/preview-validation-protocol.mjs']) await fromRoot(path);
-process.stdout.write(JSON.stringify({modules:library.modules.size,componentLibrary:library.tuple}));
+process.stdout.write(JSON.stringify({modules:library.modules.size,componentLibrary:library.tuple,
+  libraryFixtureArchiveSha256:fixture.archiveSha256}));
 """
 
 
@@ -51,7 +68,52 @@ def checked_run(arguments, *, cwd=None, timeout=45):
     return result.stdout.strip()
 
 
-def preflight(root, *, expected_ref=None, agent_root=None, run=checked_run):
+def library_fixture(root=FIXTURE_ROOT):
+    """Read a pinned release fixture as bytes; never extract into a source tree."""
+    root = Path(root)
+    contents = {}
+    for name, (size, expected) in FIXTURE_PINS.items():
+        path = root / name
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != size:
+            raise PreflightError('The immutable library fixture is absent or has an invalid size: ' + name)
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != expected:
+            raise PreflightError('The immutable library fixture pin changed: ' + name)
+        contents[name] = data
+    try:
+        entries, total = {}, 0
+        prefix = 'nextbss/design-system/'
+        with zipfile.ZipFile(io.BytesIO(contents['library-files.zip'])) as archive:
+            for member in archive.infolist():
+                name = member.filename
+                parts = name.split('/')
+                mode = member.external_attr >> 16
+                if (len(entries) >= 5000 or member.is_dir() or not name.startswith(prefix)
+                        or re.fullmatch(r'[A-Za-z0-9_.@/-]+', name) is None
+                        or any(not part or part.startswith('.') for part in parts)
+                        or mode & 0o170000 not in {0, 0o100000} or member.file_size > 2 * 1024 * 1024):
+                    raise ValueError
+                relative = name[len(prefix):]
+                if relative in entries or relative == '':
+                    raise ValueError
+                data = archive.read(member)
+                total += len(data)
+                if total > 8 * 1024 * 1024:
+                    raise ValueError
+                entries[relative] = base64.b64encode(data).decode('ascii')
+        component_library = json.loads(contents['component-library.json'])
+        manifest = json.loads(base64.b64decode(entries['nova-module-manifest.json']))
+        if len(entries) != 242 or len(manifest['modules']) != 72:
+            raise ValueError
+    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile, RuntimeError):
+        raise PreflightError('The immutable library fixture inventory is invalid.') from None
+    identity = {'archiveSha256': FIXTURE_PINS['library-files.zip'][1],
+                'componentLibrarySha256': FIXTURE_PINS['component-library.json'][1],
+                'fileCount': len(entries), 'expandedBytes': total, 'moduleCount': len(manifest['modules'])}
+    return {'archiveSha256': identity['archiveSha256'], 'componentLibrary': component_library, 'entries': entries}, identity
+
+
+def preflight(root, *, expected_ref=None, agent_root=None, fixture_root=FIXTURE_ROOT, run=checked_run):
     root = Path(root).resolve(strict=True)
     if agent_root is not None and root != Path(agent_root).resolve().parent / 'SFDC_Ui':
         raise PreflightError('Unit contracts require the explicit sibling SFDC_Ui checkout; another directory cannot satisfy sibling-dependent tests.')
@@ -67,13 +129,19 @@ def preflight(root, *, expected_ref=None, agent_root=None, run=checked_run):
     revision = run(['git', '-C', str(root), 'rev-parse', 'HEAD'])
     if expected_ref is not None and revision != expected_ref:
         raise PreflightError('The checked-out UI commit differs from the declared immutable runtime ref.')
+    fixture, identity = library_fixture(fixture_root)
     try:
-        actual = json.loads(run([node, '--input-type=module', '-e', NODE_PREFLIGHT, str(root)]))
-        if actual['modules'] != 72 or actual['componentLibrary']['family'] != 'NOVA_PUBLIC':
+        with tempfile.TemporaryDirectory(prefix='sfdc-unit-library-') as temporary:
+            reader = Path(temporary) / 'read-only-library.json'
+            reader.write_text(json.dumps(fixture, separators=(',', ':')))
+            reader.chmod(0o400)
+            actual = json.loads(run([node, '--input-type=module', '-e', NODE_PREFLIGHT, str(root), str(reader)]))
+        if (actual['modules'] != 72 or actual['componentLibrary'] != fixture['componentLibrary']
+                or actual['libraryFixtureArchiveSha256'] != identity['archiveSha256']):
             raise ValueError
     except (ValueError, KeyError, TypeError):
         raise PreflightError('The selected Node source does not provide the required verified NOVA runtime contract.') from None
-    return {'node': NODE_VERSION, 'uiCommit': revision, 'componentLibrary': actual['componentLibrary'],
+    return {'node': NODE_VERSION, 'uiCommit': revision, 'componentLibrary': actual['componentLibrary'], 'libraryFixture': identity,
             'requiredSourceSha256': {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in REQUIRED}}
 
 

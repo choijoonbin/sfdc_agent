@@ -1,6 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -40,10 +41,14 @@ class RuntimePreflightTests(unittest.TestCase):
             def run(arguments):
                 if '--version' in arguments: return module.NODE_VERSION
                 if 'rev-parse' in arguments: return 'a' * 40
-                return json.dumps({'modules': 72, 'componentLibrary': {'family': 'NOVA_PUBLIC'}})
+                fixture, identity = module.library_fixture()
+                return json.dumps({'modules': 72, 'componentLibrary': fixture['componentLibrary'],
+                                   'libraryFixtureArchiveSha256': identity['archiveSha256']})
             proof = module.preflight(root, expected_ref='a' * 40, run=run)
             self.assertEqual(proof['uiCommit'], 'a' * 40)
             self.assertEqual(len(proof['requiredSourceSha256']), len(module.REQUIRED))
+            self.assertEqual(proof['libraryFixture']['moduleCount'], 72)
+            self.assertFalse((root / 'nextbss/design-system/lwc').exists())
             with self.assertRaisesRegex(module.PreflightError, 'differs'):
                 module.preflight(root, expected_ref='b' * 40, run=run)
             with self.assertRaisesRegex(module.PreflightError, 'immutable'):
@@ -56,3 +61,39 @@ class RuntimePreflightTests(unittest.TestCase):
                 module.preflight(root, run=lambda arguments: 'v22.0.0')
             with self.assertRaisesRegex(module.PreflightError, 'sibling'):
                 module.preflight(root, agent_root=Path(directory) / 'elsewhere/Agent')
+
+    def test_fixed_library_fixture_has_no_nova_checkout_or_ui_source_dependency(self):
+        fixture, identity = module.library_fixture()
+        self.assertEqual((identity['fileCount'], identity['expandedBytes'], identity['moduleCount']), (242, 728075, 72))
+        self.assertEqual(fixture['componentLibrary']['family'], 'NOVA_PUBLIC')
+        self.assertIn('lwc/novaTokens/novaTokens.css', fixture['entries'])
+        self.assertNotIn('nextbss/design-system/lwc/novaTokens/novaTokens.css', module.REQUIRED)
+
+    def test_missing_changed_or_linked_fixture_is_rejected_before_node(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / 'fixture'
+            target.mkdir()
+            with self.assertRaisesRegex(module.PreflightError, 'fixture'):
+                module.library_fixture(target)
+            for name in module.FIXTURE_PINS:
+                shutil.copyfile(module.FIXTURE_ROOT / name, target / name)
+            archive = target / 'library-files.zip'
+            data = archive.read_bytes()
+            archive.write_bytes(bytes([data[0] ^ 1]) + data[1:])
+            with self.assertRaisesRegex(module.PreflightError, 'pin changed'):
+                module.library_fixture(target)
+            archive.unlink()
+            archive.symlink_to(module.FIXTURE_ROOT / 'library-files.zip')
+            with self.assertRaisesRegex(module.PreflightError, 'fixture'):
+                module.library_fixture(target)
+
+    def test_node_reader_must_report_the_complete_selected_fixture_identity(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(module.shutil, 'which', return_value='/node'):
+            root = self.fixture(directory)
+            def run(arguments):
+                if '--version' in arguments: return module.NODE_VERSION
+                if 'rev-parse' in arguments: return 'a' * 40
+                return json.dumps({'modules': 72, 'componentLibrary': {'family': 'NOVA_PUBLIC'},
+                                   'libraryFixtureArchiveSha256': '0' * 64})
+            with self.assertRaisesRegex(module.PreflightError, 'runtime contract'):
+                module.preflight(root, expected_ref='a' * 40, run=run)
