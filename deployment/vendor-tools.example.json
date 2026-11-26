@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "sfdc-agent-vendor-tools",
+  "approvedDownloadHosts": ["artifacts.example.invalid"],
+  "tools": [
+    {
+      "name": "kiro-cli",
+      "version": "0.0.0",
+      "url": "https://artifacts.example.invalid/approved/kiro/0.0.0/kiro-linux.tar.gz",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "format": "tar.gz",
+      "stripPrefix": "kiro-linux",
+      "entrypoint": "bin/kiro-cli",
+      "entrypointSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "chrome",
+      "version": "0.0.0.0",
+      "url": "https://artifacts.example.invalid/approved/chrome/0.0.0.0/chrome-linux64.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "format": "zip",
+      "stripPrefix": "chrome-linux64",
+      "entrypoint": "chrome",
+      "entrypointSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

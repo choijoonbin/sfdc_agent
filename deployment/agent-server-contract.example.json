@@ -1,0 +1,28 @@
+{
+  "kind": "sfdc-agent-server-contract",
+  "schemaVersion": 1,
+  "environment": "dev",
+  "network": {
+    "bindHost": "0.0.0.0",
+    "port": 8766,
+    "selfOrigin": "http://127.0.0.1:8766",
+    "trustedHosts": ["agent.dev.internal", "127.0.0.1", "localhost"]
+  },
+  "storage": {"provider": "s3", "region": "ap-northeast-2", "bucket": "sfdc-dev-artifacts-example", "prefix": "sfdc/dev"},
+  "paths": {"engineRoot": "/opt/sfdc/node-runtime", "stateRoot": "/var/lib/sfdc-agent", "scratchRoot": "/run/sfdc-agent"},
+  "worker": {
+    "uvicornWorkers": 1,
+    "routing": "scope-dedicated",
+    "scope": {"tenantId": "11111111-1111-4111-8111-111111111111", "workspaceId": "22222222-2222-4222-8222-222222222222"}
+  },
+  "capabilities": {"figmaRest": false, "kiroHeadless": false, "localArchive": true, "figmaMcp": false, "visualCapture": false},
+  "artifact": {
+    "uiCommit": "0000000000000000000000000000000000000000",
+    "archiveSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "runtimeManifestSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "runtimeSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "secretReferences": {"executionToken": "/sfdc/dev/agent/SFDC_AGENT_EXECUTION_TOKEN"},
+  "tools": {},
+  "figmaMcp": {"status": "NOT_READY", "promotionContract": "figma-mcp-server-promotion/v1"}
+}

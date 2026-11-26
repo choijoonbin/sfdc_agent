@@ -1,0 +1,13 @@
+**
+!pyproject.toml
+!requirements.lock
+!src/
+!src/**
+!deployment/
+!deployment/requirements-server.lock
+!deployment/install_runtime.py
+!deployment/install_vendor_tools.py
+!deployment/build-input/
+!deployment/build-input/artifacts.json
+!deployment/build-input/sfdc-node-runtime.tar.gz
+!deployment/build-input/vendor-tools.json

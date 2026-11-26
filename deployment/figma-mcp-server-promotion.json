@@ -1,0 +1,37 @@
+{
+  "kind": "figma-mcp-server-promotion/v1",
+  "schemaVersion": 1,
+  "implementationStatus": "CONTRACT_ONLY_NOT_IMPLEMENTED",
+  "currentServerEnabled": false,
+  "authentication": {
+    "flow": "authorization_code",
+    "callbackUrl": "https://nova.example.invalid/api/integrations/figma-mcp/callback",
+    "principalBinding": ["tenantId", "workspaceId", "userId"],
+    "pkce": true,
+    "state": true,
+    "nonce": true,
+    "browserConsent": true,
+    "cliHomeAllowed": false
+  },
+  "credentialStore": {
+    "provider": "shared-encrypted-store",
+    "kmsKeyReferenceRequired": true,
+    "tokensInLogsAllowed": false,
+    "cacheScope": "tenant/workspace/user",
+    "atRestEncryption": true
+  },
+  "lifecycle": {
+    "refreshRotation": true,
+    "revokeDisconnect": true,
+    "revokeUserRemoval": true,
+    "keyRotation": true,
+    "expiredCredentialRequiresConsent": true,
+    "silentRestFallback": false
+  },
+  "topology": {"distributedLock": true, "multiNode": true, "restartWithoutLocalHome": true},
+  "promotion": {
+    "requiredEvidence": ["httpsCallbackCsrfPkce", "crossPrincipalDenied", "refreshAndRevocation", "twoNodeConcurrency", "restartRecovery", "keyRotation", "noCredentialLogging", "explicitMcpFailureNoFallback"],
+    "passingEvidence": [],
+    "enablementRequiresImplementationRelease": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "python": "3.11.15",
+  "pythonBaseImage": "python:3.11.15-slim-bookworm",
+  "node": "26.13.0",
+  "nodeBaseImage": "node:26.13.0-bookworm-slim",
+  "imagePinPolicy": "Fixed version tags are build inputs. Record and approve registry digests before promotion.",
+  "vendorTools": "Optional separately approved version+URL+archive SHA256+binary SHA256. No implicit latest download."
+}

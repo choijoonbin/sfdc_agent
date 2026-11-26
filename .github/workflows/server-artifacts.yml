@@ -1,0 +1,94 @@
+name: Build Agent server artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      ui_runtime_ref:
+        description: Approved immutable UI commit including the server artifact builder
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  server-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: SFDC_Agent
+          persist-credentials: false
+      - name: Require an immutable reviewed runtime dependency
+        env:
+          RUNTIME_REF: ${{ inputs.ui_runtime_ref }}
+        run: |
+          python3 - <<'PY'
+          import os,re
+          if not re.fullmatch(r'[a-f0-9]{40}',os.environ['RUNTIME_REF']):
+              raise SystemExit('A full approved UI commit SHA is required. No branch or latest fallback.')
+          PY
+      - uses: actions/checkout@v6
+        with:
+          repository: choijoonbin/sfdc_ui
+          ref: ${{ inputs.ui_runtime_ref }}
+          ssh-key: ${{ secrets.SFDC_RUNTIME_READ_SSH_KEY }}
+          path: SFDC_Ui
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.13.0'
+          cache: npm
+          cache-dependency-path: SFDC_Ui/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11.15'
+      - name: Verify server packaging and policy
+        working-directory: SFDC_Agent
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install -r deployment/requirements-server.lock
+          python -m unittest discover -s tests -p test_server_distribution.py -v
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: SFDC_Ui
+      - name: Build and verify the matched UI runtime archive
+        working-directory: SFDC_Ui
+        run: |
+          node deployment/build-artifacts.mjs --output "$RUNNER_TEMP/sfdc-ui-artifacts" --commit '${{ inputs.ui_runtime_ref }}'
+          node deployment/verify-artifacts.mjs --directory "$RUNNER_TEMP/sfdc-ui-artifacts"
+      - name: Prepare public Docker inputs and independent build pins
+        working-directory: SFDC_Agent
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,os,shutil
+          source=Path(os.environ['RUNNER_TEMP'])/'sfdc-ui-artifacts'
+          target=Path('deployment/build-input'); target.mkdir()
+          for name in ('artifacts.json','sfdc-node-runtime.tar.gz'): shutil.copyfile(source/name,target/name)
+          shutil.copyfile('deployment/vendor-tools.empty.json',target/'vendor-tools.json')
+          manifest=json.loads((source/'artifacts.json').read_text())
+          runtime=next(a for a in manifest['artifacts'] if a['name']=='node-runtime')
+          with open(os.environ['GITHUB_ENV'],'a') as stream:
+              for key,value in {'RUNTIME_ARCHIVE_SHA256':runtime['sha256'],'RUNTIME_MANIFEST_SHA256':runtime['runtimeManifestSha256'],'UI_COMMIT':manifest['source']['commit']}.items():
+                  stream.write(key+'='+value+'\n')
+          PY
+      - name: Build an independent managed server image
+        working-directory: SFDC_Agent
+        run: |
+          docker build -f deployment/Dockerfile --build-arg RUNTIME_ARCHIVE_SHA256="$RUNTIME_ARCHIVE_SHA256" --build-arg RUNTIME_MANIFEST_SHA256="$RUNTIME_MANIFEST_SHA256" --build-arg UI_COMMIT="$UI_COMMIT" -t sfdc-agent-server:verified .
+      - name: Check real Linux nonroot read-only startup and provider boundaries
+        working-directory: SFDC_Agent
+        run: python deployment/verify_image.py --image sfdc-agent-server:verified --output agent-server-proof.json
+      - name: Export the verified image without deploying it
+        run: docker save sfdc-agent-server:verified | gzip -n > "$RUNNER_TEMP/sfdc-agent-server.tar.gz"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: sfdc-agent-server
+          path: |
+            ${{ runner.temp }}/sfdc-agent-server.tar.gz
+            SFDC_Agent/agent-server-proof.json
+            SFDC_Agent/deployment/build-input/artifacts.json
+          if-no-files-found: error
+          retention-days: 7

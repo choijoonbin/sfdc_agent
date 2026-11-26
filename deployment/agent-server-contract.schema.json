@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sfdc:agent:server-contract:1",
+  "title": "SFDC managed Agent server contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "environment", "network", "storage", "paths", "worker", "capabilities", "artifact", "secretReferences", "tools", "figmaMcp"],
+  "properties": {
+    "kind": {"const": "sfdc-agent-server-contract"},
+    "schemaVersion": {"const": 1},
+    "environment": {"enum": ["dev", "prd"]},
+    "network": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bindHost", "port", "selfOrigin", "trustedHosts"],
+      "properties": {
+        "bindHost": {"const": "0.0.0.0"},
+        "port": {"type": "integer", "minimum": 1024, "maximum": 65535},
+        "selfOrigin": {"type": "string", "pattern": "^http://127\\.0\\.0\\.1:[0-9]+$"},
+        "trustedHosts": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "contains": {"const": "127.0.0.1"}, "items": {"type": "string", "maxLength": 253, "pattern": "^[a-z0-9][a-z0-9.-]*[a-z0-9]$"}}
+      }
+    },
+    "storage": {
+      "type": "object", "additionalProperties": false, "required": ["provider", "region", "bucket", "prefix"],
+      "properties": {
+        "provider": {"const": "s3"},
+        "region": {"type": "string", "pattern": "^[a-z]{2}(-[a-z]+)+-[0-9]$"},
+        "bucket": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"},
+        "prefix": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9_-]+(/[A-Za-z0-9_.-]+)*$"}
+      }
+    },
+    "paths": {
+      "type": "object", "additionalProperties": false, "required": ["engineRoot", "stateRoot", "scratchRoot"],
+      "properties": {"engineRoot": {"$ref": "#/$defs/path"}, "stateRoot": {"$ref": "#/$defs/path"}, "scratchRoot": {"$ref": "#/$defs/path"}}
+    },
+    "worker": {
+      "type": "object", "additionalProperties": false, "required": ["uvicornWorkers", "routing", "scope"],
+      "properties": {
+        "uvicornWorkers": {"const": 1}, "routing": {"const": "scope-dedicated"},
+        "scope": {"type": "object", "additionalProperties": false, "required": ["tenantId", "workspaceId"], "properties": {"tenantId": {"$ref": "#/$defs/uuid"}, "workspaceId": {"$ref": "#/$defs/uuid"}}}
+      }
+    },
+    "capabilities": {
+      "type": "object", "additionalProperties": false,
+      "required": ["figmaRest", "kiroHeadless", "localArchive", "figmaMcp", "visualCapture"],
+      "properties": {"figmaRest": {"type": "boolean"}, "kiroHeadless": {"type": "boolean"}, "localArchive": {"const": true}, "figmaMcp": {"const": false}, "visualCapture": {"type": "boolean"}}
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false, "required": ["uiCommit", "archiveSha256", "runtimeManifestSha256", "runtimeSha256"],
+      "properties": {"uiCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "archiveSha256": {"$ref": "#/$defs/digest"}, "runtimeManifestSha256": {"$ref": "#/$defs/digest"}, "runtimeSha256": {"$ref": "#/$defs/digest"}}
+    },
+    "secretReferences": {
+      "type": "object", "additionalProperties": false, "required": ["executionToken"],
+      "properties": {"executionToken": {"$ref": "#/$defs/secretReference"}, "figmaRestToken": {"$ref": "#/$defs/secretReference"}, "figmaPlanToken": {"$ref": "#/$defs/secretReference"}, "kiroApiKey": {"$ref": "#/$defs/secretReference"}}
+    },
+    "tools": {"type": "object", "additionalProperties": false, "properties": {"kiro-cli": {"$ref": "#/$defs/tool"}, "chrome": {"$ref": "#/$defs/tool"}}},
+    "figmaMcp": {"const": {"status": "NOT_READY", "promotionContract": "figma-mcp-server-promotion/v1"}}
+  },
+  "allOf": [
+    {"if": {"properties": {"capabilities": {"properties": {"figmaRest": {"const": true}}}}}, "then": {"properties": {"secretReferences": {"required": ["figmaRestToken"]}}}},
+    {"if": {"properties": {"capabilities": {"properties": {"kiroHeadless": {"const": true}}}}}, "then": {"properties": {"secretReferences": {"required": ["kiroApiKey"]}, "tools": {"required": ["kiro-cli"]}}}},
+    {"if": {"properties": {"capabilities": {"properties": {"visualCapture": {"const": true}}}}}, "then": {"properties": {"tools": {"required": ["chrome"]}}}}
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "uuid": {"type": "string", "pattern": "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"},
+    "path": {"type": "string", "maxLength": 512, "pattern": "^/[A-Za-z0-9_./-]+$", "not": {"pattern": "^/(Users|home|Volumes)/"}},
+    "secretReference": {"type": "string", "pattern": "^/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+$"},
+    "tool": {"type": "object", "additionalProperties": false, "required": ["path", "version", "sha256", "archiveSha256"], "properties": {"path": {"type": "string", "pattern": "^/opt/sfdc/vendor/(kiro-cli|chrome)/[A-Za-z0-9_./-]+$"}, "version": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+){1,3}$"}, "sha256": {"$ref": "#/$defs/digest"}, "archiveSha256": {"$ref": "#/$defs/digest"}}}
+  }
+}
