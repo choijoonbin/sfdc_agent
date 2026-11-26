@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.sha || github.ref }}-${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 jobs:
   verify:
     runs-on: ubuntu-24.04
