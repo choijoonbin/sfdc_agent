@@ -22,6 +22,7 @@ from .design_core import preserve_core_summary, verify_selected_core
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
 from .managed_object_storage import ManagedObjectStorage, storage_io
+from .generated_screen_contract import verify_generated_screen_contract
 
 from .strict_json import decode_json as _decode_json, encode_json as _encode_json
 
@@ -183,6 +184,10 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                     output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
                     result = _parse_result(output, payload.operation)
                     result = preserve_core_summary(result, core)
+                    if payload.operation == 'GENERATE':
+                        result = verify_generated_screen_contract(result,
+                            required=bool(payload.fieldAliases) or bool(core and core.get('schemaVersion') == 2),
+                            expected_aliases=payload.fieldAliases or None, kind=payload.kind, engine=payload.engine)
                     if directory:
                         verify_analysis_output(directory, payload, result, engine_root().resolve(strict=True))
                         if storage:

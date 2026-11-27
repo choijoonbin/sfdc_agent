@@ -57,3 +57,15 @@ symlink boundaries, runtime compatibility and result identity. Managed HTTP
 execution tests prove the guard runs before the worker and that provenance
 reaches the actual response. These tests use synthetic artifacts and make no
 Salesforce, Figma, model or provider calls.
+
+
+V2 core markers preserve the full aggregate pin and add independent converter
+runtime and Salesforce payload units. The Python verifier recomputes both the
+archived runtime identity and the production module/package inventory of the
+explicit `SFDC_MANAGED_ENGINE_ROOT` actually used for execution. An extra, missing
+or different installed production module fails with `DESIGN_CORE_RUNTIME_MISMATCH`;
+matching an engine compatibility version alone is insufficient. V1 markers retain
+their strict original shape and historical behavior. Updating a converter unit
+does not itself require redeploying identical Salesforce LWC; consumer CI must
+still produce fresh typed same-payload retrieve/regression evidence for the new
+aggregate before promotion.

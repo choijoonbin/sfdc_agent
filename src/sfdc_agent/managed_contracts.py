@@ -13,6 +13,7 @@ from .managed_prompts import PromptBundle
 from .prompt_release_id import PromptReleaseId
 from .screen_analysis_contract import validate_checkpoint as validate_screen_checkpoint
 from .strict_json import encode_json
+from .generated_screen_contract import checked_field_aliases
 
 CHECKPOINT_BYTES = 3 * 1024 * 1024
 
@@ -75,10 +76,15 @@ class ExecutionRequest(BaseModel):
     inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
     sourceAcquisition: Literal['REST_FIRST', 'REST_ONLY', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
     sourceVersion: RegistryLabel | None = None
+    fieldAliases: dict[str, str] = Field(default_factory=dict)
+    targetContext: Literal['lightning__AppPage'] | None = None
     _screen_contract: dict | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def validate_review(self):
+        checked_field_aliases(self.fieldAliases)
+        if self.kind != 'SCREEN' and self.fieldAliases:
+            raise ValueError('Field aliases apply only to SCREEN generation.')
         if self.designCore is not None and self.designManifestSha256 is None:
             raise ValueError("A design core requires its immutable manifest pin.")
         if self.promptBundle is not None and self.promptBundle.releaseId != self.promptReleaseId:

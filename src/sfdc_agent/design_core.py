@@ -12,7 +12,7 @@ import stat
 from typing import Annotated, Literal
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, model_serializer
 
 from .strict_json import decode_json
 
@@ -20,7 +20,7 @@ CORE_PATH = "nextbss/design-system/core-source.json"
 CORE_INPUTS_PATH = "nextbss/design-system/core-inputs.json"
 LWC_PREFIX = "nextbss/design-system/lwc/"
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
-_RELEASE = re.compile(r"^nextbss-\d+(?:\.\d+){1,2}-[a-f0-9]{64}$")
+_RELEASE = re.compile(r"^nextbss-[0-9]+(?:\.[0-9]+){1,2}-[a-f0-9]{64}$")
 _FILE = re.compile(r"^[a-z][A-Za-z0-9_]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 
 
@@ -29,11 +29,31 @@ class CoreCompatibility(BaseModel):
     engineContract: Literal["nextbss-lwc-v1"]
 
 
+class ConverterUnit(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    version: Annotated[str, Field(pattern=r"^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$")]
+    runtimeTreeSha256: Digest
+
+
+class SalesforceUnit(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    version: Annotated[str, Field(pattern=r"^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$")]
+    payloadTreeSha256: Digest
+    compatibilityContract: Literal["NOVA_PUBLIC@1.0.0"]
+    publicContractSha256: Digest
+
+
+class ReleaseUnits(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    converter: ConverterUnit
+    salesforce: SalesforceUnit
+
+
 class DesignCore(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    schemaVersion: Literal[1]
-    contract: Literal["sfdc-design-system-core-v1"]
-    coreVersion: Annotated[str, Field(pattern=r"^\d{1,4}\.\d{1,4}\.\d{1,4}$")]
+    schemaVersion: Literal[1, 2]
+    contract: Literal["sfdc-design-system-core-v1", "sfdc-design-system-core-v2"]
+    coreVersion: Annotated[str, Field(pattern=r"^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$")]
     sourceRepository: Literal["https://github.com/choijoonbin/sfdc_ui.git"]
     sourcePath: Literal["packages/design-system-core"]
     commit: Annotated[str, Field(pattern=r"^(?:[a-f0-9]{40}|[a-f0-9]{64})$")]
@@ -41,19 +61,32 @@ class DesignCore(BaseModel):
     sourceTreeSha256: Digest
     artifactTreeSha256: Digest
     compatibility: CoreCompatibility
+    units: ReleaseUnits | None = None
 
-    @field_validator("schemaVersion", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def exact_schema_version(cls, value):
-        if type(value) is not int or value != 1:
-            raise ValueError("The core schema version must be integer 1.")
+    def exact_version_shape(cls, value):
+        if not isinstance(value, dict) or type(value.get("schemaVersion")) is not int or value["schemaVersion"] not in {1, 2}:
+            raise ValueError("The core schema version must be integer 1 or 2.")
+        version = value["schemaVersion"]
+        if value.get("contract") != f"sfdc-design-system-core-v{version}" or ("units" in value) != (version == 2):
+            raise ValueError("The core version and strict unit shape differ.")
         return value
 
     @model_validator(mode="after")
     def relative_source(self):
         if any(part in {".", ".."} for part in self.sourcePath.split("/")):
             raise ValueError("The core source path must be relative.")
+        if self.schemaVersion == 2 and (self.units is None or self.units.salesforce.payloadTreeSha256 != self.artifactTreeSha256):
+            raise ValueError("The Salesforce unit differs from the final payload.")
         return self
+
+    @model_serializer(mode="wrap")
+    def exact_version_dump(self, handler):
+        result = handler(self)
+        if self.schemaVersion == 1:
+            result.pop("units", None)
+        return result
 
 
 def _reject(code, status=409):
@@ -202,6 +235,31 @@ def verify_selected_core(*, release_id: str, manifest_sha: str | None, release_r
         tree = sha256("".join(f"{path}\0{digest}\n" for path, digest in sorted(files)).encode()).hexdigest()
         if tree != core.artifactTreeSha256 or _read(manifest_path, 4 * 1024 * 1024) != raw:
             raise ValueError("Core artifact identity differs")
+        if core.schemaVersion == 2:
+            runtime_files = [(path, entry["sha256"]) for path, entry in indexed.items() if path in {"package.json", "package-lock.json"} or (
+                not re.search(r"(?:^|/)(?:tests?|__tests__|fixtures|__fixtures__)(?:/|$)", path)
+                and re.fullmatch(r"nextbss/(?:engine|server|shared)/(?:[\w-]+/)*[\w-]+\.(?:mjs|json)", path))]
+            runtime_tree = sha256("".join(f"{path}\0{digest}\n" for path, digest in sorted(runtime_files)).encode()).hexdigest()
+            public_contract = _read(directory / "nextbss/design-system/nova-public-contract.json", 4 * 1024 * 1024)
+            if runtime_tree != core.units.converter.runtimeTreeSha256 or sha256(public_contract).hexdigest() != core.units.salesforce.publicContractSha256:
+                raise ValueError("The independent runtime/public contract unit differs")
+            # The selected converter identity must describe the code actually executed,
+            # not merely an unused archived copy. Keep v1's historical behavior intact.
+            execution_root = runtime_root.resolve(strict=True)
+            execution_files = []
+            for parent in ("nextbss/engine", "nextbss/server", "nextbss/shared"):
+                folder = execution_root / parent
+                if folder.exists():
+                    for candidate in folder.rglob("*"):
+                        path = candidate.relative_to(execution_root).as_posix()
+                        if (not re.search(r"(?:^|/)(?:tests?|__tests__|fixtures|__fixtures__)(?:/|$)", path)
+                                and re.fullmatch(r"nextbss/(?:engine|server|shared)/(?:[\w-]+/)*[\w-]+\.(?:mjs|json)", path)):
+                            execution_files.append((path, sha256(_read(candidate, 32 * 1024 * 1024)).hexdigest()))
+            for path in ("package.json", "package-lock.json"):
+                if (execution_root / path).exists():
+                    execution_files.append((path, sha256(_read(execution_root / path, 32 * 1024 * 1024)).hexdigest()))
+            if sorted(execution_files) != sorted(runtime_files):
+                _reject("DESIGN_CORE_RUNTIME_MISMATCH")
         return pin
     except HTTPException:
         raise

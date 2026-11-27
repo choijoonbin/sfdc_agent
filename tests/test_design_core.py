@@ -99,7 +99,7 @@ class DesignCoreTests(unittest.TestCase):
 
     def test_core_contract_rejects_paths_credentials_unknown_fields_and_future_contracts(self):
         for fields in ({"sourcePath": "../outside"}, {"sourcePath": "packages/../outside"},
-                       {"schemaVersion": True}, {"schemaVersion": 1.0},
+                       {"schemaVersion": True}, {"schemaVersion": 1.0}, {"coreVersion": "١.٩.٠"},
                        {"sourceRepository": "https://user:secret@example.test/repo.git"},
                        {"compatibility": {"engineContract": "future-engine-v2"}}, {"unknown": "field"}):
             with self.subTest(fields=fields), self.assertRaises(ValidationError):
@@ -122,3 +122,38 @@ class DesignCoreTests(unittest.TestCase):
         self.assertIsNone(self.verify(expected=None, manifest_sha=None))
         with self.assertRaises(HTTPException):
             self.verify(manifest_sha=None)
+
+
+class DesignCoreV2Tests(unittest.TestCase):
+    def test_independent_units_are_checked_without_weakening_v1_marker_shape(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            f = write_core_release(root / "releases", root / "runtime", v2=True)
+            with patch.dict(os.environ, {"SFDC_MANAGED_ENGINE_ROOT": str(f["runtime_root"])}):
+                fields = {name: f[name] for name in ("release_id", "manifest_sha", "release_root", "runtime_root")}
+                self.assertEqual(verify_selected_core(**fields, expected=DesignCore.model_validate(f["core"])), f["core"])
+                runtime_file = f["runtime_root"] / "nextbss/engine/generated-screen-contract.mjs"
+                previous_runtime = runtime_file.read_bytes()
+                runtime_file.write_text("export const changed = true;\n")
+                with self.assertRaises(HTTPException) as runtime_mismatch:
+                    verify_selected_core(**fields, expected=DesignCore.model_validate(f["core"]))
+                self.assertEqual(runtime_mismatch.exception.detail, "DESIGN_CORE_RUNTIME_MISMATCH")
+                runtime_file.write_bytes(previous_runtime)
+                changed = {**f["core"], "units": {**f["core"]["units"], "converter": {"version": "1.0.0", "runtimeTreeSha256": "f" * 64}}}
+                marker = f["directory"] / "nextbss/design-system/core-source.json"
+                raw = json.dumps(changed).encode();marker.write_bytes(raw)
+                manifest_path = f["directory"] / "release.json"
+                manifest = json.loads(manifest_path.read_bytes())
+                for entry in manifest["files"]:
+                    if entry["path"] == "nextbss/design-system/core-source.json":
+                        entry.update(bytes=len(raw), sha256=sha256(raw).hexdigest())
+                manifest_raw = json.dumps(manifest).encode();manifest_path.write_bytes(manifest_raw)
+                with self.assertRaises(HTTPException):
+                    verify_selected_core(**{**fields, "manifest_sha": sha256(manifest_raw).hexdigest()}, expected=DesignCore.model_validate(changed))
+            for unit in ("converter", "salesforce"):
+                invalid = {**f["core"], "units": {**f["core"]["units"], unit: {**f["core"]["units"][unit], "version": "١.٩.٠"}}}
+                with self.subTest(unit=unit), self.assertRaises(ValidationError):
+                    DesignCore.model_validate(invalid)
+            legacy = {**f["core"], "schemaVersion": 1, "contract": "sfdc-design-system-core-v1"}
+            with self.assertRaises(ValidationError):
+                DesignCore.model_validate(legacy)
