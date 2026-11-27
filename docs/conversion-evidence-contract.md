@@ -1,95 +1,90 @@
-# Conversion evidence and provider boundaries
+# 변환 근거와 실행 계약
 
-The managed prompt registry remains the only versioned prompt authority. Do not add a second set of conversion rules in Kiro steering files.
+Spring은 Main의 작업·권한·불변 릴리스·활성 프롬프트·결과 저장을 소유합니다. Agent는 고정된 실행 요청을 검증해 공통 Node 엔진과 모델 세션을 실행하고 출력 manifest를 반환합니다. 독립 CLI의 SQLite·프롬프트 저장소는 Main의 권한이나 활성 상태를 바꾸지 않습니다. 실행 방법은 [로컬 개발](local-development.md), 배포·서버 인수는 [배포 안내](../deployment/README.md)를 따릅니다.
 
-## Responsibilities
+## 원본과 생성 근거
 
-- The shared `source-evidence.mjs` engine module normalizes source snapshots, preserves authored facts and records source identity, revision provenance and unsupported coverage. REST and local archives use this contract.
-- `kiro-screen-context.mjs` carries measured layout, complete rich-text override tables/runs, variable bindings and vector evidence into the bounded Screen context. An incomplete run table stays unresolved; it is never reconstructed from a screenshot guess.
-- `kiro-nova-contract.mjs` projects derived mappings and regenerates their guidance from the pinned NOVA public API. Legacy renderer metadata is not model guidance. Authored Figma text remains untrusted evidence without rewriting.
-- `kiro_screen_projection.mjs` applies that same projection to saved analysis checkpoints. `nova_prompt_evidence.py` validates the final derived input rather than maintaining a second mapping implementation.
-- `provider_capabilities.py` declares implemented input/output capabilities and creates bounded reproducibility receipts. `kiro_gateway.py` transports tasks; it does not choose an automatic replacement model.
+공통 Node 엔진의 `source-evidence.mjs`는 REST·로컬 archive의 작성된 사실·출처·리비전·미지원 범위를 정규화합니다. `kiro-screen-context.mjs`는 측정 layout, rich-text override/run, 변수 binding과 vector 근거를 제한된 모델 입력에 넣습니다. 불완전한 run table은 unresolved이며 캡처를 보고 추측해 채우지 않습니다.
 
-## Provider receipts
+`kiro-nova-contract.mjs`는 고정된 NOVA 공개 API로 derived mapping과 guidance를 만듭니다. `kiro_screen_projection.mjs`는 저장 checkpoint에 같은 projection을 적용하고 `nova_prompt_evidence.py`가 최종 입력을 검사합니다. authored Figma text는 신뢰하지 않는 데이터이며 실행 지시나 API 권한으로 승격하지 않습니다. 렌더러의 과거 metadata를 별도의 모델 지침으로 사용하지 않습니다.
 
-Prompt responses and provider evaluations include `providerReceipt` with the configured model, explicitly reported model, capability flags, and model-selection policy. Kiro includes the launched CLI byte hash and executable basename. No local executable path or credentials are included. If the CLI does not report a version/model, the receipt records an unreported value rather than guessing.
+공통 LWC의 관리 원천은 승인된 NOVA Git 루트의 `packages/nova-ui/main/default/lwc`입니다. 선택한 불변 디자인 릴리스가 해당 Git 소스·공개 API·토큰을 고정하며, UI의 Node runtime은 변환·검증 엔진입니다. NextBSS v1.9는 Figma 디자인 근거의 이름입니다. 임시 모델 작업공간·fixture·runtime artifact는 편집할 공통 LWC 원천이 아닙니다.
 
-Structured text remains the default. Kiro Screen generation/repair can explicitly opt into `SFDC_AGENT_SCREEN_IMAGE_INPUT=bound-png-v1`: the provider-independent binding validator checks the saved analysis, source identity and PNG bytes, and the Kiro adapter permits exactly one verified read of that private image. Only a delivered result advertises image capability and `read-verified`; protocol negotiation alone does not. Story and OpenAI/Azure image input remain unchanged. The controlled 3+3 experiment did not establish an image quality benefit, so this option is not enabled by default.
+Screen은 분석 → 검토 확인 → NOVA 규칙 생성 또는 Kiro 생성 순서입니다. 수집 경로는 요청의 `sourceAcquisition`으로 고정합니다.
 
-These receipts improve traceability. They do not guarantee deterministic LLM output or establish visual accuracy; the common browser oracle and fixed-state fixtures measure the generated result separately.
-
-The saved Screen generator fingerprint covers SFDC_UI's production engine/shared/server modules and dependency lockfile. It does not currently pin the implementation bytes of Agent-side `kiro_screen_projection.mjs`, `prompt_projection.py` or `screen_tasks.py`. Immutable prompt templates and per-response prompt digests remain separate evidence. No current mismatch was observed by the independent review; when changing those Agent projection/assembly modules, include a small adapter revision in the saved contract or explicitly migrate/review the affected checkpoint before claiming identical generation rules.
-
-The [independent re-audit](validation/2026-11-26-independent-conversion-review.json) distinguishes implemented boundaries, remaining evidence gaps and proposed work. The [retrospective test-selection manifest](validation/2026-11-26-conversion-test-selection.json) records the previously executed commands and selected files without re-running them. Original private logs and model responses were deleted as requested; the manifest does not recreate their contents or certify untested Main/Org paths.
-
-## Live validation on 2026-11-25
-
-The [recorded benchmark](validation/2026-11-25-live-conversion.json) covers one Screen (`29876:14784`) through the normal Main APIs. Kiro analysis, code generation and repair made real model requests. Their recorded request path took 434.32 seconds of 453.17 seconds of processing stages, excluding 66.79 seconds of manual review. These intervals include bridge/CLI overhead; they do not measure model computation or first-token latency independently. NOVA archive stages took 17.86 seconds; each path has only one completed sample.
-
-With both comparison canvases explicitly fixed to white, the exact-revision REST NOVA capture differed from the official Figma 1× PNG by 0.9954% at RGB tolerance 12. The ordinary Main capture measured 1.06%, but its deliberate Lightning `#F3F3F3` canvas differed from the white canvas used to composite the transparent source. That context mismatch is not evidence of an authored-color conversion error. Fixing the isolated capture document's canvas changed no LWC CSS or saved artifact. The same archive input produced reference-only ratios of 0.85% for NOVA and 2.53% for Kiro. This archive is not linked to the current remote revision, and the earlier 1.13%/1.30% report-plus-capture pairs were unavailable. No accuracy improvement rate is established.
-
-Browser probes found that a low visual difference does not ensure operable controls: REST NOVA lacked a native service-number input and reset button; archive NOVA lacked a native search button. Kiro input, reset and required-field validation worked. Actual business API behavior remains unverified. Org apply was rejected with `ORG_REVIEW_REQUIRED`; no Salesforce metadata was deployed. Further pinned-source runs were blocked by an observed Figma nodes API 429. The managed error path currently conceals the underlying code, so that observation does not establish the cause of every earlier failed job.
-
-The same archive also exposed a digest-contract limitation: NOVA adds `draftSize` on 78 nodes and `draftAsset` on three vectors before computing `sceneSha256`; Kiro does not. Removing only those derived fields makes the snapshots identical. Preserve existing v1 receipts; a future contract must separate authored scene evidence from generated rendering assets. Reducing prompts to stage-specific evidence and the required public API closure should be tested after these correctness gaps are addressed. Full raw source evidence must remain intact.
-
-After validation, the user requested complete cleanup of test data. The ten test jobs, three saved analyses, three results, linked preview/comparison records and three prompt-input traces were removed. Thirty-eight test-exclusive objects and both temporary capture/session directories were deleted. All ten job and three result URLs returned 404. Original Figma sources, shared assets, active releases and the existing Org catalog were unchanged; no test deployment had reached the Org. Only sanitized measurement documentation and normal audit history remain.
-
-## Common remediation on 2026-11-26
-
-New source receipts use schema v2. `authoredSceneSha256` (also exposed as `sceneSha256`) excludes only the adapter's `draftSize`/`draftAsset`; derived rendering assets have their own digest. `rawSnapshotSha256` fingerprints the complete captured input object, not the original HTTP response or `.fig` file bytes. `provenanceSha256` remains independent. Existing v1 receipts keep their original algorithm; a v2 receipt never reinterprets an old hash. A valid archive hash does not prove a remote revision relationship.
-
-The shared browser oracle checks source-identified native inputs, buttons, required/disabled/read-only states, local reset/search events, and authored empty-table state. It captures the initial screenshot before interaction probes. Missing or ambiguous host evidence stays unverified; confirmed absent/broken native controls block technical eligibility. An unresolved business API is recorded independently, without invented options, data rows or API success. Visual repair must preserve these checks even if its pixel score improves.
-
-Comparison receipts fix both canvases to white and record the actual browser, font hash/load state, viewport and DPR. Export scale, bounds and revision are populated only from captured reference metadata; absent values stay unverified. These are test-document settings and do not change generated LWC styles.
-
-The canonical `execution-diagnostics-policy.json` lives in SFDC_UI and is packaged byte-for-byte in Python and Spring. A nonzero worker may return only the bounded, versioned allowlisted code/stage packet. Provider messages, source text, credentials, local paths and stderr remain private. Spring persists validated diagnostics on the fenced failed attempt; SFDC_UI uses the same error interpretation for an active observer and recovered jobs. Model/quota failures do not automatically trigger another billable call.
-
-`provider_observation.py` records client-side first stream byte, first assistant text arrival, authentication, model-process, parsing and cleanup intervals. These are not provider-internal inference time or network TTFT. Token counts are recorded only when explicitly returned by the CLI; missing counts remain `null`/`unreported`.
-
-`prompt_projection.py` preserves complete source evidence and saved review checkpoints. It deduplicates an evidence-coverage alias only when canonical typed JSON is equal. Screen analysis retains full API guidance. Generation/repair retain every public module identity and API signature; full prose is retained for verified used components and utility/style modules, while unused component prose is deferred. Unknown component selections fall back to the full contract. The bounded cache keys the entire pinned contract and selected component set. Story input serialization remains unchanged. No prompt template or screen-specific rule was added by this optimization.
-
-The [November 26 measurements](validation/2026-11-26-common-remediation.json) confirm equal authored-scene and provenance digests for actual NOVA/Kiro runs on the same archive, with intentionally separate derived-asset hashes. NOVA and Kiro each passed native-control coverage 7/7; the final NOVA source metric coverage was 27/27. A real Sandbox LWC application, owned test tab, browser rendering, input/reset and required-empty checks succeeded. Unpublish/remove succeeded and restored the original page's canonical digest. All active test results, ten jobs, saved analyses and prompt traces were removed. One archived result and its referenced objects remain because the existing immutable Org-version audit requires them; no immutability guard was disabled.
-
-The matching-revision remote comparison remained blocked by Figma quota. Archive comparisons remain reference-only: NOVA search/table differences changed from 0.8453%/2.7405% to 0.9023%/2.7546%; the observed Kiro difference was 2.5254%. Native lookup controls improved, while visual accuracy improvement was not established. At that validation point, the popup INSTANCE was outside the Screen FRAME/GROUP root contract. The real Kiro processing stages took 220.39 seconds excluding manual review; 193.72 seconds belonged to model-request stages. These single samples do not establish a general speed improvement. First-content counters start at the model-process stream after authentication and are not request TTFT.
-
-## Current follow-up status on 2026-11-26
-
-Actual Agent credentials were checked independently: REST identity and MCP `whoami` refer to the same account, and the target SK Inc organization reports Enterprise/Dev. REST nodes and three official 1× PNG exports returned HTTP 200. No 429 was observed in these bounded checks; successful responses did not report a remaining-quota count. This supersedes the earlier waiting-for-DEV status, without implying unlimited calls.
-
-The representative search, result table and popup share one pinned REST revision and individually hashed official PNGs. The component authority is the 38 NOVA families under `/Users/a10697/Work/NOVA/packages`; NextBSS v1.9 names the Figma design evidence. The private candidate release pins NOVA commit `3b013b934787ccaf8ee90f9f731d019d6e567ce9`. Main's active release remains separate and is not silently replaced. Frozen comparisons use the explicitly selected repository baseline `prompts-v1`, not a claim about Main's active prompt release. Kiro reports no exact backend model version.
-
-| Original priority | Verified now | Still incomplete |
+| 요청 | 원본 수집 | 실패 시 경계 |
 | --- | --- | --- |
-| Frozen comparison | Immutable REST revision, three official 1× PNGs, pinned NOVA/API/token bytes, saved-input reuse and six frozen first-pass Kiro samples. | No archive-to-remote or MCP-to-revision proof; backend model version is unreported. Historical 1.x% values are not this cohort's baseline. |
-| MCP input equivalence | Actual authenticated metadata/design/screenshot collection; safe field-level REST/local/MCP comparison and guidance-only source rejection. | Code Connect returns mapping guidance rather than complete design facts. User requested mapping review; no disable, publish or design mutation was performed. |
-| Generic mapping | Strict published keys/set/variant discovery; native popup verification; source-canvas button coordinates; source-proven typed empty-table recipes and native style checks. | Real transforms, unsupported appearance/text hosts and filled-table/business semantics retain their findings. Recipe input is not a claim that every LLM output follows it. |
-| Image delivery | Actual nonce-in-PNG capability proof plus three generation image reads and one repair read, all with immutable binding. | No repeatable visual gain; model image resizing/internal resolution is unreported. Default remains text. |
+| NOVA 규칙 분석 `REST_FIRST` | REST 우선, 허용된 오류에서 버전 없는 같은 파일의 등록 `.fig` 사본 | 접근 거부·노드 없음·리비전 불일치를 사본으로 우회하지 않음 |
+| Kiro 분석 `REST_ONLY` | 선택한 Figma API 원본 | MCP·등록 사본·NOVA로 자동 전환하지 않음 |
+| Kiro 분석 `MCP_ONLY` | 사용자·작업공간에 결합된 읽기 전용 MCP | 인증·한도·잘림은 명시적 실패, REST로 전환하지 않음 |
+| 명시적 로컬 `LOCAL_FILE` | 선택한 `.fig`와 hash·페이지·노드 | 다른 파일로 교체하지 않음 |
+| 저장 Screen 계약의 `GENERATE` | 저장한 장면·분석·PNG와 원본·NOVA·프롬프트 핀 | REST/MCP 재수집이나 archive 재열기로 원본을 교체하지 않음 |
 
-The acceptance result combines source, visual and native-control evidence. Perfect pixels cannot hide a failed local handler or incomplete expected control coverage. Unknown business APIs remain separate from confirmed native failures. Repair preserves those checks and rejects regressions. The saved-analysis generator fingerprint now binds production engine, shared and server modules plus the lockfile; a server-only recipe/validator change requires fresh analysis before any provider call. Source and actual packaged-runtime fingerprints are regression-tested together.
+Story는 기존 `.fig`·REST 계약을 사용합니다. MCP 원문·PNG·호출 기록은 사용자·작업 ID에 묶어 원자적으로 보존하며 같은 작업 재시도는 완성된 수집만 재사용합니다. 부분 metadata나 Code Connect mapping 지침은 전체 authored scene이 아닙니다. 완전한 원문·속성·리비전 결합이 부족하면 `PARTIAL`/`REFERENCE_ONLY`로 남기며 미확인 게시 키·속성은 검토 대상으로 유지합니다.
 
-Detailed measurement, final E2E, regression counts and cleanup receipts are recorded in [the DEV validation report](../../SFDC_Ui/docs/validation/2026-11-26-dev-seat-conversion-audit.json) and [the Agent execution report](validation/2026-11-26-dev-seat-gates.json). The versioned [follow-up roadmap](conversion-followup-roadmap.json) remains the task ledger. These reports distinguish implemented safeguards from unresolved visual accuracy and do not grant Org deployment or automatic application.
+## 서비스 인증과 실행 범위
 
-## Follow-up before DEV verification (historical)
+Main Agent는 `SFDC_AGENT_MANAGED_ONLY=1`로 실행합니다. HTTP 경로는 `/health`, 서비스 Bearer 인증을 사용하는 `/internal/v1/`, 실행별 인증을 사용하는 `/internal/kiro/sessions`입니다. 파일럿 `/runs`, SQLite 프롬프트 `/internal/prompts`, 로컬 디자인 후보 API는 404이며 `/health`는 전역 SQLite 활성 프롬프트를 조회하지 않습니다.
 
-The versioned [follow-up roadmap](conversion-followup-roadmap.json) is the current task ledger. Older validation reports preserve their historical measurements and are not retroactively upgraded to passes. [The offline audit](validation/2026-11-26-followup-audit.json) records existing business evidence, remaining confirmation requests, model image capabilities and performance evidence.
+- `SFDC_AGENT_EXECUTION_TOKEN`은 Spring–Agent 서비스 Bearer이며 Node 자식에게 전달하지 않습니다.
+- `X-SFDC-Managed-Prompt`는 현재 실행에 고정됩니다. Kiro 세션 생성·이벤트 조회·프롬프트 실행·종료에 같은 토큰을 요구하며 실행 종료 시 폐기합니다. 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없습니다.
+- 기본 Host는 `localhost`, `127.0.0.1`입니다. 사설 DNS가 필요하면 `SFDC_AGENT_TRUSTED_HOSTS`에 정확한 DNS 이름 또는 IPv4를 지정합니다.
+- 공유 REST·Plan 자격은 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정합니다. Spring과 Agent의 정규 UUID 쌍이 같아야 합니다. 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`입니다. 등록 사본이 있어도 NOVA REST 우선 요청의 원격 권한 검사를 우회하지 않습니다. 명시적 LOCAL은 소유 범위를 따로 확인합니다.
+- MCP는 공유 REST 토큰을 사용하지 않고 BACK이 서명한 사용자·테넌트·작업공간의 전용 OAuth 저장소를 사용합니다. 최초 승인·철회는 [MCP 연결](figma-mcp-setup.md)을 따릅니다.
 
-| Original priority | Current status | Remaining dependency |
-| --- | --- | --- |
-| Frozen comparison | Local archive, source/scene digests, saved analysis, release and reference PNG are fixed. Three paired local NOVA measurements preserve identical output. | Official same-revision PNG, remote revision linkage and repeated frozen LLM comparisons remain incomplete. |
-| MCP input equivalence | Common normalized contracts and local extraction improvements exist. | Actual same-revision MCP/REST evidence is still unavailable. Resume after the user confirms the seat change and real access/quota checks pass. |
-| Generic table/text mapping | Source extraction, public-API checks and native/geometry measurements exist. The inside-stroke color verifier now removes 117 false table findings without changing rendered output. | Unsupported source/appearance/text cases and popup residuals remain. Local diagnosis is independent of DEV; official accuracy comparison needs remote evidence. |
-| Image input/repair | PNG capture and browser verification exist. | Current Kiro/OpenAI/Azure adapters do not submit images. Implementing a supported adapter is independent of DEV; live image-delivery verification is a separate requirement. |
+서버는 한 REST 범위의 전용 deployment로 라우팅하며 한 Uvicorn process/worker만 사용합니다. Node가 같은 process의 메모리 실행 context를 loopback으로 호출하기 때문입니다. 서버 배포의 MCP는 `NOT_READY`이며 로컬 credential HOME 복사나 JSON flag로 활성화할 수 없습니다.
 
-The current popup INSTANCE path has generic root classification and an offline comparison case. That does not mean its visual residuals are resolved: the retained popup measurement has one matched target, seven unavailable targets and one mismatch. Follow-up source-preserving diagnosis found that all 117 table mismatches were color-verifier false positives: the renderer used inside box-shadow strokes, while the oracle read an unused CSS top-border color. The common verifier now reads solid native borders and unblurred inset edge colors using authored side weights. Missing/wrong paint fails; blur, translucency and ambiguous compositing stay unverified. This checks edge color presence, not full stroke widths or arbitrary raster/effect fidelity.
+`SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS`는 Spring과 Agent의 공통 물리 상한입니다. 기본 540초, 범위 1–900초이며 Spring이 테넌트 정책과 적용한 절대 마감을 각 시도에 고정합니다. 작업 취소는 소유한 자식 프로세스 종료·전송 중지·슬롯 반환을 확인한 뒤 응답합니다. 기한·출력·경로·hash·범위 검증 실패를 성공으로 바꾸지 않습니다. 공개 실패 진단은 `execution_diagnostics_policy.json`의 제한된 계약을 따릅니다.
 
-Actual regeneration of search, table and popup reused byte-identical saved checkpoints and PNGs without reopening archives or calling REST/MCP/models. All three retained identical LWC, pixels, native-control coverage, existing apply blockers and eligibility. Table color mismatches fell from 117 to zero, with five unsupported source targets remaining and all 144 existing apply blockers retained. Popup background and seven missing hosts were unchanged. This corrects diagnostics; it is not a rendered-accuracy improvement or permission to apply. No layout defaults, prompt templates or unverified public-API overrides were added.
+## 모델 공급자와 이미지
 
-The inspected NOVA guide and example `numberPortabilityManagement` implementation are useful leads, but are not an approved business contract bound to this Figma revision. History lookup, NPDB and termination remain TODOs; joining emits a local event whose receiving navigation is not implemented there. Request method/endpoint or Apex method, response/paging/error/permission semantics, reset/refresh scope, action activation and receiving navigation need authoritative confirmation. Existing local validation/empty data is not evidence of real API success. The guide's older component recommendations do not override the pinned NOVA public contract. This audit changes no approval gate.
+`provider_capabilities.py`는 구현된 입력·출력 기능을 선언하고 `providerReceipt`를 만듭니다. 영수증에는 설정 모델·공급자가 실제 보고한 모델·기능 flag·선택 정책을 구분합니다. Kiro는 실행 CLI의 byte hash와 basename을 기록하며 로컬 절대경로·자격 증명은 넣지 않습니다. CLI나 모델 버전이 보고되지 않으면 unreported로 남기고 대체 모델을 자동 선택하지 않습니다. Main Screen·Story는 Kiro session 경로를 사용하고 파일럿·프롬프트 평가·번역의 텍스트 공급자는 `ModelProvider.complete()`에 연결합니다.
 
-The local performance fix captures a job-bound SVG preview before its verified archive reader closes, avoiding a second archive parse for NOVA analysis reference capture. The opaque token cannot add the comparison SVG to a checkpoint, is bound to file/node/page/revision, and is not a shared parser cache. Existing archive byte hashing, dimensions, PNG classification and generation checkpoint checks remain in force. Uploaded and registered-fallback paths, altered archive bytes and mismatched preview dimensions have regression coverage.
+구조화한 텍스트가 기본입니다. Screen 생성·보정만 `SFDC_AGENT_SCREEN_IMAGE_INPUT=bound-png-v1`로 선택할 수 있습니다. `image_input.py`가 저장 분석·원본·노드·리비전 또는 MCP snapshot·크기·SHA를 결합하고, `kiro_image_transport.py`와 `kiro_image_guard.py`가 private PNG 한 파일의 실제 읽기와 전후 권한·경로·hash를 검사합니다. 검증·읽기 실패를 텍스트 성공으로 바꾸지 않으며 실제 읽기가 확인된 결과만 `providerReceipt.imageInput.status=read-verified`입니다.
 
-In three paired offline runs using the same archive and active NextBSS v1.9 release, NOVA analysis including upload took a median 11.991 seconds before and 5.593 seconds after: 6.398 seconds less (53.36%). Archive opens fell from two to one. Source digests, the 36 LWC files, PNG hash and reference difference (1.0463%) were identical; native checks remained 7/7 and available geometry 27/27. This is a local source-preparation measurement, not a Kiro speed or accuracy improvement. The earlier Kiro samples still required 230–298 seconds and 3–4 model requests including repairs, with approximately 400–424KB prompts per request. No new model calls were made to remeasure those samples. [Local timing and safeguards](../../SFDC_Ui/docs/validation/2026-11-26-local-reference-reuse.json)
+PNG가 없는 분석은 텍스트 경로와 기준 이미지 미확보 표시를 유지합니다. Story와 OpenAI/Azure 이미지 전송은 이 옵션으로 활성화되지 않습니다. 프로토콜 기능 광고는 전달 증거가 아니며 모델의 내부 resize·해상도가 보고되지 않으면 미확인입니다. 이미지 사용은 운영 기본값이 아니며 별도 품질 비교 후 결정합니다.
 
-No new Figma REST/MCP calls or Org writes are required for these offline checks. A DEV seat is not itself proof that limits reset. After user confirmation, check REST and MCP identities/permissions independently, then freeze remote evidence before measuring parity and accuracy. A supported model image transport and approved business specifications remain separate dependencies.
+영수증과 SHA는 재현 근거이며 결정적 LLM 출력·속도 개선·시각 정확도 보증은 아닙니다. 저장 Screen generator fingerprint는 UI의 production engine/shared/server 모듈과 lockfile을 포함하지만 Agent의 `kiro_screen_projection.mjs`, `prompt_projection.py`, `screen_tasks.py` 구현 byte까지 고정하지는 않습니다. 해당 assembly를 바꿀 때는 checkpoint 호환성을 검토하고 adapter revision 또는 명시적 migration을 사용해야 동일 생성 규칙을 주장할 수 있습니다.
 
-The image-adapter investigation also checked [Kiro's ACP documentation](https://kiro.dev/docs/cli/acp/) and its [capability-negotiation guidance](https://kiro.dev/docs/acp/). An isolated CLI 3.6.2 `initialize` probe, with no credentials, session, prompt or MCP server, advertised image input as false and offered one authentication method. This is an unauthenticated-profile result, not proof that Kiro models cannot process images. An authenticated capability check and actual image-delivery test are still needed before choosing a new transport. The existing API-key headless path and its capability flag remain unchanged. Node regression tests passed 157/157; provider capability/headless mock tests passed 14/14.
+## 프롬프트 릴리스와 번역
+
+Main의 프롬프트 초안·불변 릴리스·활성 버전·권한은 Spring API와 PostgreSQL이 기준입니다. Agent는 실행마다 받은 릴리스·hash를 사용합니다. Kiro steering 파일에 두 번째 변환 규칙을 만들지 않습니다. 템플릿 구조 검증은 실제 변환 품질 검증과 구분합니다.
+
+`prompt_templates_v1/`의 NOVA Prompt v1.0.0과 `prompt_templates_v2/`의 v1.0.1은 불변 패키지입니다. 소스 배포·디렉터리명 변경으로 Main 활성 릴리스가 바뀌지 않습니다. BACK의 `scripts/publish_agent_prompt_bundle.py`가 전체 13개 template·변수 계약·hash를 검사해 새 릴리스로 게시·활성화합니다. 기존 분석·진행 작업은 이전 핀을 유지합니다.
+
+관리형 평가와 CLI `evaluate-prompt`의 Kiro 공급자는 `KIRO_API_KEY`로 격리된 도구 없는 headless 실행을 시작합니다. 평가 입력은 Spring의 본인·작업공간 권한으로 조회하고 민감값 가림·1시간 만료를 적용합니다.
+
+참고 한글 번역은 서비스 인증 전용 `POST /internal/v1/prompts/translations`로 생성합니다. 영문 원문과 릴리스 hash를 바꾸지 않으며 `{{변수}}`, `@@section`, JSON·코드·URL·도구 식별자를 호출 전 보호하고 응답 후 다시 검사합니다. 기본 Kiro이며 `SFDC_AGENT_TRANSLATION_PROVIDER=kiro|openai|azure`, `SFDC_AGENT_TRANSLATION_MODEL`, `SFDC_AGENT_TRANSLATION_TIMEOUT_SECONDS`로 선택합니다. Agent의 `SFDC_AGENT_TRANSLATION_PROFILE_VERSION`·`SFDC_AGENT_TRANSLATION_GLOSSARY_VERSION`은 Spring의 `SFDC_PROMPT_TRANSLATION_PROFILE_VERSION`·`SFDC_PROMPT_TRANSLATION_GLOSSARY_VERSION`과 각각 같아야 합니다. 규칙·용어집 변경은 두 서비스를 함께 배포합니다. Spring이 번역 상태·본문을 보관하고 Agent는 로컬에 원문·번역문을 저장하지 않습니다.
+
+## 업무 파일과 불변 출력
+
+로컬은 `SFDC_STORAGE_PROVIDER=local`과 기존 `SFDC_MANAGED_SOURCE_ROOT`, `SFDC_MANAGED_RELEASE_ROOT`, `SFDC_MANAGED_RELEASE_INGRESS`, `SFDC_MANAGED_DESIGN_SOURCES`를 사용하며 boto3를 필요로 하지 않습니다. S3 서버는 `.[aws]` 의존성과 승인된 환경값을 배포 플랫폼이 주입합니다. Spring이 읽은 Parameter Store 값은 Agent로 자동 전달되지 않습니다.
+
+| 환경값 | 계약 |
+| --- | --- |
+| `SFDC_STORAGE_PROVIDER` | 서버는 `s3` |
+| `SFDC_STORAGE_S3_BUCKET`, `SFDC_STORAGE_S3_PREFIX`, `AWS_REGION` | Spring과 같은 비공개 업무 버킷·환경 prefix·리전 |
+| `SFDC_AGENT_EXECUTION_TOKEN`, 원본 scope, Kiro/공급자 키 | 해당 worker에 필요한 값만 private 참조로 주입 |
+
+AWS 인증은 workload 역할이며 정적 AWS 키·개발자 profile을 이미지·저장소·Node 환경으로 전달하지 않습니다. 서버의 secret file 소유자·권한·중복 입력 검사는 배포 preflight를 따릅니다. 원본·릴리스는 작업별 private 임시 공간에 받고 크기·SHA·경로를 확인합니다. 사용자 `.fig`는 100MiB, 릴리스 파일 합은 128MiB, 관리자 Guide/Library는 각각 256MiB입니다. 취소된 전송이 끝나기 전에 작업공간을 지우지 않습니다.
+
+분석 출력은 `release-ingress/analysis/<jobId>/<attempt>/`, 디자인 빌드는 `release-ingress/<buildId>/`입니다. 검증한 파일을 불변 업로드한 뒤 hash가 고정된 `manifest.json` 또는 `output-manifest.json`을 마지막에 게시합니다. 기존 key는 실제 byte를 대조하며 충돌·부분 업로드를 완료로 처리하지 않습니다. 공개 분석 DTO는 8MiB, 원본 asset은 최대 512개·개당 2MiB+1KiB·합계 128MiB이며 raw checkpoint와 공개 DTO hash는 구분합니다. 원본 asset의 실제 MIME·소유 범위·크기·SHA를 확인하고 Spring이 내구성 있는 분석·결과 저장을 소유합니다.
+
+관리자 디자인 원본 index는 `<prefix>/figma-sources/design-sources/index.json`에 둡니다. `objectKey`는 `figma-sources` 안의 상대 key입니다. 실제 측정 크기·SHA를 사용하며 Agent가 작업별 로컬 경로 index로 바꿉니다.
+
+```json
+{
+  "guide": {"objectKey": "design-sources/guide.fig", "sha256": "<64자리 SHA-256>", "sizeBytes": 12345},
+  "library": {"objectKey": "design-sources/library.fig", "sha256": "<64자리 SHA-256>", "sizeBytes": 67890}
+}
+```
+
+복구는 Spring DB의 scope·작업·불변 릴리스·원본 및 참조한 분석·결과 object를 같은 기준으로 맞춥니다. Agent scratch는 업무 원장이 아니며 Git 문서 정리로 원본·인증·불변 output을 삭제하지 않습니다. 전체 환경 백업·인수는 [BACK DB 보안 운영](../../SFDC_BACK/docs/database-security-runbook.md)과 [서버 배포](../deployment/README.md)를 따릅니다.
+
+## 품질 판정 경계
+
+공식 비교에는 동일 Figma 리비전의 원본과 1× PNG 출처 결합이 필요합니다. archive 재구성·MCP 원문·REST 원본의 동등성이 증명되지 않으면 별개 근거로 남깁니다. screenshot 차이가 낮아도 native handler 실패·필수 control 미지원·원본 누락·미확인 업무 API를 숨기지 않습니다. repair도 같은 검사를 보존하고 regression을 거부합니다.
+
+Guide나 예제 코드는 확정 업무 계약을 대신하지 않습니다. 실제 endpoint/Apex·요청/응답·paging·오류·권한·reset/refresh·navigation 의미가 확인되지 않으면 사용자 검토로 남기며 빈 데이터·로컬 validation을 실제 API 성공으로 보지 않습니다. 원본·공개 API를 넘어 width/font·변형·컴포넌트 속성·사업 규칙을 추측해 품질 gate를 통과시키지 않습니다.
+
+렌더링·기하·동작 판정은 [UI 변환 품질 구조](../../SFDC_Ui/docs/conversion-quality-architecture.md), 저장 분석·실행 시간·upgrade는 [BACK 변환 품질 계약](../../SFDC_BACK/docs/conversion-quality-contract.md)을 함께 따릅니다. 로컬 단위 검사·인증 성공·개별 측정은 실제 provider/Org 인수나 자동 적용 권한을 부여하지 않습니다.
