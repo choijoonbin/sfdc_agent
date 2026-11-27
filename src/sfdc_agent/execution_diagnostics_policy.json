@@ -51,6 +51,7 @@
     "EXECUTION_ANALYSIS_MISSING": "output-validation",
     "FIGMA_MCP_AUTH_REQUIRED": "source-preparation",
     "FIGMA_MCP_CONFIG_REQUIRED": "source-preparation",
+    "FIGMA_MCP_REVISION_UNSUPPORTED": "source-preparation",
     "FIGMA_MCP_CONNECTION_REVOKED": "source-preparation",
     "FIGMA_MCP_EVIDENCE_INCOMPLETE": "source-preparation",
     "FIGMA_MCP_SCOPE_FORBIDDEN": "source-preparation",
@@ -72,6 +73,16 @@
     "SCREEN_PLANNING_STRUCTURE_INVALID": "source-preparation",
     "SCREEN_PLANNING_EVIDENCE_TOO_LARGE": "source-preparation",
     "SCREEN_PLANNING_SOURCE_CHANGED": "source-preparation",
-    "SCREEN_SCOPE_SELECTION_REQUIRED": "source-preparation"
+    "SCREEN_SCOPE_SELECTION_REQUIRED": "source-preparation",
+    "KIRO_STORY_RESPONSE_JSON_INVALID": "analysis",
+    "KIRO_STORY_PLAN_ENVELOPE_INVALID": "analysis",
+    "KIRO_STORY_PLAN_EVIDENCE_INVALID": "analysis",
+    "KIRO_STORY_MODEL_INVALID": "analysis",
+    "KIRO_REPAIR_BUDGET_EXCEEDED": "generation",
+    "KIRO_LWC_COMPILE": "generation",
+    "STORY_KIRO_GENERATION_INVALID": "generation",
+    "STORY_KIRO_GENERATION_TIMEOUT": "generation",
+    "SCREEN_ANALYSIS_CHANGED": "generation",
+    "SCREEN_ANALYSIS_REANALYSIS_REQUIRED": "generation"
   }
 }
