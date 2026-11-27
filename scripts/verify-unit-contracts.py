@@ -21,6 +21,7 @@ REQUIRED = (
     'nextbss/server/managed-execution.mjs', 'nextbss/server/managed-analysis-output.mjs',
     'nextbss/server/managed-original-analysis.mjs',
     'nextbss/server/kiro-nova-contract.mjs', 'nextbss/shared/preview-validation-protocol.mjs',
+    'nextbss/shared/fixtures/logical-scope-v1.json',
     'nextbss/design-system/nova-library.json', 'nextbss/design-system/nova-public-contract.json',
     'nextbss/design-system/nova-module-manifest.json',
 )
@@ -180,6 +181,7 @@ def main():
     except (OSError, PreflightError) as error:
         parser.exit(2, 'Runtime preflight failed: ' + str(error) + '\n')
     os.environ.update(SFDC_UI_ROOT=str(Path(args.ui_root).resolve()), SFDC_MANAGED_ENGINE_ROOT=str(Path(args.ui_root).resolve()))
+    os.environ['SFDC_LOGICAL_SCOPE_FIXTURE'] = str(Path(args.ui_root).resolve() / 'nextbss/shared/fixtures/logical-scope-v1.json')
     # Unit proofs never inherit an operator's provider credentials.
     for key in list(os.environ):
         if key.startswith(('FIGMA_', 'KIRO_', 'AZURE_', 'OPENAI_', 'SALESFORCE_')):
