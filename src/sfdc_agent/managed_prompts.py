@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
+from .managed_http import authorize_request as _authorize
 from .prompt_registry import PROMPTS, _release
 from .prompt_release_id import PromptReleaseId
 from .prompt_templates import load_baseline_templates, template_placeholders, validate_template
@@ -156,12 +157,6 @@ def record_managed_trace(request, capture, release, text, mode):
             entry[2].append(trace)
 
 
-def _authorize(request):
-    # Share the managed service-auth boundary without accepting browser origin headers.
-    from .managed_execution import _authorize as authorize_execution
-    authorize_execution(request)
-    if "origin" in request.headers or "sec-fetch-site" in request.headers:
-        raise HTTPException(403, "Service requests only.")
 
 
 @router.get("/schema")

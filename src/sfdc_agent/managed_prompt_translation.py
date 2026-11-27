@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import Counter
 from hashlib import sha256
-import json
 import math
 import os
 import re
@@ -17,9 +16,10 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.requests import ClientDisconnect
 
-from .managed_execution import _authorize
+from .managed_http import authorize_request as _authorize
 from .prompt_registry import PROMPTS
 from .providers import ProviderError, create_provider
+from .strict_json import StrictJSONDecoder, decode_json
 
 
 router = APIRouter(prefix="/internal/v1/prompts", include_in_schema=False)
@@ -81,19 +81,6 @@ class TranslationResponse(BaseModel):
     model: str | None
 
 
-def _unique_object(pairs):
-    value = {}
-    for key, member in pairs:
-        if key in value:
-            raise ValueError("Repeated JSON key.")
-        value[key] = member
-    return value
-
-
-def _invalid_constant(_):
-    raise ValueError("Non-finite JSON number.")
-
-
 async def _parse_request(request: Request) -> TranslationRequest:
     body = bytearray()
     try:
@@ -101,7 +88,7 @@ async def _parse_request(request: Request) -> TranslationRequest:
             if len(body) + len(chunk) > _REQUEST_BYTES:
                 raise HTTPException(413, "Prompt translation request is too large.")
             body.extend(chunk)
-        value = json.loads(body.decode(), object_pairs_hook=_unique_object, parse_constant=_invalid_constant)
+        value = decode_json(body)
         return TranslationRequest.model_validate(value)
     except HTTPException:
         raise
@@ -112,7 +99,7 @@ async def _parse_request(request: Request) -> TranslationRequest:
 
 
 def _json_spans(text: str) -> list[tuple[int, int]]:
-    decoder = json.JSONDecoder(object_pairs_hook=_unique_object, parse_constant=_invalid_constant)
+    decoder = StrictJSONDecoder()
     spans = []
     position = 0
     while position < len(text):

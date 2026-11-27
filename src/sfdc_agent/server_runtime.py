@@ -107,7 +107,7 @@ def create_app(startup):
     # Import after the preflight and secret mount resolution. Existing local
     # commands still import api:app directly and keep their current behavior.
     from .api import app
-    from .managed_execution import _authorize
+    from .managed_http import authorize_request as _authorize
     from fastapi import Request
 
     app.add_middleware(ServerCapabilityBoundary, contract=startup.contract)

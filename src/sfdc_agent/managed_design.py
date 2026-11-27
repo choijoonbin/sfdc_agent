@@ -17,10 +17,14 @@ from .config import engine_root
 from .managed_execution_progress import ExecutionScope
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .managed_object_storage import ManagedObjectStorage, storage_io
-from .managed_execution import (
-    IncompleteExecution, _WORKER_SLOTS, _authorize, _decode_json, _encode_json,
-    _parse_request, _run_process, _runner_configuration, _wait_for_disconnect,
+from .managed_runtime import IncompleteExecution, WORKER_SLOTS as _WORKER_SLOTS, run_process as _run_process
+from .managed_http import (
+    authorize_request as _authorize,
+    parse_request as _parse_request,
+    runner_configuration as _runner_configuration,
+    wait_for_disconnect as _wait_for_disconnect,
 )
+from .strict_json import decode_json as _decode_json, encode_json as _encode_json
 
 router = APIRouter(prefix="/internal/v1/design-standards", include_in_schema=False)
 Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]

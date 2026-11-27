@@ -44,7 +44,7 @@ class ManagedVisualTests(unittest.IsolatedAsyncioTestCase):
                 output = {**payload, "report": {}, "captures": [
                     {"key": key, "base64": "cG5n", "sha256": sha256(b'png').hexdigest()} for key in ("source", "rendered", "difference")]}
                 process = AsyncMock(return_value=json.dumps(output).encode())
-                with patch("sfdc_agent.managed_visual.engine_root", return_value=root),                         patch("sfdc_agent.managed_execution._runner_configuration", return_value=("node", runner, 60)),                         patch("sfdc_agent.managed_execution._run_process", process):
+                with patch("sfdc_agent.managed_visual.engine_root", return_value=root),                         patch("sfdc_agent.managed_visual._runner_configuration", return_value=("node", runner, 60)),                         patch("sfdc_agent.managed_visual._run_process", process):
                     self.assertEqual(await compare(self.request(payload, headers)), output)
                     self.assertEqual(json.loads(process.call_args.args[4]), payload)
                     self.assertEqual(process.call_args.kwargs['output_limit'], 68 * 1024 * 1024)
@@ -65,13 +65,13 @@ class ManagedVisualTests(unittest.IsolatedAsyncioTestCase):
             runner.parent.mkdir(parents=True)
             runner.write_text('fixture')
             with patch('sfdc_agent.managed_visual.engine_root', return_value=root), \
-                    patch('sfdc_agent.managed_execution._runner_configuration', return_value=('node', runner, 60)), \
-                    patch('sfdc_agent.managed_execution._run_process', AsyncMock(return_value=json.dumps(output).encode())):
+                    patch('sfdc_agent.managed_visual._runner_configuration', return_value=('node', runner, 60)), \
+                    patch('sfdc_agent.managed_visual._run_process', AsyncMock(return_value=json.dumps(output).encode())):
                 self.assertEqual(len((await _capture(payload))['captures']), 3)
             output['captures'][2]['key'] = 'rendered'
             with patch('sfdc_agent.managed_visual.engine_root', return_value=root), \
-                    patch('sfdc_agent.managed_execution._runner_configuration', return_value=('node', runner, 60)), \
-                    patch('sfdc_agent.managed_execution._run_process', AsyncMock(return_value=json.dumps(output).encode())):
+                    patch('sfdc_agent.managed_visual._runner_configuration', return_value=('node', runner, 60)), \
+                    patch('sfdc_agent.managed_visual._run_process', AsyncMock(return_value=json.dumps(output).encode())):
                 with self.assertRaises(ValueError):
                     await _capture(payload)
 
@@ -80,7 +80,7 @@ class ManagedVisualTests(unittest.IsolatedAsyncioTestCase):
         payload = {'test': 'bounded input'}
         headers = [(b'authorization', b'Bearer visual-token')]
         with patch.dict('os.environ', {'SFDC_AGENT_EXECUTION_TOKEN': 'visual-token'}), \
-                patch('sfdc_agent.managed_execution._WORKER_SLOTS', slots):
+                patch('sfdc_agent.managed_visual._WORKER_SLOTS', slots):
             slots.acquire()
             result = await compare(self.request(payload, headers))
             self.assertEqual(result.status_code, 503)

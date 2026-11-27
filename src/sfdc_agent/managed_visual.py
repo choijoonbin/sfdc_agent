@@ -9,6 +9,17 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.requests import ClientDisconnect
 from starlette.responses import JSONResponse
 from .config import engine_root
+from .strict_json import decode_json as _decode_json, encode_json as _encode_json
+
+from .managed_http import runner_configuration as _runner_configuration
+from .managed_runtime import run_process as _run_process
+from .managed_runtime import (
+    IncompleteExecution,
+    WORKER_SLOTS as _WORKER_SLOTS,
+    finish_owned_cleanup as _finish_owned_cleanup,
+    cancel_request_tasks as _cancel_request_tasks,
+)
+from .managed_http import authorize_request as _authorize, wait_for_disconnect as _wait_for_disconnect
 
 router = APIRouter(prefix="/internal/v1/visual-comparisons", include_in_schema=False)
 _REQUEST_LIMIT = 34 * 1024 * 1024
@@ -17,7 +28,6 @@ _CAPTURE_LIMIT = 16 * 1024 * 1024
 
 
 async def _capture(value):
-    from .managed_execution import _decode_json, _encode_json, _runner_configuration, _run_process
     binary, _, _ = _runner_configuration()
     runner = (engine_root() / "nextbss/server/managed-visual-capture.mjs").resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix="sfdc-visual-capture-") as scratch:
@@ -42,13 +52,6 @@ async def _capture(value):
 
 @router.post("")
 async def compare(request: Request):
-    from .managed_execution import (
-        IncompleteExecution,
-        _authorize,
-        _decode_json,
-        _WORKER_SLOTS,
-        _wait_for_disconnect, _finish_owned_cleanup, _cancel_request_tasks,
-    )
     _authorize(request)
     if "origin" in request.headers or "sec-fetch-site" in request.headers:
         raise HTTPException(403, "Service requests only.")

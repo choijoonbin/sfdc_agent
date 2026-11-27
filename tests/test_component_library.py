@@ -35,6 +35,69 @@ class ComponentLibraryTests(unittest.TestCase):
 
 
 class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_managed_projection_passes_only_runtime_paths_and_locale_without_parent_authority(self):
+        process = AsyncMock(returncode=0)
+        process.communicate.return_value = (b'{"projected":true}', b'')
+        fields = {'nodeId': '10:1', 'designReleaseId': 'nextbss-1.9-' + 'e' * 64,
+                  'sourceContext': {'components': [{}]}, 'componentLibrary': ComponentLibraryTests().value()}
+        original = json.loads(json.dumps(fields))
+        environment = {'PATH': '/selected/bin', 'LANG': 'C.UTF-8', 'LC_ALL': 'C', 'LC_CTYPE': 'UTF-8',
+                       'SFDC_MANAGED_ENGINE_ROOT': '/selected/engine', 'SFDC_MANAGED_RELEASE_ROOT': '/selected/releases',
+                       'SFDC_MANAGED_EXECUTION_NODE': '/selected/node', 'SFDC_AGENT_EXECUTION_TOKEN': 'fixture-service-token',
+                       'SFDC_MANAGED_PROMPT_CONTEXT': 'fixture-prompt-token', 'KIRO_API_KEY': 'fixture-provider-key',
+                       'OPENAI_API_KEY': 'fixture-openai-key', 'FIGMA_ACCESS_TOKEN': 'fixture-source-token',
+                       'SFDC_AGENT_AZURE_CLIENT_SECRET': 'fixture-azure-secret', 'AWS_ACCESS_KEY_ID': 'fixture-aws-key',
+                       'AWS_SECRET_ACCESS_KEY': 'fixture-aws-secret', 'AWS_SESSION_TOKEN': 'fixture-aws-session',
+                       'AWS_PROFILE': 'foreign-profile', 'AWS_REGION': 'foreign-region',
+                       'SFDC_UI_ROOT': '/foreign/ui', 'SFDC_AGENT_ROOT': '/foreign/agent',
+                       'SFDC_MANAGED_SOURCE_ROOT': '/foreign/source', 'SFDC_MANAGED_FIGMA_SCOPE': 'foreign/scope',
+                       'NOVA_LOCAL_WORKSPACE': '/foreign/workspace', 'SFDC_NOVA_PROJECT_ROOT': '/foreign/nova',
+                       'HOME': '/foreign/home', 'XDG_CONFIG_HOME': '/foreign/config', 'TMPDIR': '/foreign/scratch',
+                       'NODE_OPTIONS': '--require /foreign/preload.js', 'NODE_PATH': '/foreign/modules',
+                       'HTTPS_PROXY': 'http://foreign-proxy', 'NODE_EXTRA_CA_CERTS': '/foreign/cert.pem'}
+        with patch.dict('os.environ', environment, clear=True), patch(
+                'sfdc_agent.kiro_screen_projection.engine_root', return_value=Path('/selected/engine')), patch(
+                'sfdc_agent.kiro_screen_projection.asyncio.create_subprocess_exec', return_value=process) as spawn:
+            projected = await project_screen_fields('screen.generate', fields)
+        self.assertTrue(projected['sourceContext']['projected'])
+        self.assertEqual(fields, original)
+        self.assertEqual(spawn.await_args.args[0], '/selected/node')
+        self.assertEqual(spawn.await_args.args[2:], ('/selected/engine', '/selected/releases'))
+        self.assertEqual(spawn.await_args.kwargs.get('env'),
+                         {'PATH': '/selected/bin', 'LANG': 'C.UTF-8', 'LC_ALL': 'C', 'LC_CTYPE': 'UTF-8'})
+        self.assertEqual(json.loads(process.communicate.await_args.args[0]), {'fields': original})
+
+    async def test_nonmanaged_projection_retains_only_its_explicit_release_store_fallback(self):
+        process = AsyncMock(returncode=0)
+        process.communicate.return_value = (b'{"projected":true}', b'')
+        fields = {'sourceContext': {'components': [{}]}}
+        with patch.dict('os.environ', {'PATH': '/selected/bin', 'SFDC_MANAGED_RELEASE_ROOT': '/selected/releases',
+                                     'SFDC_UI_ROOT': '/foreign/ui', 'NOVA_LOCAL_WORKSPACE': '/foreign/workspace',
+                                     'KIRO_API_KEY': 'fixture-provider-key'}, clear=True), patch(
+                'sfdc_agent.kiro_screen_projection.engine_root', return_value=Path('/selected/engine')), patch(
+                'sfdc_agent.kiro_screen_projection.asyncio.create_subprocess_exec', return_value=process) as spawn:
+            projected = await project_screen_fields('screen.review-plan', fields)
+        self.assertTrue(projected['sourceContext']['projected'])
+        self.assertEqual(spawn.await_args.args[2:], ('/selected/engine', ''))
+        self.assertEqual(spawn.await_args.kwargs.get('env'),
+                         {'PATH': '/selected/bin', 'SFDC_MANAGED_RELEASE_ROOT': '/selected/releases'})
+
+    async def test_repair_projection_keeps_its_nested_protocol_with_no_unrequested_environment(self):
+        process = AsyncMock(returncode=0)
+        process.communicate.return_value = (b'{"projected":true}', b'')
+        evidence = {'sourceContext': {'inputControls': [{}]}}
+        fields = {'evidence': evidence, 'previousDraft': 'fixture draft', 'diagnostic': 'fixture diagnostic'}
+        original = json.loads(json.dumps(fields))
+        with patch.dict('os.environ', {}, clear=True), patch(
+                'sfdc_agent.kiro_screen_projection.engine_root', return_value=Path('/selected/engine')), patch(
+                'sfdc_agent.kiro_screen_projection.asyncio.create_subprocess_exec', return_value=process) as spawn:
+            projected = await project_screen_fields('screen.repair', fields)
+        self.assertEqual(spawn.await_args.args[0], 'node')
+        self.assertEqual(spawn.await_args.kwargs.get('env'), {})
+        self.assertEqual(json.loads(process.communicate.await_args.args[0]), {'fields': evidence})
+        self.assertEqual(projected, {**original, 'evidence': {'sourceContext': {'inputControls': [{}], 'projected': True}}})
+        self.assertEqual(fields, original)
+
     async def test_analysis_projection_uses_its_explicit_release_not_the_active_pointer(self):
         release_id = 'nextbss-1.9-' + 'e' * 64
         with tempfile.TemporaryDirectory() as directory:

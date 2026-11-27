@@ -9,6 +9,8 @@ import re
 import stat
 from time import time
 
+from .strict_json import loads
+
 _PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 _RELEASE = re.compile(r"^nextbss-\d+(?:\.\d+){1,2}-[a-f0-9]{64}$")
@@ -44,14 +46,7 @@ def _integer(value, maximum):
 
 
 def _json(bytes_):
-    def unique(pairs):
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                raise _invalid()
-            result[key] = value
-        return result
-    value = json.loads(bytes_, object_pairs_hook=unique, parse_constant=lambda value: (_ for _ in ()).throw(_invalid()))
+    value = loads(bytes_, error_factory=_invalid)
     if not isinstance(value, dict):
         raise _invalid()
     return value

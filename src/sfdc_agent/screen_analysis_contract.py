@@ -5,6 +5,8 @@ from hashlib import sha256
 import json
 import re
 
+from .strict_json import loads
+
 _HASH = re.compile(r'^[a-f0-9]{64}$')
 _ENGINES = {'NOVA', 'KIRO'}
 _MAX_BYTES = 3 * 1024 * 1024
@@ -14,15 +16,6 @@ _ACTUAL = {'REST_FIRST': {'REST', 'LOCAL_FILE'}, 'REST_ONLY': {'REST'},
 
 def _invalid():
     return ValueError('SCREEN_ANALYSIS_CONTRACT_INVALID')
-
-
-def _object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise _invalid()
-        result[key] = value
-    return result
 
 
 def _hash(value):
@@ -48,8 +41,7 @@ def validate_checkpoint(payload, checkpoint):
         raw = base64.b64decode(encoded, validate=True)
         if len(raw) > _MAX_BYTES or sha256(raw).hexdigest() != checkpoint['digest']:
             raise _invalid()
-        record = json.loads(raw, object_pairs_hook=_object,
-                            parse_constant=lambda _: (_ for _ in ()).throw(_invalid()))
+        record = loads(raw, error_factory=_invalid)
         analysis = record.get('analysis', {})
         if not isinstance(analysis, dict):
             raise _invalid()

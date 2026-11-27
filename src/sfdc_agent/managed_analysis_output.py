@@ -1,7 +1,6 @@
 """Validate one private analysis export; Spring remains its durable storage owner."""
 
 from hashlib import sha256
-import json
 import math
 import os
 from pathlib import Path
@@ -13,6 +12,7 @@ from uuid import UUID
 import xml.etree.ElementTree as ET
 
 from fastapi import HTTPException
+from .strict_json import decode_json as _decode_json
 
 VIEW_BYTES = 8 * 1024 * 1024
 MANIFEST_BYTES = 256 * 1024
@@ -126,7 +126,6 @@ def _image(bytes_, entry):
 
 
 def verify(directory, payload, result, runtime_root):
-    from .managed_execution import _decode_json
     try:
         manifest_bytes = _bytes(directory / 'manifest.json', MANIFEST_BYTES)
         if sha256(manifest_bytes).hexdigest() != result.analysisView.manifestSha256:

@@ -12,8 +12,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from .managed_prompts import _authorize, managed_context_alive, require_managed_context
+from .managed_http import authorize_request as _authorize
+from .managed_prompts import managed_context_alive, require_managed_context
 from .managed_figma_scope import require_figma_scope
+from .strict_json import decode_json as _decode_json
 
 router = APIRouter(prefix='/internal/v1/executions', include_in_schema=False)
 _CONTEXTS = {}
@@ -219,7 +221,6 @@ async def cancel(request: Request, job_id: UUID, attempt: int):
     _authorize(request)
     if not 1 <= attempt <= MAX_ATTEMPT:
         raise _failure('EXECUTION_ATTEMPT_INVALID', 422)
-    from .managed_execution import _decode_json
     body = bytearray()
     try:
         async with asyncio.timeout(5):

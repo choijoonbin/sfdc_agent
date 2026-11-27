@@ -11,6 +11,7 @@ from sfdc_agent.managed_prompt_observability import evaluate, private_value
 from sfdc_agent.managed_prompts import PromptBundle, checked_bundle, execution_prompts, record_managed_trace, runner_token, template_digest
 from sfdc_agent.prompt_run_values import capture_prompt_run
 from sfdc_agent.prompt_templates import load_baseline_templates, PromptTemplate
+from sfdc_agent.providers import ProviderError
 from sfdc_agent.story_tasks import build_story_task
 
 
@@ -70,6 +71,28 @@ class ManagedPromptObservabilityTest(unittest.TestCase):
         self.assertEqual(safe["ok"], "layout")
         self.assertTrue(safe["items"][0]["client-secret"]["redacted"])
         self.assertTrue(safe["message"]["redacted"])
+
+    def evaluation_error(self, provider, code):
+        payload = {"operation": "story.classification", "provider": provider,
+                   "fields": {"evidence": '{"headings":[],"screens":[],"links":[]}'},
+                   "promptBundle": self.bundle.model_dump()}
+        with patch.dict("os.environ", {"SFDC_AGENT_EXECUTION_TOKEN": "service-token"}), patch(
+            "sfdc_agent.managed_prompt_observability.evaluate_prompt_provider",
+            side_effect=ProviderError(code, "synthetic-private-provider-response"),
+        ):
+            return asyncio.run(evaluate(self.request(payload)))
+
+    def test_provider_http_status_codes_are_preserved_without_error_message_text(self):
+        for provider, code in [("openai", "OPENAI_HTTP_429"), ("azure", "AZURE_CHAT_HTTP_429"),
+                               ("azure", "AZURE_TOKEN_HTTP_401"), ("openai", "OPENAI_KEY_MISSING")]:
+            with self.subTest(provider=provider, code=code):
+                self.assertEqual(self.evaluation_error(provider, code), {"errorCode": code})
+
+    def test_private_or_malformed_provider_codes_remain_fail_closed(self):
+        for code in ["synthetic-private-token", "OPENAI_HTTP_429 private-response", "OPENAI_HTTP_429\n",
+                     "OPENAI_HTTP_429/private-path", "9OPENAI_HTTP_429", "ＡZURE_HTTP_429", "A" + "1" * 80]:
+            with self.subTest(code=code):
+                self.assertEqual(self.evaluation_error("openai", code), {"errorCode": "PROVIDER_FAILED"})
 
     def test_managed_kiro_uses_the_configured_headless_transport_with_the_same_actual_render(self):
         fields = {"evidence": '{"headings":[],"screens":[],"links":[]}'}

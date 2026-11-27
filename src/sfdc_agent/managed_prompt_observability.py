@@ -10,10 +10,14 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
-from .managed_prompts import PromptBundle, _authorize, bounded_trace, checked_bundle
+from .managed_http import authorize_request as _authorize
+from .managed_prompts import PromptBundle, bounded_trace, checked_bundle
 from .prompt_provider_eval import EVALUATION_OPERATIONS, evaluate_prompt_provider
 from .prompt_run_values import _SENSITIVE, capture_prompt_run
 from .providers import ProviderError
+from .strict_json import decode_json as _decode_json, encode_json as _encode_json
+
+from .managed_runtime import WORKER_SLOTS as _WORKER_SLOTS
 
 router = APIRouter(prefix="/internal/v1/prompts", include_in_schema=False)
 _SECRET_KEYS = {"authorization", "cookie", "setcookie", "password", "passwd", "clientsecret", "apikey",
@@ -93,7 +97,6 @@ async def capabilities(request: Request):
 
 @router.post("/evaluate")
 async def evaluate(request: Request):
-    from .managed_execution import _decode_json, _encode_json, _WORKER_SLOTS
     _authorize(request)
     if not _WORKER_SLOTS.acquire(blocking=False):
         raise HTTPException(503, "Managed evaluation is busy.")
@@ -120,7 +123,7 @@ async def evaluate(request: Request):
             result["result"] = {"omitted": True}
         return result
     except ProviderError as error:
-        code = error.code if re.fullmatch(r"[A-Z][A-Z_]{1,79}", error.code) else "PROVIDER_FAILED"
+        code = error.code if re.fullmatch(r"[A-Z][A-Z0-9_]{1,79}", error.code) else "PROVIDER_FAILED"
         return {"errorCode": code}
     except TimeoutError:
         raise HTTPException(408, "Evaluation input timed out.") from None

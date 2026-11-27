@@ -4,7 +4,34 @@ Kiro의 Figma MCP 수집 연결·최초 승인·인증 재사용 방법은 [Figm
 
 변환 품질의 완료 범위·남은 작업은 [후속 작업 로드맵](docs/conversion-followup-roadmap.json)과 [근거·공급자 계약](docs/conversion-evidence-contract.md#current-follow-up-status-on-2026-11-26)에 보관합니다. 실제 DEV 시트·REST 접근은 확인했으며, MCP의 Code Connect 원본 확보와 업무 명세 확인은 별도 조건입니다.
 
-`SFDC_Agent`는 NOVA의 Screen·Story Kiro 분석과 LWC 코드 생성을 처리한다. CLI 파일럿은 `SFDC_Ui/nextbss`의 원본 파서, Figma 디자인 근거·NOVA 불변 릴리스, LWC 생성기와 브라우저 검사기를 사용해 변환 결과를 비교한다. 파일럿 작업 상태는 SQLite에 기록하고, 모델 제안·LWC 번들·PNG·비교 보고서는 실행별 폴더에 저장한다.
+`SFDC_Agent`는 Spring이 제출한 Screen·Story 변환 시도를 Node 엔진과 Kiro에서 실행하는 HTTP Worker다. Main의 작업 큐·상태·권한·활성 프롬프트와 결과 저장은 Spring이 관리한다. Agent는 실행별 원본·릴리스·프롬프트 핀을 검증하고, 모델 세션·자식 프로세스·임시 산출물을 관리해 결과를 반환한다.
+
+독립 CLI 파일럿은 같은 Node 엔진으로 기준 변환과 모델 제안을 비교한다. 파일럿 작업 상태는 로컬 SQLite, 모델 제안·LWC 번들·PNG·비교 보고서는 `.pilot/runs/<ID>/`에 저장한다. Main 관리형 실행과 독립 파일럿은 작업·프롬프트 저장소를 따로 사용한다.
+
+## 코드 지도
+
+Python 모듈은 `src/sfdc_agent/`에 있다. 변경하려는 책임에 따라 다음 파일부터 읽는다.
+
+| 책임 | 진입점과 구현 |
+| --- | --- |
+| HTTP API와 실행 모드 | [api.py](src/sfdc_agent/api.py)가 router와 lifespan을 조합하고, [service_mode.py](src/sfdc_agent/service_mode.py)가 관리형 경로를 제한한다. |
+| Main 변환 실행 | [managed_execution.py](src/sfdc_agent/managed_execution.py)가 요청을 받아 Node 실행과 결과 검증을 조정한다. [managed_execution_progress.py](src/sfdc_agent/managed_execution_progress.py)는 실행 범위·진행 상태·취소와 Kiro 세션 결합을 담당한다. |
+| 공통 실행 경계 | [managed_contracts.py](src/sfdc_agent/managed_contracts.py)는 요청·응답 모델, [managed_http.py](src/sfdc_agent/managed_http.py)는 서비스 인증·요청 읽기·연결 종료·runner 설정, [managed_runtime.py](src/sfdc_agent/managed_runtime.py)는 공통 슬롯·Node 프로세스 수명과 정리, [strict_json.py](src/sfdc_agent/strict_json.py)는 엄격한 JSON 읽기·쓰기를 담당한다. 공개 실패 진단은 [execution_diagnostics.py](src/sfdc_agent/execution_diagnostics.py)에 있다. |
+| Kiro 모델 세션 | [kiro_gateway.py](src/sfdc_agent/kiro_gateway.py)는 `/internal/kiro/sessions` API, [kiro_headless.py](src/sfdc_agent/kiro_headless.py)와 [kiro_processes.py](src/sfdc_agent/kiro_processes.py)는 격리된 CLI 실행과 종료를 담당한다. 이미지 결합·전송·읽기 검증은 `image_input.py`, `kiro_image_transport.py`, `kiro_image_guard.py`로 나뉜다. |
+| Screen·Story 프롬프트 입력 | [screen_tasks.py](src/sfdc_agent/screen_tasks.py)와 [story_tasks.py](src/sfdc_agent/story_tasks.py)가 단계별 필드를 검증해 프롬프트를 만든다. `prompt_projection.py`, `kiro_screen_projection.py`, `nova_prompt_evidence.py`는 저장된 원본·공개 NOVA 계약의 모델 입력 경계를 담당한다. |
+| 선택형 텍스트 공급자 | [providers.py](src/sfdc_agent/providers.py)와 [azure_provider.py](src/sfdc_agent/azure_provider.py)가 Kiro·OpenAI·Azure 텍스트 전송을 제공한다. `provider_capabilities.py`는 실제 기능·실행 영수증, `provider_observation.py`는 응답 본문 없는 사용량·지연 계측을 담당한다. |
+| 프롬프트 릴리스 | [managed_prompts.py](src/sfdc_agent/managed_prompts.py)는 Spring이 고정한 실행별 프롬프트를 제공한다. [prompt_registry.py](src/sfdc_agent/prompt_registry.py)와 `prompt_api.py`는 독립 로컬 저장소, [prompt_templates.py](src/sfdc_agent/prompt_templates.py)와 `prompt_templates_v1/`, `prompt_templates_v2/`는 패키지의 불변 템플릿을 담당한다. 평가·관측·번역은 `prompt_provider_eval.py`, `managed_prompt_observability.py`, `managed_prompt_translation.py`에 있다. |
+| 원본 수집과 범위 | `managed_figma_scope.py`는 실행 범위를 확인한다. [managed_figma_mcp.py](src/sfdc_agent/managed_figma_mcp.py), `figma_mcp_connections.py`, `kiro_mcp.py`는 사용자 범위의 MCP 수집·연결을, `managed_source_reference.py`와 `managed_source_revisions.py`는 원본 이미지·리비전 확인을 담당한다. |
+| 저장 분석과 산출물 | [screen_analysis_contract.py](src/sfdc_agent/screen_analysis_contract.py)는 저장 checkpoint의 원본·버전 결합을 확인하고, [managed_analysis_output.py](src/sfdc_agent/managed_analysis_output.py)는 분석 manifest·파일 해시를 검증한다. [managed_object_storage.py](src/sfdc_agent/managed_object_storage.py)는 로컬/S3 원본·릴리스 준비와 불변 출력 게시를 담당한다. |
+| 보조 관리형 작업 | `managed_design.py`는 디자인 릴리스 빌드, `managed_visual.py`는 원본·미리보기 비교, `managed_views.py`는 Node의 공개 결과 view를 제공한다. |
+| 독립 비교 파일럿 | [cli.py](src/sfdc_agent/cli.py) → [pilot.py](src/sfdc_agent/pilot.py) → [engine.py](src/sfdc_agent/engine.py)·[bridge/](bridge/)가 비교 단계를 실행한다. [contracts.py](src/sfdc_agent/contracts.py)는 파일럿 계약, [storage.py](src/sfdc_agent/storage.py)는 파일럿 SQLite·재개 상태다. |
+| 서버 배포와 검증 | [server_runtime.py](src/sfdc_agent/server_runtime.py)와 [server_preflight.py](src/sfdc_agent/server_preflight.py)가 배포 계약·runtime 핀을 확인한다. [deployment/](deployment/README.md)는 이미지·도구·Node artifact 구성, [tests/](tests/)는 회귀, [scripts/verify-unit-contracts.py](scripts/verify-unit-contracts.py)는 명시적으로 지정한 Node runtime과의 격리 계약 검증이다. |
+
+Main 실행은 Spring → `/internal/v1/executions` → Node runner 순서다. Kiro가 필요한 단계에서 Node가 Agent의 세션 API를 호출하고, Python의 단계별 프롬프트와 headless 모델 응답을 사용한다. Node는 원본 해석·NOVA 생성·LWC 컴파일·브라우저 검증을 수행하며, Agent는 출력 경계를 검사해 Spring에 반환한다. `SFDC_Ui/nextbss` 의존은 이 공통 변환 엔진을 재사용하는 경계이며, 서버 이미지는 체크아웃 대신 고정된 Node runtime artifact를 사용한다.
+
+`ModelProvider`는 파일럿·프롬프트 평가·번역의 텍스트 공급자 확장 지점이다. Main Screen·Story의 Kiro 세션은 `kiro_gateway.py`와 `kiro_headless.py` 경로를 사용한다. 독립 파일럿의 `engine.py`·`bridge/`와 Main의 `managed_execution.py`는 서로 다른 실행 진입점이다.
+
+원본·공통 지침·모델 어댑터와 영수증 필드는 [변환 근거 계약](docs/conversion-evidence-contract.md), 브라우저 검증 구조는 [SFDC_UI 변환 품질 구조](../SFDC_Ui/docs/conversion-quality-architecture.md)를 참고한다.
 
 ## Spring 통합 실시간 개발 (`dev`)
 
@@ -58,7 +85,7 @@ curl -fsS http://127.0.0.1:8766/health
 
 기동하면 `status: ready`, `mode: managed`, `screenKiroMode: headless`, `storyKiroMode: headless`가 표시된다. 서버를 시작하지 않고 설정만 확인하려면 `.venv/bin/sfdc-agent serve --check`를 실행한다. 통합 실행기로 시작한 Agent가 이미 있다면 `python3 ../SFDC_BACK/scripts/live-development.py stop-agent`로 그 Agent만 종료한 뒤 단독 실행한다. 직접 실행한 Agent는 해당 터미널의 `Ctrl+C`로 종료한다. 포트 사용 중에는 다른 포트로 우회하지 않고 기동을 거부한다.
 
-서버 배포는 기존 서비스 환경 변수와 `uvicorn sfdc_agent.api:app --host 127.0.0.1 --port 8766`을 사용한다. 서비스 토큰과 관리형 모드 등 필수 설정은 배포 환경에서 주입한다. 로컬 `serve` 명령은 기존 로컬 설치 전용이다.
+통합 로컬 환경은 `sfdc_agent.api:app`을 사용하며, `serve`는 BACK의 로컬 실행기로 연결한다. 서버 이미지의 진입점은 `python -m sfdc_agent.server_runtime --contract /etc/sfdc/agent-server-contract.json`이다. 배포 계약·Node artifact·도구·자격 증명 참조를 preflight로 확인한 뒤 HTTP 서버를 시작한다. 서버 구성은 [배포 안내](deployment/README.md)를 따른다.
 
 ### Screen·Story 원본 처리
 
@@ -105,25 +132,6 @@ Azure 공급자는 기존 Screen·Story 파일럿의 분석 인터페이스를 �
 
 실제 사용을 결정한 뒤 `pilot --provider azure`로 선택한다. `--model`은 Azure 배포 이름으로 해석된다. 요청에는 Azure 설정과 파일럿 시간 제한 중 더 짧은 값이 적용된다. Entra 토큰은 만료 전에 갱신하고, 응답 처리에서는 완료 상태와 토큰 사용량·지연시간을 기록한다.
 
-## 작업 구조
-
-| 위치 | 책임 |
-| --- | --- |
-| `src/sfdc_agent/contracts.py` | 요청과 모델 응답 구조 |
-| `src/sfdc_agent/providers.py` | 공급자 선택, Kiro Key headless 및 선택형 OpenAI Responses API 연결 |
-| `src/sfdc_agent/azure_provider.py` | AI Hub 인증·토큰 캐시 및 선택형 Azure Chat Completions 연결 |
-| `src/sfdc_agent/provider_capabilities.py` | 공급자별 실제 전송 기능과 모델·CLI 실행 영수증 |
-| `src/sfdc_agent/prompt_projection.py` | 원본을 유지한 단계별 근거·공개 API 설명 투영과 릴리스별 제한 캐시 |
-| `src/sfdc_agent/provider_observation.py` | 응답 본문을 저장하지 않는 클라이언트 지연·명시적 토큰 사용량 계측 |
-| `src/sfdc_agent/execution_diagnostics.py` | Worker 실패에서 공개 가능한 코드·단계·재시도 시각 정보만 전달 |
-| `src/sfdc_agent/nova_prompt_evidence.py` | 고정 NOVA 공개 계약과 모델 입력의 최종 경계 검증 |
-| `src/sfdc_agent/pilot.py` | 분석, 기준 변환, 모델 제안, 생성과 검증의 순서 |
-| `src/sfdc_agent/storage.py` | 작업 상태와 재개 정보 저장 |
-| `bridge/` | 원본·릴리스 검증, Screen·Story 생성, 실제 LWC 캡처 및 동작 검사 |
-| `.pilot/runs/<ID>/comparison.json` | 동일 원본에 대한 두 경로의 결과와 산출물 위치 |
-
-원본·공통 지침·모델 어댑터의 경계와 영수증 필드는 [변환 근거 계약](docs/conversion-evidence-contract.md), 공통 브라우저 검증 구조는 [SFDC_UI 변환 품질 구조](../SFDC_Ui/docs/conversion-quality-architecture.md)를 참고합니다.
-
 ## 비교 입력
 
 기준 경로와 에이전트 경로는 한 실행에서 동일한 Figma 사본, 정확한 활성 NextBSS v1.9 릴리스 ID, Story 케이스를 사용한다. Screen은 기존 측정 기반 생성기에 Kiro가 검토할 근거와 추가 확인 항목을 연결한다. Story는 Kiro 실행 명세를 기존 계획 검증기에 통과시킨 뒤 기존 생성기에 전달한다. 검증에서 거부된 명세는 보고서에서 표시한다.
@@ -150,13 +158,15 @@ Spring에서 작업·권한·프롬프트 릴리스를 관리하는 서버는 `S
 
 공유 REST·Plan 자격 증명은 운영자가 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정한다. Spring과 Agent에 동일한 정규 UUID 쌍을 설정한다. 배정 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`으로 반환한다. 등록된 사본이 있어도 NOVA의 REST 우선 요청은 해당 원격 권한을 먼저 확인한다. 명시적인 LOCAL 입력은 원본 소유 범위를 확인해 별도로 처리한다. Kiro의 MCP 연결은 공유 REST 토큰을 사용하지 않으며 BACK이 서명한 사용자·테넌트·작업공간의 전용 OAuth 저장소를 사용한다. 최초 승인은 [Kiro–Figma MCP 연결](docs/figma-mcp-setup.md)을 따른다.
 
-관리형 Screen 실행의 원본 정책은 다음과 같다. 파일 목록 탐색은 기존 공통 선택 기능이며, 실제 Kiro 분석의 원본 수집은 별도로 MCP에서 수행한다.
+관리형 Screen 분석은 요청의 `sourceAcquisition`으로 원본 수집 경로를 고정한다. 파일 목록 탐색과 선택한 프레임의 실제 수집은 구분한다.
 
 | 요청 | 원본 수집 | 실패 시 처리 |
 | --- | --- | --- |
-| 원격 NOVA | REST 우선 → 허용된 오류에서 같은 파일의 등록 사본 | 접근 거부·노드 없음·리비전 불일치는 사본으로 우회하지 않음 |
-| 원격 Kiro | Kiro ACP의 Figma 읽기 전용 MCP 수집 → Kiro 분석 → 저장된 근거로 생성 | 인증·호출 한도·잘림은 명시적 실패; REST/NOVA 자동 전환 없음 |
-| 명시적 로컬 입력 | 지정한 `.fig`와 해시·페이지·노드 확인 | 원본을 조용히 다른 파일로 교체하지 않음 |
+| NOVA 규칙 분석 · `REST_FIRST` | REST 우선 → 허용된 오류에서 버전이 지정되지 않은 같은 파일의 등록 사본 | 접근 거부·노드 없음·리비전 불일치는 사본으로 우회하지 않음 |
+| Kiro AI 분석 · `REST_ONLY` | 선택한 Figma API 원본만 수집 | 실패를 MCP·등록 사본·NOVA 분석으로 바꾸지 않음 |
+| Kiro AI 분석 · `MCP_ONLY` | 사용자·작업공간에 결합된 Figma 읽기 전용 MCP 수집 | 인증·호출 한도·잘림은 명시적 실패; REST/NOVA 자동 전환 없음 |
+| 명시적 로컬 분석 · `LOCAL_FILE` | 선택한 `.fig`와 해시·페이지·노드 확인 | 원본을 조용히 다른 파일로 교체하지 않음 |
+| 저장 Screen 계약으로 생성 · `GENERATE` | 저장한 장면·분석·PNG와 원본·NOVA·프롬프트 핀 재사용 | 새 REST/MCP 수집이나 사본 재열기로 원본을 교체하지 않음 |
 
 MCP 원문과 PNG는 사용자·작업 ID에 묶어 원자적으로 보존한다. 완성된 수집은 같은 작업의 재시도에서 재사용하며 생성은 저장된 분석의 원본·프롬프트·NOVA 릴리스를 그대로 사용한다. 부분 메타데이터는 전체 authored scene으로 승격하지 않는다. 미확인 컴포넌트 게시 키·속성은 검토 대상으로 남기며, 동일 리비전의 1× PNG가 증명되지 않은 측정은 `REFERENCE_ONLY`다. 설치된 CLI의 실제 인증 재사용 검증과 MCP 플랜 한도 등 외부 제약은 검증 보고서에 구분해 기록한다.
 

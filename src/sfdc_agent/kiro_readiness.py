@@ -17,7 +17,7 @@ from time import monotonic
 
 from fastapi import APIRouter, Request
 
-from .managed_prompts import _authorize
+from .managed_http import authorize_request as _authorize
 
 router = APIRouter(prefix='/internal/v1/kiro', include_in_schema=False)
 AUTH_ERROR_CODES = frozenset({

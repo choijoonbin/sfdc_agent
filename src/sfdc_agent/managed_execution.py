@@ -2,243 +2,54 @@
 
 import asyncio
 import base64
-import hmac
-import json
 import os
 from pathlib import Path
 import re
 import shutil
-import signal
 import tempfile
 from time import time
-from threading import BoundedSemaphore
-from typing import Annotated, Literal
-from uuid import UUID
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from .execution_diagnostics import WorkerExecutionFailure, decode_worker_failure, safe_diagnostic
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_validator
-from starlette.requests import ClientDisconnect
+from .execution_diagnostics import WorkerExecutionFailure, safe_diagnostic
 
-from .managed_prompts import PromptBundle, execution_prompts, runner_token
-from .prompt_release_id import PromptReleaseId
-from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope, execution_mode, execution_progress
+from .managed_prompts import execution_prompts, runner_token
+from .managed_execution_progress import execution_mode, execution_progress
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
-from .component_library import ComponentLibrary
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
 from .managed_object_storage import ManagedObjectStorage, storage_io
-from .screen_analysis_contract import validate_checkpoint as validate_screen_checkpoint
+
+from .strict_json import decode_json as _decode_json, encode_json as _encode_json
+
+# Compatibility exports remain here; internal consumers import the shared modules.
+from .managed_contracts import (
+    AnalysisView, ArchiveSelection, ExecutionArtifact, ExecutionRequest, ExecutionResult,
+    SourceDiscoveryRequest, CHECKPOINT_BYTES as _CHECKPOINT_BYTES,
+)
+from .managed_http import (
+    authorize_request as _authorize, parse_request as _parse_managed_request,
+    runner_configuration as _runner_configuration, wait_for_disconnect as _wait_for_disconnect,
+)
+from .managed_runtime import (
+    IncompleteExecution, WORKER_SLOTS as _WORKER_SLOTS, OUTPUT_BYTES as _OUTPUT_BYTES,
+    run_process as _run_process, read_output as _read_output, write_input as _write_input,
+    stop_process as _stop_process, finish_owned_cleanup as _finish_owned_cleanup,
+    cancel_request_tasks as _cancel_request_tasks,
+)
 
 router = APIRouter(prefix="/internal/v1", include_in_schema=False)
 
 _REQUEST_BYTES = 16 * 1024 * 1024
-_CHECKPOINT_BYTES = 3 * 1024 * 1024
 _SUMMARY_BYTES = 256 * 1024
 _ARTIFACT_BYTES = 8 * 1024 * 1024
-_OUTPUT_BYTES = 12 * 1024 * 1024
-_CHUNK_BYTES = 64 * 1024
-_WORKER_SLOTS = BoundedSemaphore(2)
-_RUNNER_ENVIRONMENT = (
-    "PATH", "LANG", "LC_ALL", "LC_CTYPE", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
-    "SFDC_MANAGED_RELEASE_ROOT", "SFDC_MANAGED_AGENT_ORIGIN", "SFDC_AGENT_SCREEN_IMAGE_INPUT",
-    "SFDC_MANAGED_SOURCE_ROOT",
-)
-
-ReleasePin = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")]
-SourceReference = Annotated[str, Field(min_length=1, max_length=2048, pattern=r"^[^\x00-\x1f\x7f]+$")]
-RegistryLabel = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[^\x00-\x1f\x7f]+$")]
-ManifestDigest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
-JsonObject = dict[str, JsonValue]
 _ARTIFACT_PART = re.compile(r'^[^./\\:<>|?*\x00-\x1f\x7f][^/\\:<>|?*\x00-\x1f\x7f]*$')
 
 
-class ArchiveSelection(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    tenantId: UUID
-    workspaceId: UUID
-    fileKey: Annotated[str, Field(pattern=r"^[A-Za-z0-9]{1,160}$")]
-    sha256: ManifestDigest
-
-
-class SourceDiscoveryRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    executionScope: ExecutionScope
-    archive: ArchiveSelection | None = None
-    sourceReference: SourceReference | None = None
-    pageId: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
-    version: Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,160}$")] | None = None
-    previewNode: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
-
-    @model_validator(mode="after")
-    def source_kind(self):
-        if bool(self.archive) == bool(self.sourceReference):
-            raise ValueError("Select a local archive or a registered remote source.")
-        if self.archive and (self.archive.tenantId != self.executionScope.tenantId or self.archive.workspaceId != self.executionScope.workspaceId):
-            raise ValueError('The selected archive belongs to a different execution scope.')
-        return self
-
-
-class ExecutionRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    jobId: UUID
-    attempt: Annotated[int, Field(ge=1, le=MAX_ATTEMPT, strict=True)]
-    executionScope: ExecutionScope
-    timeoutSeconds: Annotated[int, Field(ge=1, le=3600, strict=True)]
-    deadlineEpochSeconds: Annotated[int, Field(gt=0, strict=True)]
-    kind: Literal["SCREEN", "STORY"]
-    engine: Literal["NOVA", "KIRO"]
-    operation: Literal["ANALYZE", "GENERATE"] = "ANALYZE"
-    sourceReference: SourceReference
-    designReleaseId: ReleasePin
-    promptReleaseId: PromptReleaseId
-    promptBundle: PromptBundle | None = None
-    designManifestSha256: ManifestDigest | None = None
-    componentLibrary: ComponentLibrary | None = None
-    promptReleaseVersion: RegistryLabel | None = None
-    analysisJobId: UUID | None = None
-    analysis: JsonObject | None = None
-    workflowId: RegistryLabel | None = None
-    archive: ArchiveSelection | None = None
-    inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
-    sourceAcquisition: Literal['REST_FIRST', 'REST_ONLY', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
-    sourceVersion: RegistryLabel | None = None
-    _screen_contract: dict | None = PrivateAttr(default=None)
-
-    @model_validator(mode="after")
-    def validate_review(self):
-        if self.promptBundle is not None and self.promptBundle.releaseId != self.promptReleaseId:
-            raise ValueError("Prompt release pin does not match.")
-        if self.archive and (self.archive.tenantId != self.executionScope.tenantId
-                             or self.archive.workspaceId != self.executionScope.workspaceId):
-            raise ValueError("The selected archive belongs to a different execution scope.")
-        remote = urlsplit(self.sourceReference).scheme.lower() == 'https'
-        if self.sourceAcquisition in {'REST_FIRST', 'REST_ONLY'} and (self.kind != 'SCREEN'
-                or self.inputMode != 'SOURCE' or not remote):
-            raise ValueError('REST acquisition requires a Screen URL.')
-        if self.operation=='ANALYZE' and ((self.sourceAcquisition=='REST_FIRST' and self.engine!='NOVA')
-                or (self.sourceAcquisition=='REST_ONLY' and self.engine!='KIRO')):
-            raise ValueError('Select NOVA API-first analysis or Kiro API-only analysis.')
-        if self.sourceAcquisition == 'MCP_ONLY' and (self.kind != 'SCREEN' or (self.operation == 'ANALYZE' and self.engine != 'KIRO')
-                or self.inputMode != 'SOURCE' or not remote or self.archive
-                or not self.executionScope.actorUserId):
-            raise ValueError('MCP acquisition requires an actor-scoped Kiro Screen URL without an archive.')
-        if self.sourceAcquisition == 'LOCAL_FILE' and (not self.archive
-                or (remote and self.inputMode != 'MEASURED')):
-            raise ValueError('Local acquisition requires an explicitly selected archive.')
-        if self.inputMode == 'MEASURED':
-            if self.kind != 'SCREEN' or self.operation == 'ANALYZE' and self.engine != 'NOVA' or not self.archive or self.sourceVersion != 'local-' + self.archive.sha256:
-                raise ValueError('Measured input requires the exact registered Screen archive.')
-        elif self.sourceVersion is not None:
-            raise ValueError('Source version is only supplied for measured input.')
-        if self.operation == "GENERATE":
-            if self.analysisJobId is None or self.analysisJobId == self.jobId or not self.analysis:
-                raise ValueError("Generation requires a prior analysis checkpoint.")
-            if len(_encode_json(self.analysis)) > _CHECKPOINT_BYTES:
-                raise ValueError("Analysis checkpoint is too large.")
-            self._screen_contract = validate_screen_checkpoint(self,self.analysis)
-            if self.inputMode=='MEASURED' and self.engine!='NOVA' and self._screen_contract is None:
-                raise ValueError('Cross-engine measured generation requires a saved Screen contract.')
-        elif self.analysisJobId is not None or self.analysis is not None or self.workflowId is not None:
-            raise ValueError("Analysis starts without a prior checkpoint.")
-        return self
-
-
-class ExecutionArtifact(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-
-    name: Annotated[str, Field(min_length=1, max_length=240)]
-    mediaType: Literal["image/png", "application/zip", "application/octet-stream"]
-    base64: str
-
-
-class AnalysisView(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-    protocolVersion: Annotated[int, Field(ge=1, le=1, strict=True)]
-    manifestSha256: ManifestDigest
-
-
-class ExecutionResult(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-
-    status: Literal["REVIEW_REQUIRED", "COMPLETED"]
-    title: Annotated[str, Field(min_length=1, max_length=240)]
-    artifacts: Annotated[list[ExecutionArtifact], Field(max_length=512)]
-    summary: JsonObject | None = None
-    checkpoint: JsonObject | None = None
-    promptTraces: list[JsonObject] | None = None
-    analysisView: AnalysisView | None = None
-
-
-class IncompleteExecution(Exception):
-    """Unexpected runner response or process state."""
-
-
-def _encode_json(value: JsonValue) -> bytes:
-    return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
-
-
-def _unique_object(pairs: list[tuple[str, JsonValue]]) -> JsonObject:
-    value = {}
-    for key, member in pairs:
-        if key in value:
-            raise ValueError("Repeated JSON key.")
-        value[key] = member
-    return value
-
-
-def _reject_nonfinite(value: str):
-    raise ValueError("Non-finite JSON number.")
-
-
-def _decode_json(body: bytes | bytearray) -> JsonValue:
-    return json.loads(body.decode(), object_pairs_hook=_unique_object, parse_constant=_reject_nonfinite)
-
-
-def _authorize(request: Request) -> None:
-    token = os.environ.get("SFDC_AGENT_EXECUTION_TOKEN")
-    if not token or not token.strip():
-        raise HTTPException(503, "Managed execution is disabled.")
-    headers = request.headers.getlist("authorization")
-    scheme, _, provided = (headers[0] if len(headers) == 1 else "").partition(" ")
-    if scheme.lower() != "bearer" or not hmac.compare_digest(provided.encode("latin-1"), token.encode()):
-        raise HTTPException(401, "Service authentication required.", headers={"WWW-Authenticate": "Bearer"})
-    if 'origin' in request.headers or 'sec-fetch-site' in request.headers:
-        raise HTTPException(403, 'Service requests only.')
-
-
 async def _parse_request(request: Request, model=ExecutionRequest):
-    body = bytearray()
-    try:
-        async with asyncio.timeout(15):
-            async for chunk in request.stream():
-                if len(body) + len(chunk) > _REQUEST_BYTES:
-                    raise HTTPException(413, "Managed execution request is too large.")
-                body.extend(chunk)
-        return model.model_validate(_decode_json(body))
-    except (ValueError, RecursionError):
-        raise HTTPException(422, "Invalid managed execution request.") from None
-    except TimeoutError:
-        raise HTTPException(408, "Managed execution request timed out.") from None
-    except ClientDisconnect:
-        raise HTTPException(499, "Managed execution request disconnected.") from None
-
-
-def _runner_configuration() -> tuple[str, Path, int]:
-    binary = shutil.which(os.environ.get("SFDC_MANAGED_EXECUTION_NODE", "node"))
-    runner = Path(os.environ.get("SFDC_MANAGED_EXECUTION_RUNNER", engine_root() / "nextbss/server/managed-execution.mjs"))
-    try:
-        timeout = int(os.environ.get("SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS", "540"))
-        runner = runner.resolve(strict=True)
-        if not binary or not runner.is_file() or not 1 <= timeout <= 900:
-            raise ValueError
-    except (OSError, RuntimeError, ValueError):
-        raise HTTPException(503, "Managed execution runner is unavailable.") from None
-    return str(Path(binary).resolve()), runner, timeout
+    return await _parse_managed_request(request, model, max_bytes=_REQUEST_BYTES)
 
 
 def _execution_budget(payload: ExecutionRequest, physical: int) -> float:
@@ -295,105 +106,6 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
         raise HTTPException(503, 'RUNTIME_CAPABILITIES_UNAVAILABLE') from None
     if not supported:
         raise HTTPException(409, 'RELEASE_RUNTIME_INCOMPATIBLE')
-
-
-async def _write_input(process: asyncio.subprocess.Process, payload: bytes) -> None:
-    try:
-        process.stdin.write(payload)
-        await process.stdin.drain()
-    except (BrokenPipeError, ConnectionResetError):
-        pass
-    finally:
-        process.stdin.close()
-
-
-async def _read_output(stream: asyncio.StreamReader, limit: int = _OUTPUT_BYTES) -> bytes:
-    output = bytearray()
-    while chunk := await stream.read(_CHUNK_BYTES):
-        if len(output) + len(chunk) > limit:
-            raise IncompleteExecution
-        output.extend(chunk)
-    return bytes(output)
-
-
-async def _stop_process(process: asyncio.subprocess.Process) -> None:
-    try:
-        if os.name == "posix":
-            os.killpg(process.pid, signal.SIGKILL)
-        elif process.returncode is None:
-            process.kill()
-    except ProcessLookupError:
-        pass
-    # Drain the killed process's pipe in small chunks so the transport can reap it.
-    while await process.stdout.read(_CHUNK_BYTES):
-        pass
-    await process.wait()
-
-
-async def _finish_owned_cleanup(cleanup):
-    task = asyncio.create_task(cleanup)
-    while not task.done():
-        try:
-            await asyncio.shield(task)
-        except asyncio.CancelledError:
-            pass
-    return task.result()
-
-
-async def _cancel_request_tasks(tasks):
-    for task in tasks:
-        task.cancel()
-    if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
-
-
-async def _run_process(binary: str, runner: Path, scratch: str, timeout: int, payload: bytes,
-                       environment_overrides: dict[str, str] | None = None,
-                       output_limit: int = _OUTPUT_BYTES) -> bytes:
-    if type(output_limit) is not int or not 1 <= output_limit <= 68 * 1024 * 1024:
-        raise ValueError('Invalid managed output bound.')
-    environment = {key: os.environ[key] for key in _RUNNER_ENVIRONMENT if key in os.environ}
-    environment.update({"SFDC_EXECUTION_SCRATCH": scratch, "TMPDIR": scratch, "TEMP": scratch, "TMP": scratch})
-    environment.update(environment_overrides or {})
-    token = runner_token()
-    if token:
-        environment["SFDC_MANAGED_PROMPT_CONTEXT"] = token
-    opening = asyncio.create_task(asyncio.create_subprocess_exec(
-        binary, str(runner), cwd=scratch, env=environment, start_new_session=os.name == "posix",
-        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-    ))
-    try:
-        process = await asyncio.shield(opening)
-    except BaseException:
-        async def reap_opening():
-            try:
-                child = await opening
-                await _stop_process(child)
-            except (OSError, asyncio.CancelledError):
-                pass
-        await _finish_owned_cleanup(reap_opening())
-        raise
-    tasks = (asyncio.create_task(_write_input(process, payload)), asyncio.create_task(_read_output(process.stdout, output_limit)))
-    finished = False
-    try:
-        async with asyncio.timeout(timeout):
-            _, output = await asyncio.gather(*tasks)
-            exit_code = await process.wait()
-        if exit_code != 0:
-            diagnostic = decode_worker_failure(output)
-            if diagnostic is not None:
-                raise WorkerExecutionFailure(diagnostic)
-            raise IncompleteExecution
-        finished = True
-        return output
-    finally:
-        if not finished:
-            async def cleanup():
-                for task in tasks:
-                    task.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
-                await _stop_process(process)
-            await _finish_owned_cleanup(cleanup())
 
 
 def _parse_result(output: bytes, operation: str) -> ExecutionResult:
@@ -488,11 +200,6 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
     finally:
         if directory is not None and not keep:
             shutil.rmtree(directory, ignore_errors=True)
-
-
-async def _wait_for_disconnect(request: Request) -> None:
-    while (await request.receive())["type"] != "http.disconnect":
-        pass
 
 
 async def _discover_source(payload: SourceDiscoveryRequest):
