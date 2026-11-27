@@ -72,6 +72,21 @@ class DesignCoreTests(unittest.TestCase):
             self.verify(expected=DesignCore.model_validate(core), manifest_sha=sha256(manifest_raw).hexdigest())
         self.assertEqual(mismatch.exception.detail, "DESIGN_CORE_ARTIFACT_INVALID")
 
+    def test_nested_runtime_cannot_be_added_outside_the_committed_core_inputs(self):
+        path = "nextbss/server/conversion-quality/unreviewed-runtime.mjs"
+        raw = b'export default "unreviewed";\n'
+        target = self.fixture["directory"] / path
+        target.parent.mkdir(parents=True)
+        target.write_bytes(raw)
+        manifest_path = self.fixture["directory"] / "release.json"
+        manifest = json.loads(manifest_path.read_bytes())
+        manifest["files"].append({"path": path, "bytes": len(raw), "sha256": sha256(raw).hexdigest()})
+        manifest_raw = json.dumps(manifest).encode()
+        manifest_path.write_bytes(manifest_raw)
+        with self.assertRaises(HTTPException) as rejected:
+            self.verify(manifest_sha=sha256(manifest_raw).hexdigest())
+        self.assertEqual(rejected.exception.detail, "DESIGN_CORE_ARTIFACT_INVALID")
+
     def test_marker_and_core_file_symlinks_do_not_cross_the_artifact_boundary(self):
         path = self.fixture["directory"] / "nextbss/design-system/lwc/novaTokens/novaTokens.css"
         value = path.read_bytes()

@@ -98,6 +98,24 @@ class ManagedObjectStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((release / "release.json").stat().st_mode & 0o777, 0o600)
         self.assertFalse(any(key.startswith("AWS") or "TOKEN" in key for key in environment))
 
+    def test_larger_core_inventories_preserve_nested_runtime_files_without_losing_bounds(self):
+        body = b'export default "offline-fixture";\n'
+        entries = []
+        for index in range(1030):
+            path = f"nextbss/server/conversion-quality/runtime-{index}.mjs"
+            entries.append({"path": path, "bytes": len(body), "sha256": digest(body)})
+            self.client.objects[self.storage.object_key("releases", self.release + "/" + path)] = body
+        raw = encoded({"releaseId": self.release, "files": entries})
+        self.client.objects[self.storage.object_key("releases", self.release + "/release.json")] = raw
+        environment = self.storage.prepare(self.root, release_id=self.release, manifest_sha=digest(raw))
+        target = Path(environment["SFDC_MANAGED_RELEASE_ROOT"]) / self.release / entries[-1]["path"]
+        self.assertEqual(target.read_bytes(), body)
+        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        oversized = encoded({"releaseId": self.release, "files": [entries[0]] * 5001})
+        self.client.objects[self.storage.object_key("releases", self.release + "/release.json")] = oversized
+        with self.assertRaises(ValueError):
+            self.storage.prepare(self.root, release_id=self.release, manifest_sha=digest(oversized))
+
     def test_rejects_hash_mismatch_path_traversal_duplicate_entries_and_unknown_release_pin(self):
         with self.assertRaises(ValueError):
             self.storage.prepare(self.root, release_id=self.release, manifest_sha="0" * 64)

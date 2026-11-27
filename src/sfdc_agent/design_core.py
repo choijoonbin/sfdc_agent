@@ -151,6 +151,7 @@ def verify_selected_core(*, release_id: str, manifest_sha: str | None, release_r
             _reject("RELEASE_RUNTIME_INCOMPATIBLE")
         files = []
         known = set()
+        indexed = {}
         total = 0
         for entry in entries:
             if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
@@ -159,6 +160,7 @@ def verify_selected_core(*, release_id: str, manifest_sha: str | None, release_r
             if path.casefold() in known:
                 raise ValueError("Duplicate manifest path")
             known.add(path.casefold())
+            indexed[path] = entry
             if not path.startswith(LWC_PREFIX):
                 continue
             relative = path[len(LWC_PREFIX):]
@@ -183,13 +185,20 @@ def verify_selected_core(*, release_id: str, manifest_sha: str | None, release_r
                 raise ValueError("Deployable implementation differs from reviewed authored input")
         generated = {"nova-public-contract.json", "nova-module-manifest.json", "nova-source.json",
                      "core-source.json", "core-inputs.json", "design-release-validation.json"}
+        def archived_input(path):
+            return (path in {"package.json", "package-lock.json"} or path.startswith("nextbss/")) and not (
+                path.startswith("nextbss/design-system/") and path[len("nextbss/design-system/"):] in generated)
+        input_by_path = {item["path"]: item for item in source_files}
         for item in source_files:
             path = item["path"]
-            prefix = "nextbss/design-system/"
-            if path.startswith(prefix) and path[len(prefix):] not in generated:
+            if archived_input(path):
                 source = _read(directory / path, 32 * 1024 * 1024)
-                if len(source) != item["bytes"] or sha256(source).hexdigest() != item["sha256"]:
-                    raise ValueError("Archived standard differs from reviewed authored input")
+                declared = indexed.get(path)
+                if (len(source) != item["bytes"] or sha256(source).hexdigest() != item["sha256"] or declared is None
+                        or declared.get("bytes") != len(source) or declared.get("sha256") != item["sha256"]):
+                    raise ValueError("Archived runtime, package or standard differs from reviewed authored input")
+        if any(archived_input(path) and not path.startswith(LWC_PREFIX) and path not in input_by_path for path in indexed):
+            raise ValueError("Archived runtime, package or standard is absent from committed inputs")
         tree = sha256("".join(f"{path}\0{digest}\n" for path, digest in sorted(files)).encode()).hexdigest()
         if tree != core.artifactTreeSha256 or _read(manifest_path, 4 * 1024 * 1024) != raw:
             raise ValueError("Core artifact identity differs")

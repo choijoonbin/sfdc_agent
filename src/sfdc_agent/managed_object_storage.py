@@ -215,7 +215,7 @@ class ManagedObjectStorage:
             manifest_bytes = self.read("releases", release_id + "/release.json", _MANIFEST_BYTES, manifest_sha, deadline)
             manifest = _json(manifest_bytes)
             entries = manifest.get("files")
-            if manifest.get("releaseId") != release_id or not isinstance(entries, list) or not 1 <= len(entries) <= 1024:
+            if manifest.get("releaseId") != release_id or not isinstance(entries, list) or not 1 <= len(entries) <= 5000:
                 raise _invalid()
             root = scratch / "releases" / release_id
             total, known = 0, set()

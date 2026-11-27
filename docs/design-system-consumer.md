@@ -8,7 +8,11 @@ and derives an optional `designCore` request pin from the verified archive.
 For a core release, Agent requires the raw `designManifestSha256` pin, verifies
 the actual materialized `release.json`, marker entry, declared core inputs,
 final LWC hashes and `release.source` identity before invoking Node or any
-provider. If the request includes `designCore`, every field must match the
+provider. Archived package files and all `nextbss` runtime/standard inputs must
+match the committed input inventory in both directions, including nested
+conversion-quality modules. Generated core metadata and the separately checked
+virtual LWC output have explicit exceptions; extra runtime files are blocked.
+If the request includes `designCore`, every field must match the
 actual marker. The installed runtime must explicitly support the marker's
 `compatibility.engineContract` in `managed-runtime-capabilities.json`.
 
