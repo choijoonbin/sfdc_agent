@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_serializer, model_validator
 
 from .component_library import ComponentLibrary
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope
@@ -81,6 +81,13 @@ class ExecutionRequest(BaseModel):
     tableStateBindings: SourceTableStateBindings | None = None
     scopeReview: JsonObject | None = None
     _screen_contract: dict | None = PrivateAttr(default=None)
+
+    @model_serializer(mode="wrap")
+    def omit_absent_table_recipe(self, handler):
+        value = handler(self)
+        if self.tableStateBindings is None:
+            value.pop('tableStateBindings', None)
+        return value
 
     @model_validator(mode="before")
     @classmethod

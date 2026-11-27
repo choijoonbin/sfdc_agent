@@ -33,6 +33,15 @@ class SourceTableStateContractTests(unittest.TestCase):
         self.assertEqual(SourceTableStateBindings.model_validate(recipe).model_dump(exclude_none=True), recipe)
         SourceTableStateBindings.model_validate({'schemaVersion': 1, 'targets': [{'tableNodeId': 'a' * 160}]})
 
+    def test_default_serialization_round_trips_absent_options_without_inventing_explicit_null(self):
+        for recipe in [None, {'schemaVersion': 1, 'targets': [{'tableNodeId': '1:2'}]}, RECIPE]:
+            request = ExecutionRequest.model_validate({**BASE, **({'tableStateBindings': recipe} if recipe else {})})
+            wire = request.model_dump(mode='json')
+            self.assertEqual('tableStateBindings' in wire, recipe is not None)
+            if recipe is not None:
+                self.assertEqual(wire['tableStateBindings'], recipe)
+            self.assertEqual(ExecutionRequest.model_validate(wire), request)
+
     def test_unknown_fields_null_versions_and_invalid_identities_are_rejected(self):
         for recipe in [None, [], {}, {'schemaVersion': True, 'targets': [{'tableNodeId': '1:2'}]},
                        {'schemaVersion': 1.0, 'targets': [{'tableNodeId': '1:2'}]},

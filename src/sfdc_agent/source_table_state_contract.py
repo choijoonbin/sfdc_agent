@@ -3,7 +3,7 @@
 import re
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 NodeId = Annotated[str, Field(strict=True, min_length=1, max_length=160)]
 _INVALID = "SOURCE_TABLE_STATE_BINDING_INVALID"
@@ -13,6 +13,13 @@ class SourceTableTarget(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=False)
     tableNodeId: NodeId
     countNodeId: NodeId | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_count(self, handler):
+        value = handler(self)
+        if self.countNodeId is None:
+            value.pop('countNodeId', None)
+        return value
 
     @model_validator(mode="before")
     @classmethod
