@@ -60,3 +60,5 @@ curl -fsS http://127.0.0.1:8766/health
 Python 구현은 `src/sfdc_agent/`에 있습니다. Main은 Spring → `/internal/v1/executions` → Node runner 순서이며, Node는 필요한 단계에서 Agent의 실행별 Kiro 세션을 호출합니다. 로컬에서는 형제 `SFDC_Ui/nextbss` 엔진을 사용하고 서버는 그 엔진을 고정한 불변 runtime artifact를 사용합니다.
 
 불변 프롬프트·fixture·실행 정책 JSON·lockfile은 실행 및 회귀 계약입니다. `.pilot/`, `.prompt-management/`, `.figma-mcp/`와 비밀 설정은 Git 밖의 업무·인증 자료이므로 문서 정리 대상으로 삭제하지 않습니다. 프롬프트 authoring 계약은 [템플릿 안내](src/sfdc_agent/prompt_templates_v1/README.md), 고정 테스트 바이트는 [fixture 안내](tests/fixtures/immutable-nova-v1/README.md)를 따릅니다.
+
+Node Worker의 비정상 종료 로그에는 고정 허용 목록의 오류 코드(그 외 `UNKNOWN`)·종료 코드·stdout 바이트 수만 기록합니다. stderr 원문·모델 응답·자격 증명은 기록하지 않으며 성공 응답이나 실패 응답 계약은 바꾸지 않습니다.
