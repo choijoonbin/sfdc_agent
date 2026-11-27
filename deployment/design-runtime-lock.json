@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "https://github.com/choijoonbin/sfdc_ui.git",
+  "commit": "f8e65f22692917c14f16c34be559e9aef86e5ad3",
+  "engineContract": "nextbss-lwc-v1"
+}

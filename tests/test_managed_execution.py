@@ -10,6 +10,8 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
+from design_core_fixtures import write_core_release
+
 from sfdc_agent.api import app
 
 
@@ -67,6 +69,30 @@ process.stdout.write(JSON.stringify({ status: 'COMPLETED', title: '결과',
 
 
 class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_core_pin_is_checked_before_starting_a_provider_process(self):
+        fixture = write_core_release(Path(self.directory) / 'releases', Path(self.directory))
+        payload = {**GENERATION, 'designReleaseId': fixture['release_id'],
+                   'designManifestSha256': fixture['manifest_sha'],
+                   'designCore': {**fixture['core'], 'commit': 'f' * 40}}
+        with patch.dict(os.environ, {'SFDC_MANAGED_RELEASE_ROOT': str(fixture['release_root']),
+                                    'SFDC_MANAGED_ENGINE_ROOT': self.directory}), patch(
+                f'{RUNNER_MODULE}._run_process', new_callable=AsyncMock) as worker:
+            status, reply, _ = await self.request(payload)
+        self.assertEqual(status, 409)
+        self.assertEqual(reply['detail'], 'DESIGN_CORE_PIN_MISMATCH')
+        worker.assert_not_awaited()
+
+    async def test_selected_core_provenance_is_preserved_on_actual_worker_results(self):
+        fixture = write_core_release(Path(self.directory) / 'releases', Path(self.directory))
+        payload = {**GENERATION, 'designReleaseId': fixture['release_id'],
+                   'designManifestSha256': fixture['manifest_sha'], 'designCore': fixture['core']}
+        self.write_runner(GENERATION_SCRIPT)
+        with patch.dict(os.environ, {'SFDC_MANAGED_RELEASE_ROOT': str(fixture['release_root']),
+                                    'SFDC_MANAGED_ENGINE_ROOT': self.directory}):
+            status, reply, _ = await self.request(payload)
+        self.assertEqual(status, 200)
+        self.assertEqual(reply['summary']['designCore'], fixture['core'])
+
     async def request(self, payload=None, *, authorization=f"Bearer {TOKEN}", raw=None, disconnect=None, path=PATH, fresh=True, extra_headers=()):
         headers = [(b"host", b"127.0.0.1:18765"), (b"content-type", b"application/json")]
         if authorization is not None:

@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import engine_root
+from .design_core import DesignCore, verify_selected_core
 from .managed_execution_progress import ExecutionScope
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .managed_object_storage import ManagedObjectStorage, storage_io
@@ -50,6 +51,7 @@ class DesignBuild(BaseModel):
     baseManifestSha256: Digest
     designVersion: Annotated[str, Field(pattern=r"^\d+\.\d+(?:\.\d+)?$")]
     sources: DesignSources
+    designCore: DesignCore | None = None
     executionScope: ExecutionScope | None = None
 
     @model_validator(mode="after")
@@ -139,6 +141,9 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
             if storage:
                 overrides.update(await storage_io(storage.prepare, scratch, release_id=payload.baseReleaseId,
                     manifest_sha=payload.baseManifestSha256, design_sources=True, deadline=deadline))
+            verify_selected_core(release_id=payload.baseReleaseId, manifest_sha=payload.baseManifestSha256,
+                release_root=overrides.get('SFDC_MANAGED_RELEASE_ROOT') or os.environ.get('SFDC_MANAGED_RELEASE_ROOT'),
+                runtime_root=engine_root(), expected=payload.designCore)
             # This operation reads normal REST source metadata only. It must
             # never inherit a Plan/MCP identity or another workspace's token.
             if remote:

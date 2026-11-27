@@ -18,6 +18,7 @@ from .managed_prompts import execution_prompts, runner_token
 from .managed_execution_progress import execution_mode, execution_progress
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
+from .design_core import preserve_core_summary, verify_selected_core
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
 from .managed_object_storage import ManagedObjectStorage, storage_io
@@ -165,6 +166,10 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                         environment.update(await storage_io(storage.prepare, scratch, archive=None if saved_source else payload.archive,
                             release_id=payload.designReleaseId, manifest_sha=payload.designManifestSha256,
                             deadline=payload.deadlineEpochSeconds))
+                    core = verify_selected_core(release_id=payload.designReleaseId,
+                        manifest_sha=payload.designManifestSha256,
+                        release_root=environment.get('SFDC_MANAGED_RELEASE_ROOT') or os.environ.get('SFDC_MANAGED_RELEASE_ROOT'),
+                        runtime_root=engine_root(), expected=payload.designCore)
                     if payload.engine == 'KIRO':
                         environment['SFDC_MANAGED_KIRO_MODE'] = context.mode
                     if payload.operation == 'ANALYZE':
@@ -177,6 +182,7 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                         environment['SFDC_ANALYSIS_OUTPUT'] = str(directory)
                     output = await _run_process(binary, runner, scratch, timeout, encoded, environment)
                     result = _parse_result(output, payload.operation)
+                    result = preserve_core_summary(result, core)
                     if directory:
                         verify_analysis_output(directory, payload, result, engine_root().resolve(strict=True))
                         if storage:

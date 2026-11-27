@@ -4,10 +4,10 @@ The Agent's complete unit gate includes the real Node projection/exporter shared
 
 CI checks out `choijoonbin/sfdc_ui` as the sibling `SFDC_Ui`, installs its locked npm dependencies, and uses Node 26.13.0. Configure:
 
-- Repository variable `SFDC_UI_RUNTIME_REF`: the approved, immutable 40-character UI commit SHA.
-- Secret `SFDC_RUNTIME_READ_TOKEN`: a token restricted to read-only contents access to that private UI repository. Do not use a broad operator token.
+- Repository variable `SFDC_UI_RUNTIME_REF`: the approved, immutable 40-character UI commit SHA for existing development branches. The `design` branch defaults to the reviewed `deployment/design-runtime-lock.json` commit.
+- Secret `SFDC_RUNTIME_READ_SSH_KEY`: a read-only deploy key scoped to that private UI repository.
 
-A manual workflow may supply `ui_runtime_ref` with another exact approved commit. There is no branch/latest fallback. CI configuration is separate from local test evidence; no successful GitHub run is claimed until these dependencies are configured and the workflow actually completes.
+A manual workflow may supply `ui_runtime_ref` with another exact approved commit. There is no branch/latest fallback. New core jobs also require the explicit installed engine and archive checks described in [the design-system consumer contract](../docs/design-system-consumer.md). CI configuration is separate from local test evidence; no successful GitHub run is claimed until these dependencies are configured and the workflow actually completes.
 
 Local matching layout:
 

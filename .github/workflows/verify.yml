@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       ui_runtime_ref:
-        description: Exact approved UI runtime commit SHA (defaults to SFDC_UI_RUNTIME_REF)
+        description: Exact approved UI runtime commit SHA (design defaults to reviewed runtime lock)
         required: false
         type: string
   pull_request:
-    branches: [dev, dev_fe]
+    branches: [dev, dev_fe, design]
   push:
-    branches: [dev]
+    branches: [dev, design]
 
 permissions:
   contents: read
@@ -32,21 +32,31 @@ jobs:
           path: SFDC_Agent
           persist-credentials: false
       - name: Require the approved private runtime dependency
+        id: runtime
         env:
           RUNTIME_REF: ${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
+          REQUESTED_RUNTIME_REF: ${{ inputs.ui_runtime_ref }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           RUNTIME_SSH_KEY: ${{ secrets.SFDC_RUNTIME_READ_SSH_KEY }}
         run: |
           python3 - <<'PY'
-          import os,re
-          if not re.fullmatch(r'[a-f0-9]{40}', os.environ.get('RUNTIME_REF', '')):
+          import json,os,re
+          ref=os.environ.get('RUNTIME_REF','')
+          if os.environ.get('BRANCH_NAME')=='design' and not os.environ.get('REQUESTED_RUNTIME_REF'):
+              pin=json.load(open('deployment/design-runtime-lock.json'))
+              if pin.get('schemaVersion')!=1 or pin.get('sourceRepository')!='https://github.com/choijoonbin/sfdc_ui.git' or pin.get('engineContract')!='nextbss-lwc-v1':
+                  raise SystemExit('The design runtime dependency lock is invalid.')
+              ref=pin.get('commit','')
+          if not re.fullmatch(r'[a-f0-9]{40}', ref):
               raise SystemExit('Set SFDC_UI_RUNTIME_REF to the approved immutable UI commit SHA; branch fallback is forbidden.')
           if not os.environ.get('RUNTIME_SSH_KEY'):
               raise SystemExit('Configure SFDC_RUNTIME_READ_SSH_KEY with a read-only SSH deploy key for the private sfdc_ui runtime repository.')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as stream: stream.write('ref='+ref+'\n')
           PY
       - uses: actions/checkout@v6
         with:
           repository: choijoonbin/sfdc_ui
-          ref: ${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
+          ref: ${{ steps.runtime.outputs.ref }}
           ssh-key: ${{ secrets.SFDC_RUNTIME_READ_SSH_KEY }}
           path: SFDC_Ui
           persist-credentials: false
@@ -66,7 +76,7 @@ jobs:
       - name: Verify complete Agent and matched Node contracts without skipped tests
         env:
           PYTHONPATH: src
-          RUNTIME_REF: ${{ inputs.ui_runtime_ref || vars.SFDC_UI_RUNTIME_REF }}
+          RUNTIME_REF: ${{ steps.runtime.outputs.ref }}
         run: python scripts/verify-unit-contracts.py --ui-root ../SFDC_Ui --expected-ui-ref "$RUNTIME_REF" --report unit-contract-proof.json
       - uses: actions/upload-artifact@v6
         if: always()

@@ -39,6 +39,7 @@ curl -fsS http://127.0.0.1:8766/health
 | 사용자별 Figma MCP 최초 승인·갱신·철회 | [MCP 연결](docs/figma-mcp-setup.md) |
 | 서버 이미지·고정 런타임·도구·비밀 주입·배포 인수 | [배포 안내](deployment/README.md) |
 | CI의 불변 UI 런타임 입력 | [CI 런타임 계약](.github/RUNTIME_CONTRACTS.md) |
+| 공통 디자인 시스템 릴리스·런타임 검증 | [디자인 시스템 소비 계약](docs/design-system-consumer.md) |
 
 서버 이미지 진입점은 `python -m sfdc_agent.server_runtime --contract /etc/sfdc/agent-server-contract.json`입니다. 서버 MCP는 별도 OAuth 구현과 검증 전까지 `NOT_READY`로 차단됩니다. 로컬 승인이 서버 배포 준비를 의미하지 않습니다.
 
@@ -53,5 +54,7 @@ curl -fsS http://127.0.0.1:8766/health
 | 프롬프트·공급자·독립 CLI | `managed_prompts.py`, `screen_tasks.py`, `story_tasks.py`, `providers.py`, `azure_provider.py`, `prompt_registry.py`, `cli.py`, `pilot.py` |
 
 Python 구현은 `src/sfdc_agent/`에 있습니다. Main은 Spring → `/internal/v1/executions` → Node runner 순서이며, Node는 필요한 단계에서 Agent의 실행별 Kiro 세션을 호출합니다. 로컬에서는 형제 `SFDC_Ui/nextbss` 엔진을 사용하고 서버는 그 엔진을 고정한 불변 runtime artifact를 사용합니다.
+
+새 디자인 시스템 core 릴리스는 실행 전에 실제 아카이브의 marker·manifest·LWC tree와 엔진 계약을 검증합니다. 이 경로에는 명시적으로 설치한 `SFDC_MANAGED_ENGINE_ROOT`가 필요하며, 작업 결과의 `summary.designCore`에 검증한 동일 출처를 보존합니다.
 
 불변 프롬프트·fixture·실행 정책 JSON·lockfile은 실행 및 회귀 계약입니다. `.pilot/`, `.prompt-management/`, `.figma-mcp/`와 비밀 설정은 Git 밖의 업무·인증 자료이므로 문서 정리 대상으로 삭제하지 않습니다. 프롬프트 authoring 계약은 [템플릿 안내](src/sfdc_agent/prompt_templates_v1/README.md), 고정 테스트 바이트는 [fixture 안내](tests/fixtures/immutable-nova-v1/README.md)를 따릅니다.

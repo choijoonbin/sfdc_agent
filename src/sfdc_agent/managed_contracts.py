@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_validator
 
 from .component_library import ComponentLibrary
+from .design_core import DesignCore
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope
 from .managed_prompts import PromptBundle
 from .prompt_release_id import PromptReleaseId
@@ -64,6 +65,7 @@ class ExecutionRequest(BaseModel):
     promptReleaseId: PromptReleaseId
     promptBundle: PromptBundle | None = None
     designManifestSha256: ManifestDigest | None = None
+    designCore: DesignCore | None = None
     componentLibrary: ComponentLibrary | None = None
     promptReleaseVersion: RegistryLabel | None = None
     analysisJobId: UUID | None = None
@@ -77,6 +79,8 @@ class ExecutionRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_review(self):
+        if self.designCore is not None and self.designManifestSha256 is None:
+            raise ValueError("A design core requires its immutable manifest pin.")
         if self.promptBundle is not None and self.promptBundle.releaseId != self.promptReleaseId:
             raise ValueError("Prompt release pin does not match.")
         if self.archive and (self.archive.tenantId != self.executionScope.tenantId
