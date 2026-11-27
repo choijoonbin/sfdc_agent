@@ -197,17 +197,35 @@ class ManagedObjectStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(observed[0].exists())
 
     async def test_design_build_uses_s3_inputs_and_publishes_output_manifest_before_workspace_cleanup(self):
+        await self.assert_design_build_storage({})
+
+    async def test_nova_design_build_keeps_operator_git_root_separate_from_s3_inputs(self):
+        await self.assert_design_build_storage({"nova": {"commit": "1" * 40, "treeSha256": "2" * 64}})
+
+    async def assert_design_build_storage(self, sources):
         from sfdc_agent.managed_design import DesignBuild, run_build
-        self.design_index()
+        if not sources:
+            self.design_index()
+        nova_root = self.root / "operator-nova"
+        nova_root.mkdir()
         runner = self.root / "nextbss/server/managed-design-release.mjs"
         runner.parent.mkdir(parents=True)
         runner.write_text("// synthetic runner")
         payload = DesignBuild.model_validate({"buildId": uuid4(), "baseReleaseId": self.release,
-            "baseManifestSha256": digest(self.release_manifest), "designVersion": "1.9", "sources": {}})
+            "baseManifestSha256": digest(self.release_manifest), "designVersion": "1.9", "sources": sources})
         observed = []
         async def process(binary, runner, scratch, timeout, request, environment):
-            self.assertTrue(Path(environment["SFDC_MANAGED_DESIGN_SOURCES"]).is_file())
+            if sources:
+                self.assertNotIn("SFDC_MANAGED_DESIGN_SOURCES", environment)
+            else:
+                self.assertTrue(Path(environment["SFDC_MANAGED_DESIGN_SOURCES"]).is_file())
             self.assertTrue((Path(environment["SFDC_MANAGED_RELEASE_ROOT"]) / self.release / "release.json").is_file())
+            if sources:
+                self.assertEqual(environment["SFDC_NOVA_PROJECT_ROOT"], str(nova_root))
+                self.assertEqual(json.loads(request)["sources"], sources)
+            else:
+                self.assertNotIn("SFDC_NOVA_PROJECT_ROOT", environment)
+            self.assertFalse(any(key.startswith("FIGMA_") for key in environment))
             directory = Path(environment["SFDC_DESIGN_BUILD_OUTPUT"])
             value = b'{"synthetic":"verified-build-file"}'
             (directory / "catalog.json").write_bytes(value)
@@ -218,7 +236,8 @@ class ManagedObjectStorageTests(unittest.IsolatedAsyncioTestCase):
             return encoded({"status": "VALIDATED", "buildId": str(payload.buildId), "releaseId": self.release,
                 "manifestSha256": digest(self.release_manifest), "outputManifestSha256": digest(manifest),
                 "checks": [{"label": "synthetic validation", "status": "passed"}], "compatible": True, "reproduced": True})
-        with patch("sfdc_agent.managed_design.ManagedObjectStorage.configured", return_value=self.storage), \
+        with patch.dict(os.environ, {"SFDC_NOVA_PROJECT_ROOT": str(nova_root)}), \
+                patch("sfdc_agent.managed_design.ManagedObjectStorage.configured", return_value=self.storage), \
                 patch("sfdc_agent.managed_design.engine_root", return_value=self.root), \
                 patch("sfdc_agent.managed_design._runner_configuration", return_value=("node", runner, 900)), \
                 patch("sfdc_agent.managed_design._run_process", process):

@@ -93,6 +93,68 @@ class ManagedDesignTests(unittest.IsolatedAsyncioTestCase):
                 "executionScope": {"tenantId": "aa000000-0000-4000-8000-000000000001",
                                    "workspaceId": "ad000000-0000-4000-8000-000000000001"}}
 
+    def nova_payload(self):
+        return {**self.payload.model_dump(mode="json", exclude_none=True),
+                "sources": {"nova": {"commit": "1" * 40, "treeSha256": "2" * 64}}}
+
+    def test_nova_source_accepts_only_an_exact_immutable_git_tuple(self):
+        payload = self.nova_payload()
+        self.assertIsNone(DesignBuild.model_validate(payload).executionScope)
+        for commit in ("3" * 40, "4" * 64):
+            with self.subTest(valid_commit=commit):
+                DesignBuild.model_validate({**payload, "sources": {"nova": {
+                    "commit": commit, "treeSha256": "5" * 64}}})
+        invalid_sources = [
+            {"nova": {"commit": "main", "treeSha256": "2" * 64}},
+            {"nova": {"commit": "A" * 40, "treeSha256": "2" * 64}},
+            {"nova": {"commit": "1" * 41, "treeSha256": "2" * 64}},
+            {"nova": {"commit": "1" * 40, "treeSha256": "2" * 63}},
+            {"nova": {"commit": "1" * 40}},
+            {"nova": {**payload["sources"]["nova"], "path": "/caller/path"}},
+            {"nova": {**payload["sources"]["nova"], "url": "https://example.invalid/repository"}},
+            {**payload["sources"], "guide": {"fileKey": "Other", "revision": "Saved"}},
+            {**payload["sources"], "library": {"fileKey": "Other", "revision": "Saved"}},
+        ]
+        for sources in invalid_sources:
+            with self.subTest(sources=sources), self.assertRaises(ValidationError):
+                DesignBuild.model_validate({**payload, "sources": sources})
+
+    async def test_nova_build_uses_only_operator_root_without_figma_credentials_or_scope(self):
+        root = (self.directory / "nova-source").resolve()
+        root.mkdir()
+        with patch.dict(os.environ, {"SFDC_NOVA_PROJECT_ROOT": str(root),
+                                    "SFDC_MANAGED_DESIGN_SOURCES": "/not/allocated/design-sources.json",
+                                    "SFDC_MANAGED_FIGMA_SCOPE": "invalid",
+                                    "FIGMA_ACCESS_TOKEN": "access-fixture", "FIGMA_PLAN_ACCESS_TOKEN": "plan-fixture"}), \
+                patch("sfdc_agent.managed_design.remote_figma_environment") as credentials, \
+                patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response())) as process:
+            await run_build(DesignBuild.model_validate(self.nova_payload()))
+        credentials.assert_not_called()
+        environment = process.call_args.args[-1]
+        self.assertEqual(environment["SFDC_NOVA_PROJECT_ROOT"], str(root))
+        self.assertNotIn("SFDC_MANAGED_DESIGN_SOURCES", environment)
+        self.assertFalse(any(key.startswith("FIGMA_") for key in environment))
+        request = json.loads(process.call_args.args[-2])
+        self.assertEqual(request["sources"], self.nova_payload()["sources"])
+        self.assertNotIn("SFDC_NOVA_PROJECT_ROOT", request)
+
+    async def test_unavailable_nova_operator_root_fails_before_reservation_or_child(self):
+        file = self.directory / "file"
+        file.write_text("not a Git directory")
+        alias = self.directory / "alias"
+        alias.symlink_to(self.directory, target_is_directory=True)
+        for configured in ("", "relative/path", str(self.directory / "missing"), str(file), str(alias)):
+            with self.subTest(configured=configured), \
+                    patch.dict(os.environ, {"SFDC_NOVA_PROJECT_ROOT": configured}), \
+                    patch("sfdc_agent.managed_design._run_process", new=AsyncMock()) as process:
+                with self.assertRaises(HTTPException) as unavailable:
+                    await run_build(DesignBuild.model_validate(self.nova_payload()))
+                self.assertEqual(unavailable.exception.status_code, 503)
+                self.assertEqual(unavailable.exception.detail,
+                                 "The operator-managed NOVA Git source root is unavailable.")
+                process.assert_not_called()
+                self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+
     async def test_remote_build_requires_scope_before_creating_output_or_child(self):
         remote = self.remote_payload()
         with self.assertRaises(ValidationError):
@@ -120,10 +182,11 @@ class ManagedDesignTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_offline_rebuild_does_not_receive_any_global_figma_credentials(self):
         with patch.dict(os.environ, {"SFDC_MANAGED_FIGMA_SCOPE": "invalid", "FIGMA_ACCESS_TOKEN": "access-fixture",
-                                    "FIGMA_PLAN_ACCESS_TOKEN": "plan-fixture"}), \
+                                    "FIGMA_PLAN_ACCESS_TOKEN": "plan-fixture", "SFDC_NOVA_PROJECT_ROOT": "/not/allocated"}), \
                 patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response())) as process:
             await run_build(self.payload)
         self.assertFalse(any(key.startswith("FIGMA_") for key in process.call_args.args[-1]))
+        self.assertNotIn("SFDC_NOVA_PROJECT_ROOT", process.call_args.args[-1])
 
     async def test_scope_revocation_discards_completed_remote_output(self):
         remote = self.remote_payload()

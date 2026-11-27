@@ -44,6 +44,8 @@ curl -fsS http://127.0.0.1:8766/health
 
 서버 이미지 진입점은 `python -m sfdc_agent.server_runtime --contract /etc/sfdc/agent-server-contract.json`입니다. 서버 MCP는 별도 OAuth 구현과 검증 전까지 `NOT_READY`로 차단됩니다. 로컬 승인이 서버 배포 준비를 의미하지 않습니다.
 
+공통 NOVA Git 소스를 디자인 릴리스 후보로 빌드하려면 운영자가 Agent 환경의 `SFDC_NOVA_PROJECT_ROOT`에 Git 저장소의 실제 절대 경로를 지정합니다. Spring의 후보 입력은 `sources.nova = {"commit":"<40 또는 64자리 소문자 Git SHA>","treeSha256":"<64자리 SHA-256>"}`로 고정하며 경로·URL·브랜치·태그는 받지 않습니다. 이 후보는 Figma `guide/library` 변경과 분리하며 Figma 인증이나 원본 `.fig` 다운로드를 사용하지 않습니다. 기준 불변 릴리스는 계속 검증해 읽습니다. 로컬·객체 저장소 환경 모두 운영자 Git 경로가 없거나 유효하지 않으면 빌드를 차단합니다. 검증·별도 승인·발행·활성화 권한과 절차는 Spring이 관리합니다.
+
 ## 코드 진입점
 
 | 책임 | 파일 |

@@ -38,10 +38,23 @@ class DesignSource(BaseModel):
     nodeId: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
 
 
+class NovaSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    commit: Annotated[str, Field(pattern=r"^[a-f0-9]{40}(?:[a-f0-9]{24})?$")]
+    treeSha256: Digest
+
+
 class DesignSources(BaseModel):
     model_config = ConfigDict(extra="forbid")
     guide: DesignSource | None = None
     library: DesignSource | None = None
+    nova: NovaSource | None = None
+
+    @model_validator(mode="after")
+    def separate_nova_from_figma(self):
+        if self.nova is not None and (self.guide is not None or self.library is not None):
+            raise ValueError("NOVA Git and Figma source changes require separate candidates.")
+        return self
 
 
 class DesignBuild(BaseModel):
@@ -117,9 +130,25 @@ def check_output_directory(directory: Path) -> None:
             raise IncompleteExecution
 
 
+def nova_source_root() -> str:
+    """Resolve only the server operator's Git root, never a request-supplied path."""
+    configured = os.environ.get("SFDC_NOVA_PROJECT_ROOT", "")
+    try:
+        root = Path(configured)
+        if not configured or not root.is_absolute() or not stat.S_ISDIR(root.lstat().st_mode):
+            raise ValueError()
+        resolved = root.resolve(strict=True)
+        if root != resolved:
+            raise ValueError()
+        return str(resolved)
+    except (OSError, ValueError):
+        raise HTTPException(503, "The operator-managed NOVA Git source root is unavailable.") from None
+
+
 async def run_build(payload: DesignBuild) -> DesignBuildResult:
     remote = bool(payload.sources.guide or payload.sources.library)
     provider = remote_figma_environment(payload.executionScope, **figma_arguments(payload, "DESIGN_BUILD")) if remote else {}
+    nova_root = nova_source_root() if payload.sources.nova is not None else None
     binary, _, _ = _runner_configuration()
     runner = engine_root() / "nextbss/server/managed-design-release.mjs"
     if not runner.is_file():
@@ -140,13 +169,15 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
             deadline = time() + 900
             if storage:
                 overrides.update(await storage_io(storage.prepare, scratch, release_id=payload.baseReleaseId,
-                    manifest_sha=payload.baseManifestSha256, design_sources=True, deadline=deadline))
+                    manifest_sha=payload.baseManifestSha256, design_sources=nova_root is None, deadline=deadline))
+            if nova_root is not None:
+                overrides["SFDC_NOVA_PROJECT_ROOT"] = nova_root
             # This operation reads normal REST source metadata only. It must
             # never inherit a Plan/MCP identity or another workspace's token.
             if remote:
                 overrides["FIGMA_ACCESS_TOKEN"] = provider["FIGMA_ACCESS_TOKEN"]
             sources = os.environ.get("SFDC_MANAGED_DESIGN_SOURCES")
-            if sources and not storage:
+            if sources and not storage and nova_root is None:
                 overrides["SFDC_MANAGED_DESIGN_SOURCES"] = sources
             remaining = deadline - time() if storage else 900
             if remaining <= 0:
