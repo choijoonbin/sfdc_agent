@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedOn": "2026-11-26",
-  "status": "ACTUAL_MAIN_FLOW_VERIFIED_WITH_QUALITY_AND_AUTH_LIMITS",
+  "updatedOn": "2026-11-27",
+  "status": "COMMON_FIDELITY_IMPROVED_WITH_REMAINING_TEXT_GEOMETRY",
   "scope": "Screen conversion accuracy, source equivalence and measured performance",
   "implementationRules": [
     "Generic source/public-API rules only; no screen-ID or title branches",
@@ -121,7 +121,8 @@
         "Real transforms and unsupported appearance",
         "Populated table and business contract validation"
       ],
-      "devDependency": false
+      "devDependency": false,
+      "latestFollowup": "2026-11-27: source-owned Divider and actual Breadcrumb ownership verified; HUG text allocation remains unresolved."
     },
     {
       "id": "P4_IMAGE_INPUT_REPAIR",
@@ -143,9 +144,13 @@
     {
       "rank": 1,
       "id": "COMMON_KIRO_HOST_GEOMETRY",
-      "task": "확정된 source-host 소유·가시성·너비의 공통 원인을 근거와 공개 API에 맞춰 보완",
-      "completionGate": "관측되지 않은 marker와 실제 화면 누락을 구분한다. 합성 회귀와 같은 리비전 PNG로 검증하며 범위·임계값을 줄이거나 화면 ID를 분기하지 않는다.",
-      "devDependency": false
+      "task": "HUG 텍스트의 원본 할당폭과 브라우저 glyph advance 차이를 source-layout/반응형 실행의 경계를 나눠 검증",
+      "completionGate": "width 2건·x 1건과 미지원 변형 2건을 유지한다. 원본에 없는 고정폭·폰트 축소를 넣지 않고, 명시적 source-mode와 정적 literal 근거가 확보될 때 형제 좌표·픽셀·동적 값 확장을 함께 검증한다.",
+      "devDependency": false,
+      "completedSubtasks": [
+        "공개 Divider 외부 간격의 중복 적용 수정",
+        "Breadcrumb 실제 내부 요소 연결 6건 검증"
+      ]
     },
     {
       "rank": 2,
@@ -183,17 +188,23 @@
     "Unshown options/dependencies where not authored"
   ],
   "frozenCandidate": {
-    "generatorSourceSha256": "1e3d183070a8bfba4b75acb6aa2984d5851c1479fdd0c339d673cab6804bda9f",
-    "managedRuntimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
+    "generatorSourceSha256": "1465c252d278d6ac29fa1c2f50a7a868bc563bb4a4983af612838f0b836d4f77",
+    "managedRuntimeSha256": "3bc939f8b5e3f5ea7fe3901ebda310ad7776257e30b72a680195a93cac617e44",
+    "observedInstalledRuntimeSha256": "365e6f6001105b983f8c6bdddbbea7529c13d558cb0ea3a7fb2b858de4e10e7b",
     "packageLockSha256": "1fa32459e1540b0082339e4e3e9556bd9db05ea98c9f684987b52d27e7acde50"
   },
   "runtimeInstalled": {
     "status": "passed",
-    "runtimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
-    "generatorSourceSha256": "1e3d183070a8bfba4b75acb6aa2984d5851c1479fdd0c339d673cab6804bda9f",
-    "productionFileCount": 310,
-    "sourceMatchesFinalFocusedTestedRuntime": true,
-    "actualMainModelFlowBaselineRuntimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4"
+    "runtimeSha256": "365e6f6001105b983f8c6bdddbbea7529c13d558cb0ea3a7fb2b858de4e10e7b",
+    "generatorSourceSha256": "1465c252d278d6ac29fa1c2f50a7a868bc563bb4a4983af612838f0b836d4f77",
+    "productionFileCount": 313,
+    "testedExecutableAndPolicyBytesMatch": true,
+    "frozenPublicationPackageSha256": "3bc939f8b5e3f5ea7fe3901ebda310ad7776257e30b72a680195a93cac617e44",
+    "nonExecutableMetadataOnlyDelta": [
+      "nextbss/design-system/lwc/jsconfig.json"
+    ],
+    "mainHealth": "PASS",
+    "protectedFilesUnchanged": true
   },
   "cleanup": {
     "archived": true,
@@ -339,6 +350,12 @@
       "id": "FREEZE_AND_MINIMAL_PRODUCT_PATH_VALIDATION",
       "status": "ACTUAL_MAIN_AUTHENTICATED_PATH_VERIFIED",
       "result": "NOVA analysis -> explicit review -> Kiro generation -> server storage -> UI/reload. Source/release/prompt pins unchanged. Source-impact consumer incompatibility and fractional canvas identity contract repaired; provenance badge uses actual stored methods."
+    },
+    {
+      "id": "SOURCE_OWNED_DIVIDER_AND_BREADCRUMB",
+      "status": "COMMON_FIXES_AND_ACTUAL_OUTPUT_REPLAY_VERIFIED",
+      "evidence": "docs/validation/2026-11-27-common-geometry-publication.json",
+      "result": "Same source/revision/1x PNG: changed pixels8909->7549 (1.257818%->1.065806%); actual source-host observations39/39, missing6->0; native7/7. Width2/x1 and unsupported2 remain. No new LLM or Org call."
     }
   ],
   "latestImplementation": {
@@ -378,5 +395,47 @@
     "officialPrivateChangedPercent": 1.2578,
     "finalInstalledRuntimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
     "postVisibilityModelRerunPerformed": false
+  },
+  "latestGeometryFollowup": {
+    "evidence": "docs/validation/2026-11-27-common-geometry-publication.json",
+    "sourceEvidence": "https://github.com/choijoonbin/sfdc_ui/blob/4ef0d8222c152b7a7bc5eb6938b786152f1602c4/docs/validation/2026-11-27-common-geometry-ownership.json",
+    "publicationCommit": "4ef0d8222c152b7a7bc5eb6938b786152f1602c4",
+    "pixels": {
+      "method": "Existing actual Kiro output replay through shared deterministic postprocessing and official LWC compilation; no fresh LLM call.",
+      "originalRevision": "2425957427219410685",
+      "officialOneTimesPngSha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+      "originalAndCheckpointUnchanged": true,
+      "changedPixelsBefore": 8909,
+      "changedPixelsAfter": 7549,
+      "totalPixels": 708290,
+      "changedPercentBefore": 1.257818,
+      "changedPercentAfter": 1.065806,
+      "changedPixelReductionPercent": 15.265462,
+      "sourceTargets": 39,
+      "unobservedBefore": 6,
+      "unobservedAfter": 0,
+      "mismatchedTargetsAfter": 2,
+      "unsupportedTargets": 2,
+      "nativeMatched": 7,
+      "nativeExpected": 7,
+      "sameImageAfterReadOnlyOwnershipProbe": true,
+      "overallVerdict": "failed",
+      "orgApplyOrDeployCertified": false
+    },
+    "modelCalls": 0,
+    "ownedTestDataCleaned": true
+  },
+  "previousGeometryRuntimeInstalled": {
+    "status": "passed",
+    "runtimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
+    "generatorSourceSha256": "1e3d183070a8bfba4b75acb6aa2984d5851c1479fdd0c339d673cab6804bda9f",
+    "productionFileCount": 310,
+    "sourceMatchesFinalFocusedTestedRuntime": true,
+    "actualMainModelFlowBaselineRuntimeSha256": "e3f269c0c2ca365c3c67ae9f5e69377486261b252ac944b0c6af4a94d29688b4"
+  },
+  "previousGeometryFrozenCandidate": {
+    "generatorSourceSha256": "1e3d183070a8bfba4b75acb6aa2984d5851c1479fdd0c339d673cab6804bda9f",
+    "managedRuntimeSha256": "7152ccc52ba74e4ce68921019f243c7422fa9afab1d5412c7267c28e018310eb",
+    "packageLockSha256": "1fa32459e1540b0082339e4e3e9556bd9db05ea98c9f684987b52d27e7acde50"
   }
 }

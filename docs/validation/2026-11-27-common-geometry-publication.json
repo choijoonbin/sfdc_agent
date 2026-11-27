@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-27",
+  "status": "IMPLEMENTED_VERIFIED_PUBLISHED_AND_OWNED_TEST_DATA_CLEANED",
+  "sourceRepository": "sfdc_ui",
+  "sourceCommit": "8469cb901f1958e9ea0d1be48b7c2e93025e91ff",
+  "publicationCommit": "4ef0d8222c152b7a7bc5eb6938b786152f1602c4",
+  "implementationEvidence": "https://github.com/choijoonbin/sfdc_ui/blob/4ef0d8222c152b7a7bc5eb6938b786152f1602c4/docs/validation/2026-11-27-common-geometry-ownership.json",
+  "scope": "Common source-owned Divider geometry and read-only public Breadcrumb ownership; HUG width/x residuals preserved.",
+  "comparison": {
+    "method": "Existing actual Kiro output replay through shared deterministic postprocessing and official LWC compilation; no fresh LLM call.",
+    "originalRevision": "2425957427219410685",
+    "officialOneTimesPngSha256": "bd1867b91f5c088fea5fee62349224378415f0dbae4e77b93724c02da0405bce",
+    "originalAndCheckpointUnchanged": true,
+    "changedPixelsBefore": 8909,
+    "changedPixelsAfter": 7549,
+    "totalPixels": 708290,
+    "changedPercentBefore": 1.257818,
+    "changedPercentAfter": 1.065806,
+    "changedPixelReductionPercent": 15.265462,
+    "sourceTargets": 39,
+    "unobservedBefore": 6,
+    "unobservedAfter": 0,
+    "mismatchedTargetsAfter": 2,
+    "unsupportedTargets": 2,
+    "nativeMatched": 7,
+    "nativeExpected": 7,
+    "sameImageAfterReadOnlyOwnershipProbe": true,
+    "overallVerdict": "failed",
+    "orgApplyOrDeployCertified": false
+  },
+  "selectedTests": {
+    "uniqueCases": 40,
+    "passed": 40,
+    "failed": 0,
+    "scope": "30 divider helper + 2 new parser + 6 breadcrumb + 2 analysis/generation scenarios; repeated publication scenarios are not added.",
+    "priorCompletedFullSuitesRepeated": false
+  },
+  "actualBehavior": {
+    "inputEdit": true,
+    "searchEventValue": true,
+    "reset": true,
+    "breadcrumbNavigationEvent": true,
+    "realBusinessApiIntegrationClaimed": false
+  },
+  "runtime": {
+    "installedRuntimeSha256": "365e6f6001105b983f8c6bdddbbea7529c13d558cb0ea3a7fb2b858de4e10e7b",
+    "generatorSourceSha256": "1465c252d278d6ac29fa1c2f50a7a868bc563bb4a4983af612838f0b836d4f77",
+    "publicationPackageSha256": "3bc939f8b5e3f5ea7fe3901ebda310ad7776257e30b72a680195a93cac617e44",
+    "verifiedInstalledFiles": 313,
+    "executableAndPolicyBytesMatchTestedCandidate": true,
+    "nonExecutableMetadataOnlyDelta": [
+      "nextbss/design-system/lwc/jsconfig.json"
+    ],
+    "canonicalMainHealth": "PASS",
+    "protectedFiles": 20,
+    "protectedFilesUnchanged": true,
+    "pythonSourceChanged": false,
+    "salesforceAuthenticationRetested": false,
+    "modelCalls": 0,
+    "orgCalls": 0
+  },
+  "cleanup": {
+    "ownedTemporaryFilesRemoved": 767,
+    "dependencySymlinksUnlinkedWithoutFollowing": 1,
+    "privateProcessesRemaining": 0,
+    "rawOriginalPngAndGeneratedCopiesRemoved": true,
+    "publicationWorktreeRemoved": true,
+    "ownedPilotRootRemoved": true,
+    "newMainConversionResults": 0,
+    "newOrgObjects": 0,
+    "existingArchivedMainRecordsRetained": true,
+    "foreignWorkingChangesPreserved": true
+  },
+  "remaining": [
+    "Two HUG text width findings and one x finding need source-layout/responsive allocation evidence; fixed width or font scaling was not added.",
+    "Two unsupported transforms and the 0.5% common visual threshold remain unchanged.",
+    "MCP Code Connect/source equivalence, real business API behavior and previously recorded Salesforce Identity 403 are separate follow-up tracks."
+  ]
+}
