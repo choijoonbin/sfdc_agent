@@ -7,6 +7,7 @@ import re
 from urllib.parse import parse_qs, urlsplit
 
 from .strict_json import loads
+from .logical_scope_contract import validate_logical_scope, validate_scope_review
 
 _HASH = re.compile(r'^[a-f0-9]{64}$')
 _ENGINES = {'NOVA', 'KIRO'}
@@ -81,7 +82,9 @@ def validate_checkpoint(payload, checkpoint):
             raise _invalid()
         contract = analysis.get('contract')
         if contract is None:
-            if 'allowedGenerationEngines' in analysis or 'generationOptions' in analysis:
+            if ('allowedGenerationEngines' in analysis or 'generationOptions' in analysis or 'logicalScope' in analysis
+                    or isinstance(record.get('input'), dict) and isinstance(record['input'].get('screenInput'), dict)
+                    and 'logicalScopeSha256' in record['input']['screenInput'] or 'scopeReview' in record):
                 raise _invalid()
             return None
         source_input = record.get('input', {})
@@ -106,6 +109,8 @@ def validate_checkpoint(payload, checkpoint):
         if 'sceneSha256' in contract and not _hash(contract['sceneSha256']):
             raise _invalid()
         validate_planning_selection(analysis, captured, payload.sourceReference, getattr(payload, 'renderNodeId', None))
+        logical_scope = validate_logical_scope(analysis, captured)
+        scope_review = validate_scope_review(logical_scope, getattr(payload, 'scopeReview', None)) if payload.operation == 'GENERATE' else None
         actual, storage = contract['actualAcquisition'], captured.get('sourceStorage')
         if actual == 'MCP':
             if ('sceneSha256' in contract or storage != 'mcp-evidence' or not isinstance(source_input.get('mcpSource'), dict)
@@ -144,6 +149,7 @@ def validate_checkpoint(payload, checkpoint):
                 raise _invalid()
         if not set(engines) <= seen or payload.operation == 'GENERATE' and payload.engine not in engines:
             raise _invalid()
-        return {'analysisDigest': analysis['digest'], 'engines': tuple(engines), 'contract': contract}
+        return {'analysisDigest': analysis['digest'], 'engines': tuple(engines), 'contract': contract,
+                'logicalScope': logical_scope, 'scopeReview': scope_review}
     except (KeyError, TypeError, AttributeError, UnicodeError, json.JSONDecodeError, RecursionError, ValueError):
         raise _invalid() from None

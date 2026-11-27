@@ -79,6 +79,7 @@ class ExecutionRequest(BaseModel):
     sourceVersion: RegistryLabel | None = None
     renderNodeId: Annotated[str, Field(pattern=r'^\d+:\d+$', max_length=160)] | None = None
     tableStateBindings: SourceTableStateBindings | None = None
+    scopeReview: JsonObject | None = None
     _screen_contract: dict | None = PrivateAttr(default=None)
 
     @model_validator(mode="before")
@@ -94,6 +95,8 @@ class ExecutionRequest(BaseModel):
                 or self.operation != 'ANALYZE' or self.inputMode != 'SOURCE'
                 or self.componentLibrary is not None and self.componentLibrary.family != 'NOVA_PUBLIC'):
             raise ValueError('SOURCE_TABLE_STATE_BINDING_INVALID')
+        if self.scopeReview is not None and (self.kind != 'SCREEN' or self.operation != 'GENERATE'):
+            raise ValueError('Scope review applies only to saved Screen generation.')
         if self.renderNodeId is not None and (self.kind != 'SCREEN' or self.operation != 'ANALYZE' or self.inputMode != 'SOURCE'):
             raise ValueError('Render selection applies only to Screen analysis.')
         if self.figmaConnection is not None and self.sourceAcquisition in {'MCP_ONLY', 'LOCAL_FILE'}:
@@ -128,6 +131,10 @@ class ExecutionRequest(BaseModel):
             if len(encode_json(self.analysis)) > CHECKPOINT_BYTES:
                 raise ValueError("Analysis checkpoint is too large.")
             self._screen_contract = validate_screen_checkpoint(self,self.analysis)
+            if self.scopeReview is not None and self._screen_contract is None:
+                raise ValueError('SCREEN_SCOPE_REVIEW_INVALID')
+            if self._screen_contract is not None:
+                self.scopeReview = self._screen_contract['scopeReview']
             if self.inputMode=='MEASURED' and self.engine!='NOVA' and self._screen_contract is None:
                 raise ValueError('Cross-engine measured generation requires a saved Screen contract.')
         elif self.analysisJobId is not None or self.analysis is not None or self.workflowId is not None:

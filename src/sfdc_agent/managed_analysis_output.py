@@ -184,7 +184,7 @@ def verify(directory, payload, result, runtime_root):
             if any(view.get(field)!=original.get(field) for field in ('contract','allowedGenerationEngines','generationOptions')):
                 raise invalid()
         if payload.kind == 'SCREEN' and any(view.get(field) != original.get(field) or (field in view) != (field in original)
-                                            for field in ('planningSelection', 'planningSummary')):
+                                            for field in ('planningSelection', 'planningSummary', 'logicalScope')):
             raise invalid()
         if not payload.archive and view['source'].get('fileKey') not in (None, key):
             raise invalid()
