@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -10,6 +11,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from sfdc_agent.managed_design import DesignBuild, check_output_directory, output_directory, run_build
+from sfdc_agent.core_change_request import MAX_BUILD_RESPONSE_BYTES
 from sfdc_agent.managed_execution import IncompleteExecution
 from sfdc_agent.managed_figma_scope import FigmaProviderScopeError
 
@@ -154,3 +156,51 @@ class ManagedDesignTests(unittest.IsolatedAsyncioTestCase):
             result = await run_build(self.payload)
         self.assertEqual(result.checks[0].retryAfterSeconds, 31 * 86400)
         self.assertEqual(process.await_count, 1)
+
+    def node_proposal(self):
+        ui = Path(__file__).resolve().parents[2] / "SFDC_Ui"
+        script = """
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+const {makeCoreChangeRequest}=await import(pathToFileURL(resolve(process.argv[1],'nextbss/engine/design-core-change-request.mjs')));
+const parts=Array.from({length:5000},(_,i)=>createHash('sha256').update('offline-unit-'+i).digest('hex')).join('');
+const value=makeCoreChangeRequest({parentReleaseId:process.argv[2],parentCore:null,targetDesignVersion:'1.9',
+sources:{guide:{fileKey:'Guide',revision:'guide-v1',sha256:'1'.repeat(64)},library:{fileKey:'Library',revision:'library-v1',sha256:'2'.repeat(64)}},
+files:{'tokens.json':JSON.stringify({offlineSyntheticUnitData:parts})}});
+process.stdout.write(JSON.stringify(value));
+"""
+        response = subprocess.run(["node", "--input-type=module", "-e", script, str(ui), self.payload.baseReleaseId],
+                                  capture_output=True, check=True, timeout=30)
+        return json.loads(response.stdout)
+
+    async def test_actual_node_blocked_proposal_larger_than_128k_passes_through_without_publishing_output(self):
+        proposal = self.node_proposal()
+        output = self.response(status="BLOCKED", checks=[{"label": "Reviewed core rebuild", "status": "failed", "code": "DESIGN_CORE_REBUILD_REQUIRED"}],
+                               compatible=False, reproduced=False, coreChangeRequest=proposal)
+        self.assertGreater(len(output), 128 * 1024)
+        with patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=output)) as process:
+            result = await run_build(self.payload)
+        self.assertEqual(result.status, "BLOCKED")
+        self.assertEqual(result.coreChangeRequest, proposal)
+        self.assertEqual(process.await_count, 1)
+        self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+
+    async def test_core_proposal_scope_hash_code_path_and_output_size_are_not_trusted(self):
+        original = self.node_proposal()
+        changes = []
+        for field, value in (("parentReleaseId", "nextbss-1.9-" + "f" * 64), ("targetDesignVersion", "2.0")):
+            changes.append({**original, field: value})
+        for field, value in (("path", "nextbss/design-system/lwc/novaTokens/novaTokens.js"), ("sha256", "f" * 64)):
+            changes.append({**original, "changes": [{**original["changes"][0], field: value}]})
+        for proposal in changes:
+            with self.subTest(proposal=list(proposal)), patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=self.response(
+                    status="BLOCKED", compatible=False, reproduced=False, coreChangeRequest=proposal))):
+                with self.assertRaises(HTTPException) as rejected:
+                    await run_build(self.payload)
+                self.assertEqual(rejected.exception.status_code, 502)
+            self.assertFalse((self.ingress / str(self.payload.buildId)).exists())
+        with patch("sfdc_agent.managed_design._run_process", new=AsyncMock(return_value=b" " * (MAX_BUILD_RESPONSE_BYTES + 1))):
+            with self.assertRaises(HTTPException) as oversized:
+                await run_build(self.payload)
+        self.assertEqual(oversized.exception.status_code, 502)

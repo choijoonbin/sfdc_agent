@@ -28,6 +28,13 @@ without copying editable common sources into an Agent workspace. Org screen
 apply independently checks installed common module bytes and changes owned
 screen metadata only.
 
+Changed Figma inputs can return a `BLOCKED` result with a bounded
+`coreChangeRequest` authoring proposal. Agent permits at most 2 MiB for the
+proposal, checks gzip/base64, decoded JSON paths, byte counts and hashes, and
+binds its parent core, release, target version and requested sources to this
+build. The proposal remains blocked for reviewed source changes and a committed
+CI rebuild; it cannot publish new LWC bytes under an old source identity.
+
 Historical archives without `core-source.json` retain their historical release
 behavior. They cannot satisfy a request that claims a new core marker. A marked
 archive requires a manifest pin and compatible installed runtime even when a

@@ -19,6 +19,7 @@ REQUIRED = (
     'package.json', 'package-lock.json',
     'nextbss/engine/component-library.mjs', 'nextbss/engine/managed-runtime-capabilities.json',
     'nextbss/engine/design-core-identity.mjs',
+    'nextbss/engine/design-core-change-request.mjs',
     'nextbss/server/managed-execution.mjs', 'nextbss/server/managed-analysis-output.mjs',
     'nextbss/server/managed-original-analysis.mjs',
     'nextbss/server/kiro-nova-contract.mjs', 'nextbss/shared/preview-validation-protocol.mjs',

@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import engine_root
+from .core_change_request import MAX_BUILD_RESPONSE_BYTES, validate_core_change_request
 from .design_core import DesignCore, verify_selected_core
 from .managed_execution_progress import ExecutionScope
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
@@ -85,6 +86,15 @@ class DesignBuildResult(BaseModel):
     checks: Annotated[list[BuildCheck], Field(max_length=200)]
     compatible: bool
     reproduced: bool
+    coreChangeRequest: dict | None = None
+
+    @model_validator(mode="after")
+    def bounded_core_change(self):
+        if self.coreChangeRequest is not None:
+            if self.status != "BLOCKED" or self.compatible or self.reproduced:
+                raise ValueError("A core authoring proposal cannot be a validated release.")
+            validate_core_change_request(self.coreChangeRequest)
+        return self
 
 
 def output_directory(build_id: UUID, *, root=None) -> Path:
@@ -141,7 +151,7 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
             if storage:
                 overrides.update(await storage_io(storage.prepare, scratch, release_id=payload.baseReleaseId,
                     manifest_sha=payload.baseManifestSha256, design_sources=True, deadline=deadline))
-            verify_selected_core(release_id=payload.baseReleaseId, manifest_sha=payload.baseManifestSha256,
+            trusted_core = verify_selected_core(release_id=payload.baseReleaseId, manifest_sha=payload.baseManifestSha256,
                 release_root=overrides.get('SFDC_MANAGED_RELEASE_ROOT') or os.environ.get('SFDC_MANAGED_RELEASE_ROOT'),
                 runtime_root=engine_root(), expected=payload.designCore)
             # This operation reads normal REST source metadata only. It must
@@ -156,13 +166,23 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
                 raise TimeoutError
             output = await _run_process(binary, runner, scratch, remaining,
                                         _encode_json(payload.model_dump(mode="json", exclude_none=True)), overrides)
-            if len(output) > 128 * 1024:
+            if len(output) > MAX_BUILD_RESPONSE_BYTES:
                 raise IncompleteExecution
             result = DesignBuildResult.model_validate(_decode_json(output))
             if remote:
                 require_figma_scope(payload.executionScope)
             if result.buildId != payload.buildId:
                 raise IncompleteExecution
+            if result.coreChangeRequest is not None:
+                proposal = result.coreChangeRequest
+                if (proposal["parentReleaseId"] != payload.baseReleaseId or proposal["targetDesignVersion"] != payload.designVersion
+                        or proposal["parentCore"] != trusted_core):
+                    raise IncompleteExecution
+                for name in ("guide", "library"):
+                    requested = getattr(payload.sources, name)
+                    if requested is not None and (proposal["sources"][name]["fileKey"] != requested.fileKey
+                                                  or proposal["sources"][name].get("revision") != requested.revision):
+                        raise IncompleteExecution
             if result.status == "VALIDATED" and (not result.releaseId or not result.manifestSha256
                                                 or not result.outputManifestSha256
                                                 or not result.checks or any(check.status != "passed" for check in result.checks)):
