@@ -12,11 +12,12 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationError, model_validator
 
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .image_input import ImageBinding, validate_image_input
-from .kiro_screen_projection import project_screen_fields
+from .kiro_screen_projection import prepare_screen_fields
+from .screen_prompt_context import ScreenPromptContext
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
 from .provider_capabilities import provider_receipt
 from .prompt_release_id import PromptReleaseId
@@ -95,6 +96,7 @@ class Prompt(BaseModel):
     fields: dict | None = None
     png: str | None = None
     imageBinding: ImageBinding | None = None
+    _screen_prompt_context: ScreenPromptContext | None = PrivateAttr(default=None)
 
     def build(self, *, templates=None) -> str:
         if self.operation is not None and self.operation not in OPERATIONS:
@@ -104,7 +106,8 @@ class Prompt(BaseModel):
         elif self.text is None and self.fields is not None and self.operation:
             if self.operation.startswith("screen."):
                 from .screen_tasks import build_screen_task
-                text = build_screen_task(self.operation, self.fields, templates=templates)
+                text = build_screen_task(self.operation, self.fields, templates=templates,
+                                         prepared_context=self._screen_prompt_context)
             else:
                 from .story_tasks import build_story_task
                 text = build_story_task(self.operation, self.fields, templates=templates)
@@ -240,7 +243,7 @@ async def start_session(request: Request):
         await session.close()
         raise
     return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id,
-            "imageInputContractVersion": 1}
+            "imageInputContractVersion": 1, "screenPromptContextEncodingVersion": 1}
 
 
 @router.get("/{session_id}/events")
@@ -273,10 +276,12 @@ async def prompt_session(request: Request, session_id: str):
             _validate_headless_prompt(prompt)
         image = validate_image_input(prompt.png, prompt.imageBinding, operation=prompt.operation,
                                      fields=prompt.fields, context=context)
-        fields = await project_screen_fields(prompt.operation, prompt.fields)
+        prepared = await prepare_screen_fields(prompt.operation, prompt.fields)
+        fields = prepared.fields
         projection_ms = max(0, round((monotonic() - projection_started) * 1000))
         if fields is not prompt.fields:
             prompt = prompt.model_copy(update={"fields": fields})
+        prompt._screen_prompt_context = prepared.prompt_context
         build_started = monotonic()
         with capture_prompt_run(prompt.operation) if owner or managed_capture else nullcontext() as prompt_run:
             text = prompt.build(templates=release.templates)
@@ -284,6 +289,10 @@ async def prompt_session(request: Request, session_id: str):
     except (ValueError, UnicodeError, TypeError, KeyError):
         raise SessionError("KIRO_TASK_INVALID", "Kiro 작업 요청의 원본 데이터 형식이 올바르지 않습니다.") from None
     payload = text.encode()
+    if prepared.prompt_context is not None:
+        logger.info("Screen prompt context %s %s %s", prompt.operation,
+                    (fields.get('evidence') if prompt.operation == 'screen.repair' else fields).get('nodeId'),
+                    json.dumps(prepared.prompt_context.receipt, separators=(',', ':')))
     operation = prompt.operation or "prompt"
     logger.info("Kiro %s started (%s, %s)", operation, session_id[:8], execution_mode)
     started = monotonic()
@@ -300,6 +309,8 @@ async def prompt_session(request: Request, session_id: str):
             raise SessionError("KIRO_HEADLESS_INCOMPLETE", "원본 PNG 입력의 전달 완료 기록을 확인하지 못했습니다.")
     receipt = {**receipt, 'gatewayPerformance': {'schemaVersion': 1, 'projectionMs': projection_ms,
         'promptBuildMs': build_ms, 'sessionCallMs': max(0, round((monotonic() - started) * 1000))}}
+    if prepared.prompt_context is not None:
+        receipt['sourcePromptContext'] = dict(prepared.prompt_context.receipt)
     if prompt_run is not None and owner is not None:
         request.app.state.prompt_run_values.save(owner, prompt_run, started=started, release=release, mode=execution_mode)
     if prompt_run is not None and managed_capture:

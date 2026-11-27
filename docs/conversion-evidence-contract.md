@@ -10,17 +10,27 @@ Spring은 Main의 작업·권한·불변 릴리스·활성 프롬프트·결과 
 
 공통 LWC의 관리 원천은 승인된 NOVA Git 루트의 `packages/nova-ui/main/default/lwc`입니다. 선택한 불변 디자인 릴리스가 해당 Git 소스·공개 API·토큰을 고정하며, UI의 Node runtime은 변환·검증 엔진입니다. NextBSS v1.9는 Figma 디자인 근거의 이름입니다. 임시 모델 작업공간·fixture·runtime artifact는 편집할 공통 LWC 원천이 아닙니다.
 
-Screen은 분석 → 검토 확인 → NOVA 규칙 생성 또는 Kiro 생성 순서입니다. 수집 경로는 요청의 `sourceAcquisition`으로 고정합니다.
+Screen은 분석 → 검토 확인 → 규칙 기반 생성 또는 AI 생성 순서입니다. 수집 경로는 요청의 `sourceAcquisition`으로 고정합니다.
 
 | 요청 | 원본 수집 | 실패 시 경계 |
 | --- | --- | --- |
-| NOVA 규칙 분석 `REST_FIRST` | REST 우선, 허용된 오류에서 버전 없는 같은 파일의 등록 `.fig` 사본 | 접근 거부·노드 없음·리비전 불일치를 사본으로 우회하지 않음 |
-| Kiro 분석 `REST_ONLY` | 선택한 Figma API 원본 | MCP·등록 사본·NOVA로 자동 전환하지 않음 |
-| Kiro 분석 `MCP_ONLY` | 사용자·작업공간에 결합된 읽기 전용 MCP | 인증·한도·잘림은 명시적 실패, REST로 전환하지 않음 |
+| 디자인 구조 분석 `REST_FIRST` | REST 우선, 허용된 오류에서 버전 없는 같은 파일의 등록 `.fig` 사본 | 접근 거부·노드 없음·리비전 불일치를 사본으로 우회하지 않음 |
+| AI 분석 `REST_ONLY` | 선택한 Figma API 원본 | MCP·등록 사본·다른 분석 방식으로 자동 전환하지 않음 |
+| AI 분석 `MCP_ONLY` | 사용자·작업공간에 결합된 읽기 전용 MCP | 인증·한도·잘림은 명시적 실패, REST로 전환하지 않음 |
 | 명시적 로컬 `LOCAL_FILE` | 선택한 `.fig`와 hash·페이지·노드 | 다른 파일로 교체하지 않음 |
 | 저장 Screen 계약의 `GENERATE` | 저장한 장면·분석·PNG와 원본·NOVA·프롬프트 핀 | REST/MCP 재수집이나 archive 재열기로 원본을 교체하지 않음 |
 
 Story는 기존 `.fig`·REST 계약을 사용합니다. MCP 원문·PNG·호출 기록은 사용자·작업 ID에 묶어 원자적으로 보존하며 같은 작업 재시도는 완성된 수집만 재사용합니다. 부분 metadata나 Code Connect mapping 지침은 전체 authored scene이 아닙니다. 완전한 원문·속성·리비전 결합이 부족하면 `PARTIAL`/`REFERENCE_ONLY`로 남기며 미확인 게시 키·속성은 검토 대상으로 유지합니다.
+
+## 모델에 전달하는 원본 표현
+
+REST·로컬의 `sourceContext`는 원본 확인·PNG 식별·결과 보정용 canonical 객체로 유지합니다. 고정된 Node 엔진의 `kiro-prompt-projection.mjs`가 공통 컴포넌트 매핑을 최종 보강하며, `shared/screen-prompt-context.mjs` 한 곳에서 모델용 JSON을 만듭니다. Worker도 같은 최종 보강·표현으로 모든 포함 상태를 첫 모델 호출 전에 검사합니다.
+
+512KiB를 넘는 원본은 `screen-record-tables-v1`의 열·행·원래 인덱스와 정확히 같은 값의 외부 경로 목록으로 표현합니다. 원본 ID·문구·좌표·스타일·기획 근거·순서를 삭제하거나 추정하지 않습니다. 작은 원본은 기존 JSON 형태입니다. Python `screen_prompt_context.py`는 encoder를 복제하지 않고 표현을 독립적으로 복원해 Node의 canonical JSON·해시·타입·순서와 비교합니다. 클라이언트 wire 필드로 표현·영수증을 주입할 수 없으며, 검증된 서버 내부 속성만 렌더러가 사용합니다.
+
+분석·생성·보정·로컬 분석과 직접 모델 평가가 같은 경계를 사용합니다. 별도 MCP 캡처 텍스트와 PNG 검증은 기존 경로를 유지합니다. 원본 context 12MiB·깊이 64·값 50만 개, 모델 원본 표현 512KiB와 최종 전체 프롬프트의 기존 8MiB 상한을 각각 검사합니다. 고유 정보가 표현 후에도 크면 모델을 호출하지 않습니다. 저장·레이어·캡처 상한도 늘리지 않습니다.
+
+세션 응답과 Worker 기능 선언의 `screenPromptContextEncodingVersion: 1`을 확인하며 혼합 버전은 모델 호출 전에 거절합니다. `providerReceipt.sourcePromptContext`와 고정 형식 로그는 원본/표현의 바이트 수·SHA·버전만 기록합니다. 프롬프트 trace는 실제 대입한 표현을 기록하고 원본 checkpoint와 구분합니다. 자세한 구조와 검증은 [UI 논리적 화면 구조](../../SFDC_Ui/docs/logical-screen-architecture.md)를 참고합니다.
 
 ## 서비스 인증과 실행 범위
 

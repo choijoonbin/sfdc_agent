@@ -4,14 +4,17 @@ import asyncio
 import json
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from .config import engine_root
+from .screen_prompt_context import ScreenPromptContext, read_screen_prompt_context
+from .strict_json import loads
 
 
 logger = logging.getLogger("uvicorn.error")
 _BRIDGE = Path(__file__).with_suffix(".mjs")
-_OPERATIONS = {"screen.review-plan", "screen.generate", "screen.repair"}
+_OPERATIONS = {"screen.analyze.local", "screen.review-plan", "screen.generate", "screen.repair"}
 _PROJECTION_ENVIRONMENT = ("PATH", "LANG", "LC_ALL", "LC_CTYPE")
 
 
@@ -26,14 +29,24 @@ def _projection_environment() -> dict[str, str]:
     return environment
 
 
-async def project_screen_fields(operation: str | None, fields: dict | None) -> dict | None:
+@dataclass(frozen=True)
+class PreparedScreenFields:
+    fields: dict | None
+    prompt_context: ScreenPromptContext | None = None
+
+
+async def prepare_screen_fields(operation: str | None, fields: dict | None) -> PreparedScreenFields:
     if operation not in _OPERATIONS or not isinstance(fields, dict):
-        return fields
+        return PreparedScreenFields(fields)
     evidence = fields.get("evidence") if operation == "screen.repair" else fields
     if not isinstance(evidence, dict) or not isinstance(evidence.get("sourceContext"), dict):
-        return fields
-    if not evidence["sourceContext"].get("inputControls") and not evidence["sourceContext"].get("components"):
-        return fields
+        return PreparedScreenFields(fields)
+    # Captured MCP text has a different evidence contract and renderer. Its
+    # incidental metadata is not a measured source scene or a model payload.
+    if (evidence.get('local') is not True or evidence.get('sourceKind') == 'figma-mcp'
+            or not isinstance(evidence['sourceContext'].get('nodes'), list)
+            or not evidence['sourceContext']['nodes']):
+        return PreparedScreenFields(fields)
 
     try:
         release_root = os.environ.get("SFDC_MANAGED_RELEASE_ROOT", "") if os.environ.get("SFDC_MANAGED_ENGINE_ROOT") else ""
@@ -55,14 +68,22 @@ async def project_screen_fields(operation: str | None, fields: dict | None) -> d
                 await process.wait()
         if process.returncode != 0:
             raise ValueError("Projection bridge failed")
-        projection = json.loads(output)
-        if not isinstance(projection, dict):
+        projection = loads(output)
+        if not isinstance(projection, dict) or set(projection) != {'sourceJson', 'prepared'}:
             raise ValueError("Invalid projection response")
-    except (OSError, ValueError, TimeoutError):
-        if evidence.get("componentLibrary") is not None:
+        prepared = read_screen_prompt_context(projection['sourceJson'], projection['prepared'])
+        context = loads(prepared.source_json)
+    except (OSError, ValueError, TimeoutError, KeyError, TypeError, RecursionError):
+        if evidence.get("componentLibrary") is not None or len(json.dumps(evidence['sourceContext'], ensure_ascii=False).encode()) > 512 * 1024:
             raise ValueError("The pinned component-library projection is unavailable.") from None
         logger.warning("NextBSS visual projection unavailable for %s", operation)
-        return fields
+        return PreparedScreenFields(fields)
 
-    enriched = {**evidence, "sourceContext": {**evidence["sourceContext"], **projection}}
-    return {**fields, "evidence": enriched} if operation == "screen.repair" else enriched
+    enriched = {**evidence, "sourceContext": context}
+    result = {**fields, "evidence": enriched} if operation == "screen.repair" else enriched
+    return PreparedScreenFields(result, prepared)
+
+
+async def project_screen_fields(operation: str | None, fields: dict | None) -> dict | None:
+    """Retain the canonical-field projection API for non-rendering consumers."""
+    return (await prepare_screen_fields(operation, fields)).fields

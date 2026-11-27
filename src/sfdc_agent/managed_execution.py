@@ -86,7 +86,8 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
     # Null is only the established pre-integration transport representation.
     # Spring classifies new commands explicitly; the Node selected-release guard
     # also fences any unversioned request before model work.
-    if payload.componentLibrary is None and payload.sourceAcquisition is None:
+    screen_ai = payload.kind == 'SCREEN' and payload.engine == 'KIRO'
+    if payload.componentLibrary is None and payload.sourceAcquisition is None and not screen_ai:
         return
     try:
         path = engine_root() / 'nextbss/engine/managed-runtime-capabilities.json'
@@ -98,6 +99,9 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
         supported = payload.componentLibrary is None or any(item == {'family': payload.componentLibrary.family,
                                  'libraryVersion': payload.componentLibrary.libraryVersion}
                         for item in capabilities['generationFamilies'])
+        if screen_ai:
+            supported = supported and type(capabilities.get('screenPromptContextEncodingVersion')) is int \
+                and capabilities['screenPromptContextEncodingVersion'] == 1
         if payload.sourceAcquisition is not None:
             supported = supported and capabilities.get('sourceAcquisitionVersion') == 1 and (
                 payload.sourceAcquisition in capabilities.get('sourceAcquisitions', []))

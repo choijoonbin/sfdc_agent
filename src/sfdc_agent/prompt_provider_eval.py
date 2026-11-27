@@ -1,6 +1,7 @@
 """Evaluate a shared conversion prompt with an explicitly selected provider."""
 
 import hashlib
+import asyncio
 from typing import Any
 
 from .prompt_registry import runtime_release
@@ -9,6 +10,7 @@ from .providers import ProviderError, create_provider
 from .provider_capabilities import provider_receipt
 from .screen_tasks import build_screen_task
 from .story_tasks import build_story_task
+from .kiro_screen_projection import prepare_screen_fields
 
 
 EVALUATION_OPERATIONS = (
@@ -53,8 +55,10 @@ def evaluate_prompt_provider(
         raise ProviderError("PROMPT_EVALUATION_INVALID", "The immutable release pin changed.")
     try:
         _check_evidence(operation, fields)
-        builder = build_screen_task if operation.startswith("screen.") else build_story_task
-        text = builder(operation, fields, templates=release.templates)
+        prepared = asyncio.run(prepare_screen_fields(operation, fields)) if operation.startswith("screen.") else None
+        text = build_screen_task(operation, prepared.fields, templates=release.templates,
+                                 prepared_context=prepared.prompt_context) if prepared is not None \
+            else build_story_task(operation, fields, templates=release.templates)
         payload = text.encode("utf-8")
         if not payload or len(payload) > 8 * 1024 * 1024:
             raise ValueError
@@ -65,6 +69,8 @@ def evaluate_prompt_provider(
     receipt = getattr(provider, "provider_receipt", None)
     if not isinstance(receipt, dict):
         receipt = provider_receipt(provider.name, provider.model)
+    if prepared is not None and prepared.prompt_context is not None:
+        receipt = {**receipt, 'sourcePromptContext': dict(prepared.prompt_context.receipt)}
     return {
         "operation": operation,
         "provider": provider.name,

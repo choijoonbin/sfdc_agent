@@ -113,6 +113,10 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         self.runner = Path(self.directory) / "runner.mjs"
         self.runner.write_text(ANALYSIS_SCRIPT)
         (Path(self.directory) / 'managed-runtime.json').write_text(json.dumps({'sha256': 'b' * 64}))
+        capability = Path(self.directory) / 'nextbss/engine/managed-runtime-capabilities.json'
+        capability.parent.mkdir(parents=True)
+        capability.write_text(json.dumps({'schemaVersion': 1, 'generationFamilies': [],
+                                         'screenPromptContextEncodingVersion': 1}))
         (Path(self.directory) / 'ingress').mkdir()
         self.enterContext(patch(f'{RUNNER_MODULE}.engine_root', return_value=Path(self.directory)))
         self.enterContext(patch.dict('sfdc_agent.managed_execution_progress._ATTEMPTS', {}, clear=True))
@@ -305,7 +309,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         payload=contract_request(record,engine='NOVA',acquisition='LOCAL_FILE',archive=archive)
         payload.update(timeoutSeconds=10,deadlineEpochSeconds=int(time())+11)
         caps=Path(self.directory)/'nextbss/engine/managed-runtime-capabilities.json'
-        caps.parent.mkdir(parents=True)
+        caps.parent.mkdir(parents=True, exist_ok=True)
         caps.write_text(json.dumps({'schemaVersion':1,'generationFamilies':[],
                                    'sourceAcquisitionVersion':1,'sourceAcquisitions':['LOCAL_FILE'],'screenAnalysisContractVersion':1}))
         self.write_runner(GENERATION_SCRIPT.replace('summary: { workflow: request.workflowId }',

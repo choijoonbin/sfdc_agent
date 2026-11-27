@@ -4,12 +4,13 @@ import json
 from collections.abc import Mapping
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, StrictBool, StrictInt
 
 from .prompt_templates import PromptTemplate
 from .component_library import ComponentLibrary
 from .nova_prompt_evidence import prompt_source_context
 from .prompt_projection import source_for_prompt, contract_for_prompt
+from .screen_prompt_context import ScreenPromptContext
 
 
 class TaskFields(BaseModel):
@@ -105,6 +106,7 @@ class GenerationFields(NodeFields):
     novaContract: dict = Field(default_factory=dict)
     componentLibrary: ComponentLibrary | None = None
     designReleaseId: str | None = Field(default=None, pattern=r"^nextbss-\d{1,4}(?:\.\d{1,4}){1,2}-[a-f0-9]{64}$")
+    _prompt_context: ScreenPromptContext | None = PrivateAttr(default=None)
 
 
 def _json(value) -> str:
@@ -142,13 +144,14 @@ def _repair(args: RepairFields, template: PromptTemplate) -> str:
 
 
 def _generation(args: GenerationFields, template: PromptTemplate) -> str:
-    source_context = source_for_prompt(prompt_source_context(args.sourceContext, args.novaContract))
-    contract = contract_for_prompt(args.novaContract, source_context, stage='generation')
+    canonical_context = prompt_source_context(args.sourceContext, args.novaContract)
+    source_json = args._prompt_context.matches(canonical_context) if args._prompt_context else _json(source_for_prompt(canonical_context))
+    contract = contract_for_prompt(args.novaContract, canonical_context, stage='generation')
     dimensions = args.layoutDimensions
     width, height = (dimensions.width, dimensions.height) if dimensions else (1234, 700)
     has_review = args.reviewedAnalysis is not None
     if args.local:
-        if not dimensions or source_context is None:
+        if not dimensions or canonical_context is None:
             raise ValueError("Local generation requires measured source evidence.")
         mode = "rest" if args.sourceKind == "figma-rest" else "local"
         source_instruction = template.render(f"{mode}_source_instruction")
@@ -157,7 +160,7 @@ def _generation(args: GenerationFields, template: PromptTemplate) -> str:
         reading = template.render(f"{mode}_reading")
         payload = template.render(
             "local_payload", source_label=template.render(f"{mode}_source_label"),
-            source_context=_json(source_context),
+            source_context=source_json,
         )
         action_evidence = template.render("local_action_evidence") if args.actions else ""
         accordion_evidence = template.render("local_accordion_evidence")
@@ -221,6 +224,17 @@ def _review_plan(args: GenerationFields, template: PromptTemplate) -> str:
         "coverage": args.coverage.model_dump() if args.coverage else None,
         "splitLayout": args.splitLayout, "actions": args.actions, "novaContract": args.novaContract,
     }
+    if args.local and args._prompt_context is not None:
+        canonical_context = prompt_source_context(args.sourceContext, args.novaContract)
+        context_json = args._prompt_context.matches(canonical_context)
+        key = "figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"
+        # Embed the engine's exact JSON text rather than reserializing floats or
+        # numeric property keys differently on the Python side.
+        source_json = _json(source)[:-1] + ',' + _json(key) + ':' + context_json
+        if args.historyTables and canonical_context.get("historyTables") != args.historyTables:
+            source_json += ',"historyTables":' + _json(args.historyTables)
+        source_json += '}'
+        return template.render(version=args.version, component_variants=args.componentVariants, source=source_json)
     if args.local:
         source["figmaRestSnapshot" if args.sourceKind == "figma-rest" else "localSource"] = source_for_prompt(prompt_source_context(args.sourceContext, args.novaContract))
     else:
@@ -238,7 +252,9 @@ def _metadata(args: ContextFields, template: PromptTemplate) -> str:
 def _local_analysis(args: GenerationFields, template: PromptTemplate) -> str:
     if not args.local or not args.layoutDimensions or args.sourceContext is None:
         raise ValueError("Local analysis requires measured source evidence.")
-    return template.render(node_id=args.nodeId, source_context=_json(prompt_source_context(args.sourceContext, args.novaContract)))
+    canonical_context = prompt_source_context(args.sourceContext, args.novaContract)
+    source_json = args._prompt_context.matches(canonical_context) if args._prompt_context else _json(canonical_context)
+    return template.render(node_id=args.nodeId, source_context=source_json)
 
 
 def _plan(args: PlanFields, template: PromptTemplate) -> str:
@@ -273,9 +289,17 @@ _TASKS = {
 }
 
 
-def build_screen_task(operation: str, fields: dict, *, templates: Mapping[str, str] | None = None) -> str:
+def build_screen_task(operation: str, fields: dict, *, templates: Mapping[str, str] | None = None,
+                      prepared_context: ScreenPromptContext | None = None) -> str:
     try:
         contract, build_prompt = _TASKS[operation]
     except KeyError:
         raise ValueError("Unknown Screen Kiro operation.") from None
-    return build_prompt(contract.model_validate(fields), PromptTemplate(operation, templates))
+    args = contract.model_validate(fields)
+    if prepared_context is not None:
+        target = args.evidence if isinstance(args, RepairFields) else args
+        if not isinstance(target, GenerationFields) or not isinstance(prepared_context, ScreenPromptContext):
+            raise ValueError('Prepared source context requires a structured Screen task.')
+        prepared_context.matches(target.sourceContext)
+        target._prompt_context = prepared_context
+    return build_prompt(args, PromptTemplate(operation, templates))

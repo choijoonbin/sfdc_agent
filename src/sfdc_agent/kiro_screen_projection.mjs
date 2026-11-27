@@ -5,34 +5,31 @@ import { pathToFileURL } from 'node:url';
 const [engineRoot, releaseRoot] = process.argv.slice(2);
 const { fields } = JSON.parse(readFileSync(0, 'utf8'));
 const context = fields.sourceContext;
+const { prepareScreenPromptContext } = await import(pathToFileURL(resolve(engineRoot,
+  'nextbss/shared/screen-prompt-context.mjs')).href);
+let canonical = context;
+if (context?.nodes?.length && context.nodes[0].id !== fields.nodeId)
+  throw new Error('The measured source root does not match its selected node.');
 const releaseId = fields.designReleaseId ?? fields.reviewedAnalysis?.standard?.releaseId;
 if (releaseRoot && fields.componentLibrary && !/^nextbss-\d{1,4}(?:\.\d{1,4}){1,2}-[a-f0-9]{64}$/.test(releaseId ?? '')) {
   throw new Error('Pinned component-library projection requires its immutable design release.');
 }
-if (!context?.nodes?.length || context.nodes[0].id !== fields.nodeId) {
-  process.stdout.write('{}');
-} else {
+if (context?.nodes?.length && context.nodes[0].id === fields.nodeId
+  && (Object.keys(context.components ?? {}).length || context.inputControls?.length)) {
   const fromEngine = (path) => import(pathToFileURL(resolve(engineRoot, 'nextbss', 'engine', path)).href);
-  const { projectKiroNovaContext } = await import(pathToFileURL(resolve(engineRoot, 'nextbss/server/kiro-nova-contract.mjs')).href);
-  const [{ readNextBssStandard }, { rebuildKiroSourceSnapshot }, { extractKiroButtonEvidence }, { projectKiroFormEvidence }] =
-    await Promise.all(['generate.mjs', 'kiro-source-snapshot.mjs', 'kiro-button-evidence.mjs', 'kiro-form-projection.mjs'].map(fromEngine));
+  const { projectKiroPromptSourceContext } = await import(pathToFileURL(resolve(engineRoot,
+    'nextbss/server/kiro-prompt-projection.mjs')).href);
+  const { readNextBssStandard } = await fromEngine('generate.mjs');
   const design = await readNextBssStandard({
     releaseId,
     releaseRoot: releaseRoot || undefined,
     componentLibrary: fields.componentLibrary,
   });
-  const snapshot = rebuildKiroSourceSnapshot(context);
-  if (design.standard.version !== fields.version || !snapshot) {
-    process.stdout.write('{}');
-  } else {
-    const buttons = extractKiroButtonEvidence(snapshot, design);
-    const forms = projectKiroFormEvidence(snapshot, design, context.inputControls);
-    const components = new Map((context.verifiedComponents ?? []).map((component) => [component.nodeId, component]));
-    for (const button of buttons) components.set(button.nodeId, button);
-    // Include the saved derived guidance as well as current mappings so the
-    // pinned projector can retire obsolete API instructions from checkpoints.
-    const projection = { ...context, verifiedComponents: [...components.values()], ...forms };
-    process.stdout.write(JSON.stringify(design.componentLibrary.tuple.family === 'NOVA_PUBLIC'
-      ? projectKiroNovaContext(projection, design.componentLibrary.contract) : projection));
-  }
+  if (design.standard.version !== fields.version)
+    throw new Error('The measured source version does not match its pinned design release.');
+  canonical = projectKiroPromptSourceContext(context, design);
 }
+// The source stays canonical for image identity, findings, reconstruction and
+// traces. Only the model payload is encoded, using the engine's one serializer.
+const { json, receipt } = prepareScreenPromptContext(canonical);
+process.stdout.write(JSON.stringify({ sourceJson: JSON.stringify(canonical), prepared: { json, receipt } }));

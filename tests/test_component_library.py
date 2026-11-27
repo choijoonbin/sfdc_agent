@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 from pathlib import Path
 import json
+from hashlib import sha256
 import tempfile
 from time import time
 from starlette.requests import Request
@@ -9,6 +10,15 @@ from pydantic import ValidationError
 from sfdc_agent.component_library import ComponentLibrary
 from sfdc_agent.kiro_screen_projection import project_screen_fields
 from sfdc_agent.managed_execution import execute
+
+
+def projected_response(context):
+    text = json.dumps(context, ensure_ascii=False, separators=(',', ':'))
+    encoded = text.encode()
+    return json.dumps({'sourceJson': text, 'prepared': {'json': text, 'receipt': {
+        'schemaVersion': 1, 'encoding': 'plain-json', 'sourceBytes': len(encoded), 'promptBytes': len(encoded),
+        'sourceSha256': sha256(encoded).hexdigest(), 'promptSha256': sha256(encoded).hexdigest(),
+    }}}).encode()
 
 
 class ComponentLibraryTests(unittest.TestCase):
@@ -37,9 +47,10 @@ class ComponentLibraryTests(unittest.TestCase):
 class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
     async def test_managed_projection_passes_only_runtime_paths_and_locale_without_parent_authority(self):
         process = AsyncMock(returncode=0)
-        process.communicate.return_value = (b'{"projected":true}', b'')
-        fields = {'nodeId': '10:1', 'designReleaseId': 'nextbss-1.9-' + 'e' * 64,
-                  'sourceContext': {'components': [{}]}, 'componentLibrary': ComponentLibraryTests().value()}
+        context = {'nodes': [{'id': '10:1'}], 'components': [{}]}
+        process.communicate.return_value = (projected_response({**context, 'projected': True}), b'')
+        fields = {'local': True, 'nodeId': '10:1', 'designReleaseId': 'nextbss-1.9-' + 'e' * 64,
+                  'sourceContext': context, 'componentLibrary': ComponentLibraryTests().value()}
         original = json.loads(json.dumps(fields))
         environment = {'PATH': '/selected/bin', 'LANG': 'C.UTF-8', 'LC_ALL': 'C', 'LC_CTYPE': 'UTF-8',
                        'SFDC_MANAGED_ENGINE_ROOT': '/selected/engine', 'SFDC_MANAGED_RELEASE_ROOT': '/selected/releases',
@@ -69,8 +80,9 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_nonmanaged_projection_retains_only_its_explicit_release_store_fallback(self):
         process = AsyncMock(returncode=0)
-        process.communicate.return_value = (b'{"projected":true}', b'')
-        fields = {'sourceContext': {'components': [{}]}}
+        context = {'nodes': [{'id': '10:1'}], 'components': [{}]}
+        process.communicate.return_value = (projected_response({**context, 'projected': True}), b'')
+        fields = {'local': True, 'nodeId': '10:1', 'sourceContext': context}
         with patch.dict('os.environ', {'PATH': '/selected/bin', 'SFDC_MANAGED_RELEASE_ROOT': '/selected/releases',
                                      'SFDC_UI_ROOT': '/foreign/ui', 'NOVA_LOCAL_WORKSPACE': '/foreign/workspace',
                                      'KIRO_API_KEY': 'fixture-provider-key'}, clear=True), patch(
@@ -84,8 +96,9 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_repair_projection_keeps_its_nested_protocol_with_no_unrequested_environment(self):
         process = AsyncMock(returncode=0)
-        process.communicate.return_value = (b'{"projected":true}', b'')
-        evidence = {'sourceContext': {'inputControls': [{}]}}
+        context = {'nodes': [{'id': '10:1'}], 'inputControls': [{}]}
+        process.communicate.return_value = (projected_response({**context, 'projected': True}), b'')
+        evidence = {'local': True, 'nodeId': '10:1', 'sourceContext': context}
         fields = {'evidence': evidence, 'previousDraft': 'fixture draft', 'diagnostic': 'fixture diagnostic'}
         original = json.loads(json.dumps(fields))
         with patch.dict('os.environ', {}, clear=True), patch(
@@ -95,7 +108,7 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(spawn.await_args.args[0], 'node')
         self.assertEqual(spawn.await_args.kwargs.get('env'), {})
         self.assertEqual(json.loads(process.communicate.await_args.args[0]), {'fields': evidence})
-        self.assertEqual(projected, {**original, 'evidence': {'sourceContext': {'inputControls': [{}], 'projected': True}}})
+        self.assertEqual(projected, {**original, 'evidence': {**evidence, 'sourceContext': {**context, 'projected': True}}})
         self.assertEqual(fields, original)
 
     async def test_analysis_projection_uses_its_explicit_release_not_the_active_pointer(self):
@@ -104,16 +117,19 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
             root = Path(directory)
             engine = root / 'nextbss/engine'
             server = root / 'nextbss/server'
+            shared = root / 'nextbss/shared'
             engine.mkdir(parents=True)
             server.mkdir(parents=True)
+            shared.mkdir(parents=True)
             (engine / 'generate.mjs').write_text('export async function readNextBssStandard(options) {'
                 'if (options.releaseId !== ' + json.dumps(release_id) + ' || !options.releaseRoot) throw Error("active pointer forbidden");'
                 'return { standard:{version:"1.9"}, componentLibrary:{tuple:{family:"NOVA_PUBLIC"},contract:{selected:true}} };}')
-            (engine / 'kiro-source-snapshot.mjs').write_text('export const rebuildKiroSourceSnapshot = () => ({});')
-            (engine / 'kiro-button-evidence.mjs').write_text('export const extractKiroButtonEvidence = () => [];')
-            (engine / 'kiro-form-projection.mjs').write_text('export const projectKiroFormEvidence = () => ({});')
-            (server / 'kiro-nova-contract.mjs').write_text('export const projectKiroNovaContext = (value, contract) => ({...value, selected:contract.selected});')
-            fields = {'nodeId': '10:1', 'version': '1.9', 'designReleaseId': release_id,
+            (server / 'kiro-prompt-projection.mjs').write_text('export const projectKiroPromptSourceContext = (value, design) => ({...value, selected:design.componentLibrary.contract.selected});')
+            (shared / 'screen-prompt-context.mjs').write_text("import {createHash} from 'node:crypto';"
+                "export function prepareScreenPromptContext(context){const json=JSON.stringify(context);"
+                "const bytes=Buffer.byteLength(json),sha=createHash('sha256').update(json).digest('hex');"
+                "return {json,receipt:{schemaVersion:1,encoding:'plain-json',sourceBytes:bytes,promptBytes:bytes,sourceSha256:sha,promptSha256:sha}};}")
+            fields = {'local': True, 'nodeId': '10:1', 'version': '1.9', 'designReleaseId': release_id,
                       'sourceContext': {'nodes': [{'id': '10:1'}], 'components': [{}]},
                       'componentLibrary': ComponentLibraryTests().value()}
             with patch.dict('os.environ', {'SFDC_MANAGED_ENGINE_ROOT': directory, 'SFDC_MANAGED_RELEASE_ROOT': str(root / 'releases')}):
@@ -121,12 +137,17 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(projected['sourceContext']['selected'])
                 with self.assertRaisesRegex(ValueError, 'pinned component-library'):
                     await project_screen_fields('screen.review-plan', {key: value for key, value in fields.items() if key != 'designReleaseId'})
+                with self.assertRaisesRegex(ValueError, 'pinned component-library'):
+                    await project_screen_fields('screen.review-plan', {**fields, 'version': '2.0'})
+                with self.assertRaisesRegex(ValueError, 'pinned component-library'):
+                    await project_screen_fields('screen.review-plan', {**fields, 'nodeId': '99:99'})
 
     async def test_managed_projection_failure_cannot_silently_downgrade(self):
         process = AsyncMock()
         process.returncode = 1
         process.communicate.return_value = (b'', b'')
-        fields = {'sourceContext': {'components': [{}]}, 'componentLibrary': ComponentLibraryTests().value()}
+        fields = {'local': True, 'nodeId': '10:1', 'sourceContext': {'nodes': [{'id': '10:1'}], 'components': [{}]},
+                  'componentLibrary': ComponentLibraryTests().value()}
         with patch('sfdc_agent.kiro_screen_projection.asyncio.create_subprocess_exec', return_value=process):
             with self.assertRaisesRegex(ValueError, 'pinned component-library'):
                 await project_screen_fields('screen.generate', fields)
@@ -135,7 +156,7 @@ class PinnedProjectionTests(unittest.IsolatedAsyncioTestCase):
         process = AsyncMock()
         process.returncode = 1
         process.communicate.return_value = (b'', b'')
-        fields = {'sourceContext': {'components': [{}]}}
+        fields = {'local': True, 'nodeId': '10:1', 'sourceContext': {'nodes': [{'id': '10:1'}], 'components': [{}]}}
         with patch('sfdc_agent.kiro_screen_projection.asyncio.create_subprocess_exec', return_value=process):
             self.assertIs(await project_screen_fields('screen.generate', fields), fields)
 

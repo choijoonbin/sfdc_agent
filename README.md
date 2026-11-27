@@ -52,6 +52,7 @@ curl -fsS http://127.0.0.1:8766/health
 | Main 실행·진행·취소·프로세스 수명 | `managed_execution.py`, `managed_execution_progress.py`, `managed_runtime.py` |
 | Kiro 세션·격리 실행·이미지 | `kiro_gateway.py`, `kiro_headless.py`, `kiro_processes.py`, `image_input.py`, `kiro_image_transport.py`, `kiro_image_guard.py` |
 | 원본·범위·저장 분석·파일 | `managed_figma_scope.py`, `managed_figma_connections.py`, `managed_figma_mcp.py`, `managed_source_reference.py`, `screen_analysis_contract.py`, `managed_analysis_output.py`, `managed_object_storage.py` |
+| 모델용 원본 표현·독립 복원 검증 | `kiro_screen_projection.py`, `kiro_screen_projection.mjs`, `screen_prompt_context.py` |
 | 프롬프트·공급자·독립 CLI | `managed_prompts.py`, `screen_tasks.py`, `story_tasks.py`, `providers.py`, `azure_provider.py`, `prompt_registry.py`, `cli.py`, `pilot.py` |
 
 Python 구현은 `src/sfdc_agent/`에 있습니다. Main은 Spring → `/internal/v1/executions` → Node runner 순서이며, Node는 필요한 단계에서 Agent의 실행별 Kiro 세션을 호출합니다. 로컬에서는 형제 `SFDC_Ui/nextbss` 엔진을 사용하고 서버는 그 엔진을 고정한 불변 runtime artifact를 사용합니다.
