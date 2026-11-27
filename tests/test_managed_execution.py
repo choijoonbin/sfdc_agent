@@ -183,6 +183,23 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(reply["checkpoint"]["request"]["engine"], "KIRO")
 
+    async def test_explicit_nova_table_recipe_reaches_the_owned_worker_unchanged(self):
+        recipe = {'schemaVersion': 1, 'targets': [{'tableNodeId': '29876:14788', 'countNodeId': 'I29876:14801;5645:2349'}]}
+        status, reply, _ = await self.request({**EXECUTION, 'tableStateBindings': recipe})
+        self.assertEqual(status, 200)
+        self.assertEqual(reply['checkpoint']['request']['tableStateBindings'], recipe)
+        self.assertFalse(reply['checkpoint']['receivedServiceToken'])
+        self.assertFalse(reply['checkpoint']['receivedUnrelatedSecret'])
+
+    async def test_table_recipe_is_rejected_before_worker_start_for_other_modes_or_late_input(self):
+        recipe = {'schemaVersion': 1, 'targets': [{'tableNodeId': '1:2'}]}
+        with patch(f'{RUNNER_MODULE}._run_process') as worker:
+            for override in [{'engine': 'KIRO'}, {'kind': 'STORY'}, {'operation': 'GENERATE'},
+                             {'inputMode': 'MEASURED'}, {'tableStateBindings': None}]:
+                status, _, _ = await self.request({**EXECUTION, 'tableStateBindings': recipe, **override})
+                self.assertEqual(status, 422)
+            worker.assert_not_called()
+
     async def test_published_nova_prompt_pin_reaches_both_workers_without_losing_its_snapshot(self):
         from sfdc_agent.managed_prompts import template_digest
         from sfdc_agent.prompt_templates import load_baseline_templates
