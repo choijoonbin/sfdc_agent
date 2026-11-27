@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import engine_root
 from .managed_execution_progress import ExecutionScope
+from .managed_figma_connections import FigmaConnectionProof, arguments as figma_arguments
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .managed_object_storage import ManagedObjectStorage, storage_io
 from .managed_runtime import IncompleteExecution, WORKER_SLOTS as _WORKER_SLOTS, run_process as _run_process
@@ -51,6 +52,7 @@ class DesignBuild(BaseModel):
     designVersion: Annotated[str, Field(pattern=r"^\d+\.\d+(?:\.\d+)?$")]
     sources: DesignSources
     executionScope: ExecutionScope | None = None
+    figmaConnection: FigmaConnectionProof | None = None
 
     @model_validator(mode="after")
     def remote_scope(self):
@@ -117,7 +119,7 @@ def check_output_directory(directory: Path) -> None:
 
 async def run_build(payload: DesignBuild) -> DesignBuildResult:
     remote = bool(payload.sources.guide or payload.sources.library)
-    provider = remote_figma_environment(payload.executionScope) if remote else {}
+    provider = remote_figma_environment(payload.executionScope, **figma_arguments(payload, "DESIGN_BUILD")) if remote else {}
     binary, _, _ = _runner_configuration()
     runner = engine_root() / "nextbss/server/managed-design-release.mjs"
     if not runner.is_file():
@@ -150,12 +152,12 @@ async def run_build(payload: DesignBuild) -> DesignBuildResult:
             if remaining <= 0:
                 raise TimeoutError
             output = await _run_process(binary, runner, scratch, remaining,
-                                        _encode_json(payload.model_dump(mode="json", exclude_none=True)), overrides)
+                                        _encode_json(payload.model_dump(mode="json", exclude_none=True, exclude={"figmaConnection"})), overrides)
             if len(output) > 128 * 1024:
                 raise IncompleteExecution
             result = DesignBuildResult.model_validate(_decode_json(output))
             if remote:
-                require_figma_scope(payload.executionScope)
+                require_figma_scope(payload.executionScope, **figma_arguments(payload, "DESIGN_BUILD"))
             if result.buildId != payload.buildId:
                 raise IncompleteExecution
             if result.status == "VALIDATED" and (not result.releaseId or not result.manifestSha256

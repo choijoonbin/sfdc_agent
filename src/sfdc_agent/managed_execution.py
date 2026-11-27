@@ -16,6 +16,7 @@ from .execution_diagnostics import WorkerExecutionFailure, safe_diagnostic
 
 from .managed_prompts import execution_prompts, runner_token
 from .managed_execution_progress import execution_mode, execution_progress
+from .managed_figma_connections import FigmaConnectionProof, arguments as figma_arguments
 from .managed_figma_scope import remote_figma_environment, require_figma_scope
 from .config import engine_root
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
@@ -147,7 +148,7 @@ def _requires_remote_figma(payload: ExecutionRequest) -> bool:
 
 
 async def _execute(payload: ExecutionRequest) -> ExecutionResult:
-    provider_environment = remote_figma_environment(payload.executionScope) if _requires_remote_figma(payload) else {}
+    provider_environment = remote_figma_environment(payload.executionScope, **figma_arguments(payload, "EXECUTION")) if _requires_remote_figma(payload) else {}
     binary, runner, physical = _runner_configuration()
     timeout = _execution_budget(payload, physical)
     directory = None
@@ -157,7 +158,7 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
         storage = ManagedObjectStorage.configured()
         async with asyncio.timeout(timeout):
             with execution_prompts(payload.promptBundle) as traces, tempfile.TemporaryDirectory(prefix="sfdc-execution-") as scratch:
-                encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
+                encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True, exclude={"figmaConnection"}))
                 async with execution_progress(payload, runner_token(), timeout) as context:
                     environment = dict(provider_environment)
                     if storage:
@@ -186,7 +187,7 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
                 if time() >= payload.deadlineEpochSeconds:
                     raise TimeoutError
                 if _requires_remote_figma(payload):
-                    require_figma_scope(payload.executionScope)
+                    require_figma_scope(payload.executionScope, **figma_arguments(payload, "EXECUTION"))
                 keep = True
                 return result.model_copy(update={"promptTraces": traces or None})
     except TimeoutError:
@@ -203,10 +204,10 @@ async def _execute(payload: ExecutionRequest) -> ExecutionResult:
 
 
 async def _discover_source(payload: SourceDiscoveryRequest):
-    environment = remote_figma_environment(payload.executionScope) if payload.sourceReference else {}
+    environment = remote_figma_environment(payload.executionScope, **figma_arguments(payload, "DISCOVERY")) if payload.sourceReference else {}
     binary, _, _ = _runner_configuration()
     runner = (engine_root() / "nextbss/server/managed-source-discovery.mjs").resolve(strict=True)
-    encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True))
+    encoded = _encode_json(payload.model_dump(mode="json", exclude_none=True, exclude={"figmaConnection"}))
     with tempfile.TemporaryDirectory(prefix="sfdc-source-discovery-") as scratch:
         deadline = time() + 90
         storage = ManagedObjectStorage.configured()
@@ -217,7 +218,7 @@ async def _discover_source(payload: SourceDiscoveryRequest):
             raise TimeoutError
         output = await _run_process(binary, runner, scratch, remaining, encoded, environment)
     if payload.sourceReference:
-        require_figma_scope(payload.executionScope)
+        require_figma_scope(payload.executionScope, **figma_arguments(payload, "DISCOVERY"))
     response = _decode_json(output)
     if isinstance(response, dict) and response.get("code") == "FIGMA_TOKEN_REQUIRED":
         return JSONResponse({"code": "FIGMA_TOKEN_REQUIRED"}, status_code=503)
@@ -237,7 +238,7 @@ async def source_discovery(request: Request):
     try:
         payload = await _parse_request(request, SourceDiscoveryRequest)
         if payload.sourceReference:
-            require_figma_scope(payload.executionScope)
+            require_figma_scope(payload.executionScope, **figma_arguments(payload, "DISCOVERY"))
         execution = asyncio.create_task(_discover_source(payload))
         disconnect = asyncio.create_task(_wait_for_disconnect(request))
         tasks = (execution, disconnect)
@@ -265,7 +266,7 @@ async def execute(request: Request) -> ExecutionResult:
     try:
         payload = await _parse_request(request)
         if _requires_remote_figma(payload):
-            require_figma_scope(payload.executionScope)
+            require_figma_scope(payload.executionScope, **figma_arguments(payload, "EXECUTION"))
         _execution_budget(payload, _runner_configuration()[2])
         _check_component_library_configuration(payload)
         _check_kiro_configuration(request, payload)

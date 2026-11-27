@@ -19,6 +19,16 @@ def packet(value=DIAGNOSTIC):
 
 
 class DiagnosticContractTests(unittest.TestCase):
+    def test_planning_and_scope_selection_descriptors_remain_bounded_source_preparation_errors(self):
+        for code in ('SCREEN_SCOPE_SELECTION_REQUIRED', 'SCREEN_RENDER_ROOT_AMBIGUOUS', 'SCREEN_RENDER_ROOT_INVALID',
+                     'SCREEN_PLANNING_STRUCTURE_INVALID', 'SCREEN_PLANNING_EVIDENCE_TOO_LARGE', 'SCREEN_PLANNING_SOURCE_CHANGED'):
+            value={'schemaVersion':1,'code':code,'stage':'source-preparation'}
+            self.assertEqual(safe_diagnostic(value),value)
+            self.assertEqual(decode_worker_failure(packet(value)),value)
+            self.assertIsNone(safe_diagnostic({**value,'stage':'generation'}))
+            self.assertIsNone(safe_diagnostic({**value,'rawSource':'private-provider-value'}))
+        self.assertIsNone(safe_diagnostic({'schemaVersion':1,'code':'SCREEN_SCOPE_SELECTION_REQUIRED_OTHER','stage':'source-preparation'}))
+
     def test_quota_hint_survives_without_raw_worker_or_provider_text(self):
         self.assertEqual(decode_worker_failure(packet()), DIAGNOSTIC)
         self.assertEqual(safe_diagnostic(DIAGNOSTIC), DIAGNOSTIC)

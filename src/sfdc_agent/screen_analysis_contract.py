@@ -4,6 +4,7 @@ import base64
 from hashlib import sha256
 import json
 import re
+from urllib.parse import parse_qs, urlsplit
 
 from .strict_json import loads
 
@@ -20,6 +21,39 @@ def _invalid():
 
 def _hash(value):
     return isinstance(value, str) and _HASH.fullmatch(value) is not None
+
+
+def validate_planning_selection(analysis, captured, reference, render_node=None):
+    selection = analysis.get('planningSelection')
+    contract = analysis.get('contract', {})
+    if selection is None:
+        if 'planningSelection' in analysis or 'planningSelectionSha256' in contract or 'planningSelectionSha256' in captured or render_node is not None:
+            raise _invalid()
+        return None
+    fields = {'schemaVersion', 'requestedNodeId', 'planningRootId', 'renderNodeId', 'sourceVersion',
+              'planningSourceSha256', 'renderSourceSha256', 'evidenceSha256'}
+    if not isinstance(selection, dict) or set(selection) != fields or type(selection.get('schemaVersion')) is not int or selection['schemaVersion'] != 1:
+        raise _invalid()
+    for field in ('requestedNodeId', 'planningRootId', 'renderNodeId'):
+        value = selection[field]
+        if not isinstance(value, str) or len(value) > 160 or re.fullmatch(r'[0-9]+:[0-9]+', value) is None:
+            raise _invalid()
+    if not isinstance(selection['sourceVersion'], str) or re.fullmatch(r'[A-Za-z0-9_-]{1,160}', selection['sourceVersion']) is None:
+        raise _invalid()
+    if any(not _hash(selection[field]) for field in ('planningSourceSha256', 'renderSourceSha256', 'evidenceSha256')):
+        raise _invalid()
+    requested = parse_qs(urlsplit(reference).query).get('node-id', [])
+    source = analysis.get('source', {})
+    if (len(requested) != 1 or requested[0].replace('-', ':') != selection['requestedNodeId']
+            or source.get('nodeId') != selection['renderNodeId'] or source.get('version') != selection['sourceVersion']
+            or render_node is not None and render_node != selection['renderNodeId']):
+        raise _invalid()
+    # This receipt contains only bounded ASCII strings and integer 1. Opaque
+    # authored scene numbers are never reserialized to imitate Node hashes.
+    digest = sha256(json.dumps(selection, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
+    if contract.get('planningSelectionSha256') != digest or captured.get('planningSelectionSha256') != digest:
+        raise _invalid()
+    return selection
 
 
 def validate_checkpoint(payload, checkpoint):
@@ -71,6 +105,7 @@ def validate_checkpoint(payload, checkpoint):
                 raise _invalid()
         if 'sceneSha256' in contract and not _hash(contract['sceneSha256']):
             raise _invalid()
+        validate_planning_selection(analysis, captured, payload.sourceReference, getattr(payload, 'renderNodeId', None))
         actual, storage = contract['actualAcquisition'], captured.get('sourceStorage')
         if actual == 'MCP':
             if ('sceneSha256' in contract or storage != 'mcp-evidence' or not isinstance(source_input.get('mcpSource'), dict)

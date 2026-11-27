@@ -50,6 +50,31 @@ def request(record, engine='KIRO', acquisition='REST_FIRST', archive=None, measu
 
 
 class ScreenAnalysisContractTests(unittest.TestCase):
+    def test_parent_and_render_selection_are_digest_bound_without_upgrading_legacy(self):
+        record=checkpoint()
+        selection={'schemaVersion':1,'requestedNodeId':'1:2','planningRootId':'1:2','renderNodeId':'1:3','sourceVersion':'fixture-version',
+                   'planningSourceSha256':'1'*64,'renderSourceSha256':'2'*64,'evidenceSha256':'3'*64}
+        digest=sha256(json.dumps(selection,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        record['analysis']['planningSelection']=selection
+        record['analysis']['source']['nodeId']='1:3'
+        record['analysis']['contract']['planningSelectionSha256']=digest
+        record['input']['screenInput']['planningSelectionSha256']=digest
+        checked=ExecutionRequest.model_validate(request(record))
+        self.assertEqual(checked._screen_contract['contract']['planningSelectionSha256'],digest)
+        for field,value in [('requestedNodeId','9:9'),('renderNodeId','9:9'),('sourceVersion','other'),('evidenceSha256','4'*64),('extra','forbidden')]:
+            changed=deepcopy(record);changed['analysis']['planningSelection'][field]=value
+            with self.subTest(field=field),self.assertRaises(ValidationError):ExecutionRequest.model_validate(request(changed))
+        explicit=request(record);explicit['renderNodeId']='1:3'
+        with self.assertRaises(ValidationError):ExecutionRequest.model_validate(explicit) # GENERATE cannot override.
+        legacy=checkpoint();self.assertNotIn('planningSelection',ExecutionRequest.model_validate(request(legacy)).analysis)
+
+    def test_render_node_is_a_bounded_screen_analysis_only_selection(self):
+        payload=request(checkpoint());payload.pop('analysis');payload.pop('analysisJobId');payload['operation']='ANALYZE';payload['engine']='NOVA'
+        self.assertEqual(ExecutionRequest.model_validate({**payload,'renderNodeId':'1:3'}).renderNodeId,'1:3')
+        for value in ['1-3','../1:3','1:'+'3'*160,'']:
+            with self.subTest(value=value),self.assertRaises(ValidationError):ExecutionRequest.model_validate({**payload,'renderNodeId':value})
+        with self.assertRaises(ValidationError):ExecutionRequest.model_validate({**payload,'kind':'STORY','sourceAcquisition':None,'renderNodeId':'1:3'})
+
     def test_cross_engine_generation_uses_the_exact_source_and_does_not_require_remote_credentials(self):
         record=checkpoint()
         payload=ExecutionRequest.model_validate(request(record))

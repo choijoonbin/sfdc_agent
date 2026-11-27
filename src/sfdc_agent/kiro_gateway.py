@@ -165,8 +165,8 @@ def get_session(request, session_id):
     if session is None or session.closed:
         raise SessionError("KIRO_CLOSED", "Kiro 세션이 종료됐습니다. 다시 실행해 주세요.")
     require_session_owner(request, session)
-    if managed_only() and (context := getattr(session, 'managed_execution_context', None)) and context.remote:
-        require_figma_scope(context.execution_scope)
+    if managed_only() and (context := getattr(session, 'managed_execution_context', None)) and context.remote and getattr(context, "source_acquisition", None) != "MCP_ONLY":
+        require_figma_scope(context.execution_scope, **getattr(context, "figma_authorization", {}))
     return session
 
 
@@ -199,8 +199,8 @@ async def start_session(request: Request):
         raise HTTPException(422, "Invalid Kiro session purpose.")
     if context and context.purpose != purpose:
         raise HTTPException(422, 'The execution purpose does not match.')
-    if context and context.remote:
-        require_figma_scope(context.execution_scope)
+    if context and context.remote and getattr(context, "source_acquisition", None) != "MCP_ONLY":
+        require_figma_scope(context.execution_scope, **getattr(context, "figma_authorization", {}))
     if context and context.mode != "headless":
         raise SessionError("KIRO_MODE_INVALID", "Kiro 실행은 API 키 기반 헤드리스 모드만 지원합니다.")
     if len(sessions) >= MAX_SESSIONS:
@@ -214,8 +214,8 @@ async def start_session(request: Request):
     session_id = uuid4().hex
     session = HeadlessKiroSession(read_key(), purpose=purpose)
     try:
-        if context and context.remote:
-            require_figma_scope(context.execution_scope)
+        if context and context.remote and getattr(context, "source_acquisition", None) != "MCP_ONLY":
+            require_figma_scope(context.execution_scope, **getattr(context, "figma_authorization", {}))
     except BaseException:
         await session.close()
         raise
@@ -233,8 +233,8 @@ async def start_session(request: Request):
 
     try:
         require_session_owner(request, session)
-        if context and context.remote:
-            require_figma_scope(context.execution_scope)
+        if context and context.remote and getattr(context, "source_acquisition", None) != "MCP_ONLY":
+            require_figma_scope(context.execution_scope, **getattr(context, "figma_authorization", {}))
     except BaseException:
         sessions.pop(session_id, None)
         await session.close()

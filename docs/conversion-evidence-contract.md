@@ -29,10 +29,14 @@ Main Agent는 `SFDC_AGENT_MANAGED_ONLY=1`로 실행합니다. HTTP 경로는 `/h
 - `SFDC_AGENT_EXECUTION_TOKEN`은 Spring–Agent 서비스 Bearer이며 Node 자식에게 전달하지 않습니다.
 - `X-SFDC-Managed-Prompt`는 현재 실행에 고정됩니다. Kiro 세션 생성·이벤트 조회·프롬프트 실행·종료에 같은 토큰을 요구하며 실행 종료 시 폐기합니다. 다른 실행의 토큰으로 세션을 조회하거나 종료할 수 없습니다.
 - 기본 Host는 `localhost`, `127.0.0.1`입니다. 사설 DNS가 필요하면 `SFDC_AGENT_TRUSTED_HOSTS`에 정확한 DNS 이름 또는 IPv4를 지정합니다.
-- 공유 REST·Plan 자격은 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<workspace UUID>`로 배정합니다. Spring과 Agent의 정규 UUID 쌍이 같아야 합니다. 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 다른 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`입니다. 등록 사본이 있어도 NOVA REST 우선 요청의 원격 권한 검사를 우회하지 않습니다. 명시적 LOCAL은 소유 범위를 따로 확인합니다.
+- 공유 REST·Plan의 기존 운영 연결은 `SFDC_MANAGED_FIGMA_SCOPE=<tenant UUID>/<legacy workspace UUID>`를 소유 조직과 기존 작업공간의 기준으로 유지합니다. 조직 연결을 채택하기 전에는 같은 정규 UUID 쌍만 허용합니다. 채택 후에는 같은 조직의 명시적 workspace binding과 Spring의 서명 증빙이 있어야 다른 작업공간에서 사용할 수 있습니다. 누락·형식 오류는 `FIGMA_PROVIDER_SCOPE_UNAVAILABLE`, 허용되지 않은 범위는 `FIGMA_PROVIDER_SCOPE_FORBIDDEN`입니다. 등록 사본이 있어도 REST 우선 요청의 권한 검사를 우회하지 않으며 명시적 LOCAL은 사본 소유권을 따로 확인합니다.
 - MCP는 공유 REST 토큰을 사용하지 않고 BACK이 서명한 사용자·테넌트·작업공간의 전용 OAuth 저장소를 사용합니다. 최초 승인·철회는 [MCP 연결](figma-mcp-setup.md)을 따릅니다.
 
-서버는 한 REST 범위의 전용 deployment로 라우팅하며 한 Uvicorn process/worker만 사용합니다. Node가 같은 process의 메모리 실행 context를 loopback으로 호출하기 때문입니다. 서버 배포의 MCP는 `NOT_READY`이며 로컬 credential HOME 복사나 JSON flag로 활성화할 수 없습니다.
+서버는 운영 연결의 소유 조직에 고정하며 한 Uvicorn process/worker만 사용합니다. 다른 작업공간의 원격 RPC는 동일 조직의 유효한 서명 증빙을 요구합니다. 동일 조직의 저장 분석·사본을 처리하는 offline 경로는 서비스 인증과 기존 소유권·불변 입력 검증을 유지하며 Figma 자격을 받지 않습니다. 다른 조직의 worker 사용은 거절합니다. Node가 같은 process의 메모리 실행 context를 loopback으로 호출하므로 process 수를 늘리지 않습니다. 서버 배포의 MCP는 `NOT_READY`이며 로컬 credential HOME 복사나 JSON flag로 활성화할 수 없습니다.
+
+기존 물리 토큰이나 키를 다시 발급할 필요는 없습니다. 조직 `iam.manage` 관리자가 원본 관리의 Figma 연결에서 기존 운영 연결의 draft를 등록하면 현재 legacy 작업공간 binding 하나를 명시적으로 보존합니다. 추가 작업공간을 선택해 binding을 저장하고 연결을 활성화하면 조직 연결 모드로 채택합니다. 다른 작업공간은 자동 허용하지 않으며 workspace 관리권한만으로 운영 연결을 스스로 부여할 수 없습니다. 연결·binding을 철회하면 새 실행·claim·진행 중 실행·게시와 장시간 RPC 결과의 현재 버전 검사가 차단합니다. 이미 저장한 Screen을 원본 재수집 없이 생성하는 경로와 기존 원본 읽기 권한은 별도 계약을 유지합니다. 채택 후 사용 중지해도 legacy 권한으로 되돌아가지 않습니다. 기존 환경·launcher·보호된 adoption 설정을 바꾸거나 개인 PAT를 다른 사용자의 개인 OAuth로 표시하지 않습니다.
+
+`managed_figma_connections.py`는 목적·요청 context·조직/작업공간·connection/binding 버전·절대 기한에 결합한 HMAC 증빙을 검증합니다. 증빙은 Node 입력에서 제외하며 모델·checkpoint·public DTO·감사 로그로 전달하지 않습니다. HMAC은 기존 Back/Agent service bearer를 재사용하므로 이 bearer를 가진 trusted service/Node도 서명 가능한 동일 신뢰 경계에 있습니다. 별도 키 격리나 기존 trusted Node bridge bearer의 비전달을 주장하지 않습니다. 생성한 LWC/browser에 환경·CLI 권한을 부여하지 않으며 개인 OAuth/MCP의 사용자별 경계와 서버 `NOT_READY` 정책도 유지합니다.
 
 `SFDC_MANAGED_EXECUTION_TIMEOUT_SECONDS`는 Spring과 Agent의 공통 물리 상한입니다. 기본 540초, 범위 1–900초이며 Spring이 테넌트 정책과 적용한 절대 마감을 각 시도에 고정합니다. 작업 취소는 소유한 자식 프로세스 종료·전송 중지·슬롯 반환을 확인한 뒤 응답합니다. 기한·출력·경로·hash·범위 검증 실패를 성공으로 바꾸지 않습니다. 공개 실패 진단은 `execution_diagnostics_policy.json`의 제한된 계약을 따릅니다.
 

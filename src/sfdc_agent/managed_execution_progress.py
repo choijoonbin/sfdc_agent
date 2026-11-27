@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .managed_http import authorize_request as _authorize
 from .managed_prompts import managed_context_alive, require_managed_context
 from .managed_figma_scope import require_figma_scope
+from .managed_figma_connections import arguments as figma_arguments
 from .strict_json import decode_json as _decode_json
 
 router = APIRouter(prefix='/internal/v1/executions', include_in_schema=False)
@@ -104,6 +105,8 @@ class ExecutionContext:
     view: dict = field(default_factory=lambda: {'status': 'running', 'phase': 'connecting'})
     actor_user_id: str | None = None
     node_id: str | None = None
+    figma_authorization: dict = field(default_factory=dict)
+    source_acquisition: str | None = None
 
     def alive(self):
         return not self.closed and self.expires > monotonic() and (not self.token or managed_context_alive(self.token))
@@ -149,10 +152,12 @@ async def execution_progress(payload, token, timeout):
                   and not (getattr(payload,'operation',None)=='GENERATE' and payload.kind=='SCREEN' and getattr(payload,'_screen_contract',None) is not None))
     file_key = match[1] if remote else None
     if remote and getattr(payload, 'sourceAcquisition', None) != 'MCP_ONLY':
-        require_figma_scope(payload.executionScope)
+        require_figma_scope(payload.executionScope, **figma_arguments(payload, "EXECUTION"))
     context = ExecutionContext(str(payload.jobId), payload.attempt, token, payload.kind.lower(),
                                execution_mode(payload) if payload.engine == 'KIRO' else 'nova',
                                file_key, remote, monotonic() + timeout, asyncio.current_task(), _scope(payload))
+    context.figma_authorization = figma_arguments(payload, "EXECUTION")
+    context.source_acquisition = getattr(payload,"sourceAcquisition",None)
     actor = getattr(payload.executionScope, 'actorUserId', None)
     context.actor_user_id = str(actor) if actor else None
     node = parse_qs(source.query).get('node-id', [None])[0]

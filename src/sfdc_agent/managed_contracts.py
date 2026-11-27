@@ -12,6 +12,7 @@ from .managed_prompts import PromptBundle
 from .prompt_release_id import PromptReleaseId
 from .screen_analysis_contract import validate_checkpoint as validate_screen_checkpoint
 from .strict_json import encode_json
+from .managed_figma_connections import FigmaConnectionProof
 
 CHECKPOINT_BYTES = 3 * 1024 * 1024
 
@@ -33,6 +34,7 @@ class ArchiveSelection(BaseModel):
 class SourceDiscoveryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     executionScope: ExecutionScope
+    figmaConnection: FigmaConnectionProof | None = None
     archive: ArchiveSelection | None = None
     sourceReference: SourceReference | None = None
     pageId: Annotated[str, Field(pattern=r"^\d+:\d+$")] | None = None
@@ -54,6 +56,7 @@ class ExecutionRequest(BaseModel):
     jobId: UUID
     attempt: Annotated[int, Field(ge=1, le=MAX_ATTEMPT, strict=True)]
     executionScope: ExecutionScope
+    figmaConnection: FigmaConnectionProof | None = None
     timeoutSeconds: Annotated[int, Field(ge=1, le=3600, strict=True)]
     deadlineEpochSeconds: Annotated[int, Field(gt=0, strict=True)]
     kind: Literal["SCREEN", "STORY"]
@@ -73,10 +76,15 @@ class ExecutionRequest(BaseModel):
     inputMode: Literal['SOURCE', 'MEASURED'] = 'SOURCE'
     sourceAcquisition: Literal['REST_FIRST', 'REST_ONLY', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
     sourceVersion: RegistryLabel | None = None
+    renderNodeId: Annotated[str, Field(pattern=r'^\d+:\d+$', max_length=160)] | None = None
     _screen_contract: dict | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def validate_review(self):
+        if self.renderNodeId is not None and (self.kind != 'SCREEN' or self.operation != 'ANALYZE' or self.inputMode != 'SOURCE'):
+            raise ValueError('Render selection applies only to Screen analysis.')
+        if self.figmaConnection is not None and self.sourceAcquisition in {'MCP_ONLY', 'LOCAL_FILE'}:
+            raise ValueError('Organization REST authorization cannot authorize a personal MCP or local source.')
         if self.promptBundle is not None and self.promptBundle.releaseId != self.promptReleaseId:
             raise ValueError("Prompt release pin does not match.")
         if self.archive and (self.archive.tenantId != self.executionScope.tenantId

@@ -40,6 +40,8 @@ curl -fsS http://127.0.0.1:8766/health
 | 서버 이미지·고정 런타임·도구·비밀 주입·배포 인수 | [배포 안내](deployment/README.md) |
 | CI의 불변 UI 런타임 입력 | [CI 런타임 계약](.github/RUNTIME_CONTRACTS.md) |
 
+공유 Figma REST·Plan은 기존 운영 연결을 조직 연결로 재사용할 수 있습니다. 조직 관리자가 draft → 명시적 workspace bindings → 활성화 순서로 채택하며 기존 작업공간 권한을 보존합니다. 물리 토큰·키 재발급이나 환경 설정 변경은 필요하지 않습니다. 작업공간 관리권한과 연결 사용권한, 개인 OAuth/MCP는 각각 분리합니다. 서명과 실행 기한·철회 경계는 [서비스 인증과 실행 범위](docs/conversion-evidence-contract.md#서비스-인증과-실행-범위)를 따릅니다.
+
 서버 이미지 진입점은 `python -m sfdc_agent.server_runtime --contract /etc/sfdc/agent-server-contract.json`입니다. 서버 MCP는 별도 OAuth 구현과 검증 전까지 `NOT_READY`로 차단됩니다. 로컬 승인이 서버 배포 준비를 의미하지 않습니다.
 
 ## 코드 진입점
@@ -49,7 +51,7 @@ curl -fsS http://127.0.0.1:8766/health
 | HTTP·모드·서비스 인증 | `api.py`, `service_mode.py`, `managed_http.py` |
 | Main 실행·진행·취소·프로세스 수명 | `managed_execution.py`, `managed_execution_progress.py`, `managed_runtime.py` |
 | Kiro 세션·격리 실행·이미지 | `kiro_gateway.py`, `kiro_headless.py`, `kiro_processes.py`, `image_input.py`, `kiro_image_transport.py`, `kiro_image_guard.py` |
-| 원본·범위·저장 분석·파일 | `managed_figma_scope.py`, `managed_figma_mcp.py`, `managed_source_reference.py`, `screen_analysis_contract.py`, `managed_analysis_output.py`, `managed_object_storage.py` |
+| 원본·범위·저장 분석·파일 | `managed_figma_scope.py`, `managed_figma_connections.py`, `managed_figma_mcp.py`, `managed_source_reference.py`, `screen_analysis_contract.py`, `managed_analysis_output.py`, `managed_object_storage.py` |
 | 프롬프트·공급자·독립 CLI | `managed_prompts.py`, `screen_tasks.py`, `story_tasks.py`, `providers.py`, `azure_provider.py`, `prompt_registry.py`, `cli.py`, `pilot.py` |
 
 Python 구현은 `src/sfdc_agent/`에 있습니다. Main은 Spring → `/internal/v1/executions` → Node runner 순서이며, Node는 필요한 단계에서 Agent의 실행별 Kiro 세션을 호출합니다. 로컬에서는 형제 `SFDC_Ui/nextbss` 엔진을 사용하고 서버는 그 엔진을 고정한 불변 runtime artifact를 사용합니다.

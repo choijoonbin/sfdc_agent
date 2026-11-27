@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from fastapi import HTTPException
 from urllib.parse import urlsplit
 
 from .server_preflight import PreflightError, preflight, read_contract
@@ -85,7 +86,8 @@ class ServerCapabilityBoundary:
             if request_scope is not None:
                 expected = self.contract["worker"]["scope"]
                 if not isinstance(request_scope, dict) or any(request_scope.get(key) != value for key, value in expected.items()):
-                    return await reject(403, "SERVER_WORKER_SCOPE_FORBIDDEN")
+                    if not _organization_scope_request(path, payload, expected):
+                        return await reject(403, "SERVER_WORKER_SCOPE_FORBIDDEN")
             uses_rest = isinstance(acquisition, str) and acquisition in {"REST_FIRST", "REST_ONLY"} or (remote and not payload.get("archive")
                         and payload.get("operation", "ANALYZE") != "GENERATE")
             if (uses_rest or path == "/internal/v1/source-reference") and not capabilities["figmaRest"]:
@@ -101,6 +103,46 @@ class ServerCapabilityBoundary:
             return await receive()
 
         await self.app(scope, replay, send)
+
+
+def _organization_scope_request(path, payload, expected):
+    """Only Spring service endpoints may reuse the same owner's worker.
+
+    Provider routes require an exact signed REST/Plan purpose. Offline routes
+    still authenticate the service and validate their immutable scoped inputs;
+    they receive no process Figma credential. Personal MCP is never included.
+    """
+    selected = payload.get('executionScope')
+    if not isinstance(selected, dict) or selected.get('tenantId') != expected['tenantId']:
+        return False
+    try:
+        from .managed_figma_connections import arguments
+        from .managed_figma_scope import require_figma_scope
+        from types import SimpleNamespace
+        from uuid import UUID
+        if str(UUID(selected.get('workspaceId'))) != selected.get('workspaceId'):
+            return False
+        if path.startswith('/internal/v1/executions/') and path.endswith('/cancel'):
+            return True  # No provider access; the exact owned attempt/deadline is checked by cancel().
+        if path == '/internal/v1/source-revisions':
+            return True  # Existing deterministic saved-plan route; no provider/model/environment.
+        if path == '/internal/v1/source-discovery' and payload.get('archive') and not payload.get('sourceReference'):
+            return True
+        if path == '/internal/v1/executions' and (payload.get('sourceAcquisition') == 'LOCAL_FILE'
+                or payload.get('kind') == 'SCREEN' and payload.get('operation') == 'GENERATE'):
+            return True  # Endpoint validates the complete saved contract before choosing its no-provider path.
+        if path == '/internal/v1/design-standards/builds' and not any((payload.get('sources') or {}).values()):
+            return True
+        purpose = {'/internal/v1/executions': 'EXECUTION', '/internal/v1/source-discovery': 'DISCOVERY',
+                   '/internal/v1/source-reference': 'REFERENCE', '/internal/v1/design-standards/builds': 'DESIGN_BUILD'}.get(path)
+        if purpose is None or not payload.get('figmaConnection'):
+            return False
+        require_figma_scope(SimpleNamespace(**selected), **arguments(payload, purpose))
+        return True
+    except (ValueError, TypeError, AttributeError, KeyError):
+        return False
+    except HTTPException:
+        return False
 
 
 def create_app(startup):
