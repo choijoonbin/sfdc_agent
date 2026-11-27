@@ -19,6 +19,26 @@ def packet(value=DIAGNOSTIC):
 
 
 class DiagnosticContractTests(unittest.TestCase):
+    def test_checkpoint_capacity_keeps_the_declared_preparation_code_without_new_wire_fields(self):
+        value = {'schemaVersion': 1, 'code': 'SCREEN_ANALYSIS_TOO_LARGE', 'stage': 'source-preparation'}
+        self.assertEqual(safe_diagnostic(value), value)
+        self.assertEqual(decode_worker_failure(packet(value)), value)
+        self.assertIsNone(safe_diagnostic({**value, 'stage': 'analysis'}))
+        self.assertIsNone(safe_diagnostic({**value, 'message': 'private-provider-value'}))
+        self.assertIsNone(safe_diagnostic({**value, 'retryAfterSeconds': 1}))
+
+    def test_oversize_source_context_preserves_only_its_declared_safe_code_and_phase(self):
+        for code in ('KIRO_REST_CONTEXT_TOO_LARGE', 'KIRO_LOCAL_CONTEXT_TOO_LARGE'):
+            value = {'schemaVersion': 1, 'code': code, 'stage': 'source-preparation'}
+            with self.subTest(code=code):
+                self.assertEqual(safe_diagnostic(value), value)
+                self.assertEqual(decode_worker_failure(packet(value)), value)
+                self.assertIsNone(safe_diagnostic({**value, 'stage': 'generation'}))
+                self.assertIsNone(safe_diagnostic({**value, 'message': 'private-provider-value'}))
+                self.assertIsNone(safe_diagnostic({**value, 'contextBytes': 625664}))
+                self.assertIsNone(safe_diagnostic({**value, 'scopeMemberId': '50:2'}))
+                self.assertIsNone(safe_diagnostic({**value, 'retryAfterSeconds': 1}))
+
     def test_planning_and_scope_selection_descriptors_remain_bounded_source_preparation_errors(self):
         for code in ('SCREEN_SCOPE_SELECTION_REQUIRED', 'SCREEN_RENDER_ROOT_AMBIGUOUS', 'SCREEN_RENDER_ROOT_INVALID',
                      'SCREEN_PLANNING_STRUCTURE_INVALID', 'SCREEN_PLANNING_EVIDENCE_TOO_LARGE', 'SCREEN_PLANNING_SOURCE_CHANGED'):
@@ -28,6 +48,32 @@ class DiagnosticContractTests(unittest.TestCase):
             self.assertIsNone(safe_diagnostic({**value,'stage':'generation'}))
             self.assertIsNone(safe_diagnostic({**value,'rawSource':'private-provider-value'}))
         self.assertIsNone(safe_diagnostic({'schemaVersion':1,'code':'SCREEN_SCOPE_SELECTION_REQUIRED_OTHER','stage':'source-preparation'}))
+
+    def test_logical_scope_descriptors_preserve_only_the_declared_safe_phase(self):
+        expected = {
+            'SCREEN_SCOPE_SOURCE_CHANGED': ('analysis', 'generation'),
+            'SCREEN_SCOPE_SOURCE_UNVERIFIED': ('source-preparation',),
+            'SCREEN_SCOPE_CAPTURE_LIMIT': ('source-preparation',),
+            'SCREEN_SCOPE_REVIEW_REQUIRED': ('generation',),
+            'SCREEN_SCOPE_REVIEW_INVALID': ('generation',),
+            'SCREEN_SCOPE_REVIEW_CHANGED': ('generation',),
+            'SCREEN_SCOPE_SURFACE_UNAVAILABLE': ('generation',),
+            'SCREEN_SCOPE_STANDARD_REQUIRED': ('runtime',),
+            'SCREEN_SCOPE_ASYNC_GENERATION_REQUIRED': ('generation',),
+            'EXECUTION_LOGICAL_SCOPE_INVALID': ('output-validation',),
+            'LOGICAL_SURFACE_BUNDLE_INVALID': ('generation',),
+            'KIRO_INVALID_LOGICAL_CHILD_EVENT': ('generation',),
+        }
+        for code, stages in expected.items():
+            for stage in stages:
+                value = {'schemaVersion': 1, 'code': code, 'stage': stage}
+                with self.subTest(code=code, stage=stage):
+                    self.assertEqual(safe_diagnostic(value), value)
+                    self.assertEqual(decode_worker_failure(packet(value)), value)
+                    self.assertIsNone(safe_diagnostic({**value, 'message': 'private-provider-value'}))
+                    self.assertIsNone(safe_diagnostic({**value, 'credential': 'private-provider-value'}))
+                    self.assertIsNone(safe_diagnostic({**value, 'stage': 'untrusted-provider-stage'}))
+        self.assertIsNone(safe_diagnostic({'schemaVersion': 1, 'code': 'SCREEN_SCOPE_REVIEW_UNKNOWN', 'stage': 'generation'}))
 
     def test_quota_hint_survives_without_raw_worker_or_provider_text(self):
         self.assertEqual(decode_worker_failure(packet()), DIAGNOSTIC)

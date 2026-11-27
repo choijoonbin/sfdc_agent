@@ -103,6 +103,10 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
                 payload.sourceAcquisition in capabilities.get('sourceAcquisitions', []))
         if payload._screen_contract is not None:
             supported = supported and capabilities.get('screenAnalysisContractVersion') == 1
+            if payload._screen_contract.get('logicalScope') is not None:
+                supported = supported and capabilities.get('logicalScopeContractVersion') == 1
+                versions = capabilities.get('deploymentManifestVersions')
+                supported = supported and isinstance(versions, list) and any(type(version) is int and version == 3 for version in versions)
     except (OSError, ValueError, TypeError, AttributeError):
         raise HTTPException(503, 'RUNTIME_CAPABILITIES_UNAVAILABLE') from None
     if not supported:
