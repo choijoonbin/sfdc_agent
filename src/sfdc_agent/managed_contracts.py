@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, PrivateAttr, model_serializer, model_validator
 
 from .component_library import ComponentLibrary
 from .managed_execution_progress import MAX_ATTEMPT, ExecutionScope
@@ -13,6 +13,7 @@ from .prompt_release_id import PromptReleaseId
 from .screen_analysis_contract import validate_checkpoint as validate_screen_checkpoint
 from .strict_json import encode_json
 from .managed_figma_connections import FigmaConnectionProof
+from .source_table_state_contract import SourceTableStateBindings
 
 CHECKPOINT_BYTES = 3 * 1024 * 1024
 
@@ -77,11 +78,30 @@ class ExecutionRequest(BaseModel):
     sourceAcquisition: Literal['REST_FIRST', 'REST_ONLY', 'LOCAL_FILE', 'MCP_ONLY', 'LEGACY'] | None = None
     sourceVersion: RegistryLabel | None = None
     renderNodeId: Annotated[str, Field(pattern=r'^\d+:\d+$', max_length=160)] | None = None
+    tableStateBindings: SourceTableStateBindings | None = None
     scopeReview: JsonObject | None = None
     _screen_contract: dict | None = PrivateAttr(default=None)
 
+    @model_serializer(mode="wrap")
+    def omit_absent_table_recipe(self, handler):
+        value = handler(self)
+        if self.tableStateBindings is None:
+            value.pop('tableStateBindings', None)
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def explicit_table_recipe(cls, value):
+        if isinstance(value, dict) and "tableStateBindings" in value and value["tableStateBindings"] is None:
+            raise ValueError('SOURCE_TABLE_STATE_BINDING_INVALID')
+        return value
+
     @model_validator(mode="after")
     def validate_review(self):
+        if self.tableStateBindings is not None and (self.kind != 'SCREEN' or self.engine != 'NOVA'
+                or self.operation != 'ANALYZE' or self.inputMode != 'SOURCE'
+                or self.componentLibrary is not None and self.componentLibrary.family != 'NOVA_PUBLIC'):
+            raise ValueError('SOURCE_TABLE_STATE_BINDING_INVALID')
         if self.scopeReview is not None and (self.kind != 'SCREEN' or self.operation != 'GENERATE'):
             raise ValueError('Scope review applies only to saved Screen generation.')
         if self.renderNodeId is not None and (self.kind != 'SCREEN' or self.operation != 'ANALYZE' or self.inputMode != 'SOURCE'):
