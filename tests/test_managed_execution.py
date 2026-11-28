@@ -116,7 +116,7 @@ class ManagedExecutionTests(unittest.IsolatedAsyncioTestCase):
         capability = Path(self.directory) / 'nextbss/engine/managed-runtime-capabilities.json'
         capability.parent.mkdir(parents=True)
         capability.write_text(json.dumps({'schemaVersion': 1, 'generationFamilies': [],
-                                         'screenPromptContextEncodingVersion': 1}))
+                                         'screenPromptContextEncodingVersion': 2}))
         (Path(self.directory) / 'ingress').mkdir()
         self.enterContext(patch(f'{RUNNER_MODULE}.engine_root', return_value=Path(self.directory)))
         self.enterContext(patch.dict('sfdc_agent.managed_execution_progress._ATTEMPTS', {}, clear=True))

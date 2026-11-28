@@ -6,6 +6,8 @@ from unittest.mock import patch
 
 from sfdc_agent.api import app
 from sfdc_agent.kiro_gateway import SessionError, kiro_lifespan
+from sfdc_agent.screen_prompt_context import SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION
+from screen_prompt_context_fixtures import screen_fields
 
 
 BASE_PATH = '/internal/kiro/sessions'
@@ -71,6 +73,25 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         }, receive, send)
         body = b''.join(message.get('body', b'') for message in messages)
         return messages[0]['status'], json.loads(body) if body else None
+
+    async def test_actual_session_open_advertises_supported_captured_screen_capability(self):
+        fields = screen_fields()
+        fields.update(local=False, sourceKind='figma-mcp', capturedContext=[
+            {'nodeId': fields['nodeId'], 'text': 'Synthetic captured design input'}])
+        session = StubSession()
+        async with kiro_lifespan(app):
+            with patch('sfdc_agent.kiro_gateway.read_key', return_value='test-key'), patch(
+                    'sfdc_agent.kiro_gateway.HeadlessKiroSession', return_value=session):
+                status, opened = await self.request('POST', BASE_PATH, {'fileKey': fields['fileKey']},
+                    extra_headers=((b'x-sfdc-kiro-purpose', b'screen'),))
+            self.assertEqual(status, 200)
+            self.assertEqual(SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION, 2)
+            self.assertEqual(opened['screenPromptContextEncodingVersion'], SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION)
+            status, _ = await self.request('POST', f'{BASE_PATH}/{opened["id"]}/prompt', {
+                'operation': 'screen.review-plan', 'fields': fields})
+            self.assertEqual(status, 200)
+            self.assertEqual(len(session.calls), 1)
+            self.assertIn('Synthetic captured design input', session.calls[0][1]['text'])
 
     async def test_design_candidate_returns_only_reviewable_cited_proposals(self):
         data = candidate_payload()

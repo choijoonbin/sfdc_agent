@@ -19,6 +19,7 @@ from sfdc_agent.kiro_screen_projection import prepare_screen_fields
 from sfdc_agent.managed_execution import _check_component_library_configuration
 from sfdc_agent.prompt_registry import BASELINE_RELEASE, runtime_release
 from sfdc_agent.screen_tasks import build_screen_task
+from sfdc_agent.screen_prompt_context import SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION
 
 
 def request(payload):
@@ -53,6 +54,24 @@ class SessionFixture:
 
 
 class ScreenPromptGatewayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_worker_capability_matches_decoder_support_and_rejects_other_versions(self):
+        payload = SimpleNamespace(componentLibrary=None, sourceAcquisition=None, engine='KIRO', kind='SCREEN',
+            _screen_contract=None)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'nextbss/engine/managed-runtime-capabilities.json'
+            path.parent.mkdir(parents=True)
+            capability = {'schemaVersion': 1, 'generationFamilies': []}
+            for version in (1, SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION, 3, True):
+                with self.subTest(version=version):
+                    path.write_text(json.dumps({**capability, 'screenPromptContextEncodingVersion': version}))
+                    with patch('sfdc_agent.managed_execution.engine_root', return_value=root):
+                        if type(version) is int and version == SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION:
+                            _check_component_library_configuration(payload)
+                        else:
+                            with self.assertRaises(HTTPException):
+                                _check_component_library_configuration(payload)
+
     async def test_partial_mcp_keeps_captured_text_and_does_not_encode_incidental_metadata(self):
         fields = screen_fields()
         fields.update(local=False, sourceKind='figma-mcp', capturedContext=[
@@ -123,7 +142,7 @@ class ScreenPromptCapabilityTests(unittest.TestCase):
                 'sfdc_agent.managed_execution.engine_root', return_value=Path(directory)):
             path = Path(directory) / 'nextbss/engine/managed-runtime-capabilities.json'
             path.parent.mkdir(parents=True)
-            for version in [None, True, False, '1', 0, 2]:
+            for version in [None, True, False, '1', 0, 1, 3]:
                 path.write_text(json.dumps({'schemaVersion': 1, 'generationFamilies': [],
                                            'screenPromptContextEncodingVersion': version}))
                 with self.subTest(version=version), self.assertRaises(HTTPException) as denied:
@@ -131,7 +150,7 @@ class ScreenPromptCapabilityTests(unittest.TestCase):
                 self.assertEqual(denied.exception.status_code, 409)
                 self.assertEqual(denied.exception.detail, 'RELEASE_RUNTIME_INCOMPATIBLE')
             path.write_text(json.dumps({'schemaVersion': 1, 'generationFamilies': [],
-                                       'screenPromptContextEncodingVersion': 1}))
+                                       'screenPromptContextEncodingVersion': 2}))
             _check_component_library_configuration(payload)
             path.unlink()
             for kind, engine in [('SCREEN', 'NOVA'), ('STORY', 'KIRO')]:

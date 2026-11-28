@@ -22,6 +22,7 @@ from .config import engine_root
 from .managed_analysis_output import output_directory, verify as verify_analysis_output
 from .kiro_readiness import AUTH_ERROR_CODES
 from .managed_object_storage import ManagedObjectStorage, storage_io
+from .screen_prompt_context import SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION
 
 from .strict_json import decode_json as _decode_json, encode_json as _encode_json
 
@@ -101,7 +102,7 @@ def _check_component_library_configuration(payload: ExecutionRequest) -> None:
                         for item in capabilities['generationFamilies'])
         if screen_ai:
             supported = supported and type(capabilities.get('screenPromptContextEncodingVersion')) is int \
-                and capabilities['screenPromptContextEncodingVersion'] == 1
+                and capabilities['screenPromptContextEncodingVersion'] == SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION
         if payload.sourceAcquisition is not None:
             supported = supported and capabilities.get('sourceAcquisitionVersion') == 1 and (
                 payload.sourceAcquisition in capabilities.get('sourceAcquisitions', []))

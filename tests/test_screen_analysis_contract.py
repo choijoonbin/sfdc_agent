@@ -140,7 +140,7 @@ class ScreenAnalysisContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory,patch('sfdc_agent.managed_execution.engine_root',return_value=Path(directory)):
             path=Path(directory)/'nextbss/engine/managed-runtime-capabilities.json';path.parent.mkdir(parents=True)
             caps={'schemaVersion':1,'generationFamilies':[],'sourceAcquisitionVersion':1,'sourceAcquisitions':['REST_FIRST'],
-                  'screenPromptContextEncodingVersion':1}
+                  'screenPromptContextEncodingVersion':2}
             path.write_text(json.dumps(caps))
             with self.assertRaises(Exception) as failure:_check_component_library_configuration(payload)
             self.assertEqual(failure.exception.detail,'RELEASE_RUNTIME_INCOMPATIBLE')

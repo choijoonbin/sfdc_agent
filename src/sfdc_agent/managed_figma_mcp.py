@@ -3,6 +3,7 @@
 import asyncio
 from hashlib import sha256
 import json
+import logging
 import re
 from time import time, monotonic
 import xml.etree.ElementTree as ET
@@ -25,6 +26,7 @@ _SAFE_CODES = {"FIGMA_MCP_AUTH_REQUIRED", "FIGMA_MCP_CONFIG_REQUIRED", "FIGMA_MC
                "FIGMA_MCP_EVIDENCE_INCOMPLETE", "FIGMA_MCP_SCOPE_FORBIDDEN", "FIGMA_MCP_COLLECTION_FAILED",
                "FIGMA_MCP_SNAPSHOT_CHANGED", "FIGMA_MCP_SNAPSHOT_UNAVAILABLE", "FIGMA_MCP_RATE_LIMITED",
                "KIRO_KEY_AUTH_REQUIRED", "KIRO_KEY_MISSING", "KIRO_KEY_INVALID"}
+logger = logging.getLogger(__name__)
 
 
 class Collection(BaseModel):
@@ -78,6 +80,20 @@ class SnapshotStore:
             _write_private(path, value)
         _write_private(self.root / (self.key + ".index.json"), {"identity": self.identity, "snapshotId": digest})
         return response
+
+    def save_failure(self, reader, error):
+        # Separate tree, no snapshot/index registration and no source reuse API.
+        # The connection lock and the original managed-job identity still own it.
+        from .failed_mcp_evidence import write_private_object
+        report, objects = reader.failed_evidence(error)
+        value = {**report, "identity": self.identity, "collectedAtEpochSeconds": int(time())}
+        digest = sha256(_encode(value)).hexdigest()
+        root = self.directory / "failed-evidence"
+        _directory(root)
+        for object_digest, body in objects.items():
+            write_private_object(root / "objects", object_digest, body)
+        _write_private(root / (digest + ".failure.json"), value)
+        return digest
 
     @staticmethod
     def response(value, digest, reused):
@@ -194,6 +210,14 @@ async def collect(request: Request):
                 collected = await task
                 _scope(context, payload)
                 return store.save(collected)
+            except Exception as error:
+                try:
+                    store.save_failure(reader, error)
+                except Exception:
+                    # No source prose, auth state or exception text in logs; the
+                    # original collection failure remains the product outcome.
+                    logger.warning("Figma MCP failed-evidence persistence unavailable")
+                raise
             finally:
                 context.sessions.discard(owned)
                 if not task.done():

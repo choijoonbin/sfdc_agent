@@ -163,6 +163,14 @@ async def execution_progress(payload, token, timeout):
     node = parse_qs(source.query).get('node-id', [None])[0]
     if isinstance(node, str):
         context.node_id = node.replace('-', ':')
+    # A validated saved analysis may resolve a planning wrapper to its authored
+    # render child. Keep the original URL and remote-authorization policy; only
+    # the private checkpoint/source-evidence authority can select this identity.
+    saved = getattr(payload, '_screen_contract', None)
+    image_source = saved.get('planningImageSource') if isinstance(saved, dict) else None
+    if payload.operation == 'GENERATE' and payload.kind == 'SCREEN' and image_source is not None:
+        context.file_key = image_source['fileKey']
+        context.node_id = image_source['nodeId']
     fingerprint = sha256(json.dumps(payload.model_dump(mode='json', exclude_none=True), sort_keys=True,
                                     ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
     key = (context.job_id, context.attempt)

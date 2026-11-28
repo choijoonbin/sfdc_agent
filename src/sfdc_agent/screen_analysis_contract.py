@@ -57,6 +57,39 @@ def validate_planning_selection(analysis, captured, reference, render_node=None)
     return selection
 
 
+def _planning_image_source(analysis, captured, reference, selection):
+    """Authorize only the saved, receipt-bound render identity, never model fields.
+
+    Older receipts without source evidence keep their existing context. They do
+    not gain wrapper-to-child image authority from an unverified alias.
+    """
+    evidence = analysis.get('sourceEvidence')
+    if selection is None or not isinstance(evidence, dict) or evidence.get('schemaVersion') != 2:
+        return None
+    identity, source = evidence.get('identity'), analysis.get('source', {})
+    contract = analysis['contract']
+    url = urlsplit(reference)
+    match = re.match(r'^/(?:design|file)/([A-Za-z0-9]{1,160})(?:/|$)', url.path)
+    file_key = match[1] if url.scheme == 'https' and match else url.netloc if url.scheme == 'figma-local' else None
+    versions = parse_qs(url.query).get('version-id', parse_qs(url.query).get('version', []))
+    if (not isinstance(identity, dict) or not file_key or source.get('fileKey') != file_key
+            or identity.get('fileKey') != file_key or identity.get('nodeId') != selection['renderNodeId']
+            or source.get('nodeId') != selection['renderNodeId']
+            or identity.get('actualRevision') != selection['sourceVersion']
+            or versions and (len(versions) != 1 or versions[0] != selection['sourceVersion'])
+            or identity.get('requestedRevision') is not None
+            and identity['requestedRevision'] != selection['sourceVersion']
+            or not _hash(evidence.get('rawSnapshotSha256'))
+            or evidence['rawSnapshotSha256'] != contract['sourceDigest']
+            or evidence['rawSnapshotSha256'] != captured['sourceDigest']
+            or not _hash(evidence.get('sceneSha256'))
+            or evidence['sceneSha256'] != contract.get('sceneSha256')
+            or evidence['sceneSha256'] != captured.get('sceneSha256')):
+        raise _invalid()
+    return {'fileKey': file_key, 'nodeId': selection['renderNodeId'],
+            'sourceVersion': selection['sourceVersion'], 'analysisSourceDigest': analysis['sourceDigest']}
+
+
 def validate_checkpoint(payload, checkpoint):
     """Return small validated contract facts, or None for a legacy checkpoint.
 
@@ -108,7 +141,7 @@ def validate_checkpoint(payload, checkpoint):
                 raise _invalid()
         if 'sceneSha256' in contract and not _hash(contract['sceneSha256']):
             raise _invalid()
-        validate_planning_selection(analysis, captured, payload.sourceReference, getattr(payload, 'renderNodeId', None))
+        planning_selection = validate_planning_selection(analysis, captured, payload.sourceReference, getattr(payload, 'renderNodeId', None))
         logical_scope = validate_logical_scope(analysis, captured)
         scope_review = validate_scope_review(logical_scope, getattr(payload, 'scopeReview', None)) if payload.operation == 'GENERATE' else None
         actual, storage = contract['actualAcquisition'], captured.get('sourceStorage')
@@ -149,7 +182,9 @@ def validate_checkpoint(payload, checkpoint):
                 raise _invalid()
         if not set(engines) <= seen or payload.operation == 'GENERATE' and payload.engine not in engines:
             raise _invalid()
+        image_source = _planning_image_source(analysis, captured, payload.sourceReference, planning_selection)
         return {'analysisDigest': analysis['digest'], 'engines': tuple(engines), 'contract': contract,
-                'logicalScope': logical_scope, 'scopeReview': scope_review}
+                'logicalScope': logical_scope, 'scopeReview': scope_review,
+                **({'planningImageSource': image_source} if image_source else {})}
     except (KeyError, TypeError, AttributeError, UnicodeError, json.JSONDecodeError, RecursionError, ValueError):
         raise _invalid() from None

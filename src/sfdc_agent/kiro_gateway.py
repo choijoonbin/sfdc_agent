@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationError,
 from .kiro_headless import HeadlessKiroSession, IDLE_SECONDS, SessionError, read_key
 from .image_input import ImageBinding, validate_image_input
 from .kiro_screen_projection import prepare_screen_fields
-from .screen_prompt_context import ScreenPromptContext
+from .screen_prompt_context import ScreenPromptContext, SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION
 from .prompt_registry import PROMPTS, RegistryError, runtime_release
 from .provider_capabilities import provider_receipt
 from .prompt_release_id import PromptReleaseId
@@ -243,7 +243,7 @@ async def start_session(request: Request):
         await session.close()
         raise
     return {"id": session_id, "executionMode": session.execution_mode, "promptReleaseId": release.id,
-            "imageInputContractVersion": 1, "screenPromptContextEncodingVersion": 1}
+            "imageInputContractVersion": 1, "screenPromptContextEncodingVersion": SCREEN_PROMPT_CONTEXT_CAPABILITY_VERSION}
 
 
 @router.get("/{session_id}/events")

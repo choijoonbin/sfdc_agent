@@ -174,7 +174,7 @@ class LogicalScopeContractTests(unittest.TestCase):
         payload = ExecutionRequest.model_validate({**request(self.record), 'scopeReview': self.review})
         capabilities = {'schemaVersion': 1, 'generationFamilies': [], 'sourceAcquisitionVersion': 1,
                         'sourceAcquisitions': ['REST_FIRST'], 'screenAnalysisContractVersion': 1,
-                        'screenPromptContextEncodingVersion': 1,
+                        'screenPromptContextEncodingVersion': 2,
                         'logicalScopeContractVersion': 1, 'deploymentManifestVersions': [1, 2]}
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'SFDC_MANAGED_ENGINE_ROOT': directory}):
             path = Path(directory) / 'nextbss/engine/managed-runtime-capabilities.json'
