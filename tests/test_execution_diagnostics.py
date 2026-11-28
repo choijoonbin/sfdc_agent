@@ -19,6 +19,21 @@ def packet(value=DIAGNOSTIC):
 
 
 class DiagnosticContractTests(unittest.TestCase):
+    def test_reference_handoff_and_bundle_validation_keep_safe_specific_stages(self):
+        for code, stage in [('SOURCE_REFERENCE_CHANGED', 'output-validation'),
+                            ('KIRO_INVALID_BUNDLE', 'generation'), ('KIRO_INVALID_LWC_TEMPLATE', 'generation'),
+                            ('KIRO_INVALID_LWC_CSS', 'generation'), ('KIRO_INVALID_LWC_JS', 'generation'),
+                            ('KIRO_INVALID_NOVA_BINDING', 'generation'), ('KIRO_INVALID_NOVA_EVENT', 'generation'),
+                            ('KIRO_INVALID_NOVA_PROPERTY', 'generation'), ('KIRO_UNKNOWN_LWC_COMPONENT', 'generation'),
+                            ('KIRO_FIGMA_CONTEXT_UNAVAILABLE', 'source-preparation'),
+                            ('KIRO_FIGMA_CONTEXT_UNVERIFIED', 'source-preparation'),
+                            ('KIRO_FIGMA_SOURCE_MISMATCH', 'source-preparation')]:
+            value = {'schemaVersion': 1, 'code': code, 'stage': stage}
+            self.assertEqual(decode_worker_failure(packet(value)), value)
+            for extra in ({'message': 'private-source'}, {'png': 'private-image'}, {'retryAfterSeconds': 1}):
+                self.assertIsNone(decode_worker_failure(packet({**value, **extra})))
+            self.assertIsNone(safe_diagnostic({**value, 'stage': 'analysis'}))
+
     def test_checkpoint_capacity_keeps_the_declared_preparation_code_without_new_wire_fields(self):
         value = {'schemaVersion': 1, 'code': 'SCREEN_ANALYSIS_TOO_LARGE', 'stage': 'source-preparation'}
         self.assertEqual(safe_diagnostic(value), value)
@@ -108,6 +123,13 @@ class ActualWorkerDiagnosticTests(unittest.IsolatedAsyncioTestCase):
     setUp = fixtures.ManagedExecutionTests.setUp
     request = fixtures.ManagedExecutionTests.request
     write_runner = fixtures.ManagedExecutionTests.write_runner
+
+    async def test_reference_handoff_failure_reaches_service_with_output_validation_code(self):
+        value = {'schemaVersion': 1, 'code': 'SOURCE_REFERENCE_CHANGED', 'stage': 'output-validation'}
+        self.write_runner("process.stderr.write('private-png-and-provider-response'); process.stdout.write(" + repr(packet(value).decode()) + "); process.exitCode=1;")
+        status, body, _ = await self.request(fixtures.EXECUTION)
+        self.assertEqual(status, 502)
+        self.assertEqual(body, value)
 
     async def test_node_nonzero_exit_reaches_service_as_safe_failure_and_keeps_stderr_private(self):
         self.write_runner("process.stderr.write('private-provider-value'); process.stdout.write(" + repr(packet().decode()) + "); process.exitCode=4;")

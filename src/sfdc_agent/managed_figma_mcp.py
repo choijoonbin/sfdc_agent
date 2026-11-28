@@ -18,6 +18,7 @@ from .kiro_mcp import KiroMcpReader
 from .kiro_mcp import _metadata_root, validate_design_context_output
 from .managed_execution_progress import managed_execution_context
 from .managed_prompts import current_managed_release
+from .figma_mcp_capabilities import mcp_capability_receipt
 
 router = APIRouter(prefix="/internal/v1/figma-mcp", include_in_schema=False)
 _SAFE_CODES = {"FIGMA_MCP_AUTH_REQUIRED", "FIGMA_MCP_CONFIG_REQUIRED", "FIGMA_MCP_CONNECTION_REVOKED",
@@ -92,7 +93,8 @@ class SnapshotStore:
         provenance = {"provider": "figma-mcp", "revisionStatus": "UNVERIFIED", "comparison": "REFERENCE_ONLY",
                       "collectedAtEpochSeconds": value["collectedAtEpochSeconds"], "snapshotId": digest,
                       "promptReleaseId": value.get("promptReleaseId"), "acquisitionTemplates": value.get("acquisitionTemplates", {}),
-                      "providerReceipt": value.get("providerReceipt", {})}
+                      "providerReceipt": value.get("providerReceipt", {}),
+                      "capabilities": mcp_capability_receipt(value, digest)}
         metadata_nodes, properties = {}, set()
         for call in tools:
             if call["name"] != "get_metadata":
